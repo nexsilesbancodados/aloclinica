@@ -20,4 +20,12 @@
   <url><loc>https://aloclinica.com.br/refund</loc><priority>0.3</priority><changefreq>yearly</changefreq></url>
   <url><loc>https://aloclinica.com.br/doctor-terms</loc><priority>0.3</priority><changefreq>yearly</changefreq></url>
   <url><loc>https://aloclinica.com.br/accessibility</loc><priority>0.3</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/termo-telemedicina</loc><priority>0.4</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/cartao/funeral</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/cartao/sorteios</loc><priority>0.5</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/empresas/checkout</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/sobre</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/servicos</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/faq</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://aloclinica.com.br/contato</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
 </urlset>

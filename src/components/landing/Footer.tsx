@@ -181,8 +181,12 @@ const Footer = memo(forwardRef<HTMLElement, { config?: any }>(({ config }, ref) 
             <ul className="space-y-3 text-sm text-white/60">
               <li><Link to="/ajuda" className="hover:text-primary transition-colors flex items-center gap-2"><Question className="w-3.5 h-3.5 text-teal-400" weight="fill" /> Central de Ajuda</Link></li>
               <li><Link to="/termos" className="hover:text-primary transition-colors">Termos de Uso</Link></li>
+              <li><Link to="/termo-telemedicina" className="hover:text-primary transition-colors">Termo Telemedicina</Link></li>
               <li><Link to="/privacidade" className="hover:text-primary transition-colors">Política de Privacidade</Link></li>
               <li><Link to="/lgpd" className="hover:text-primary transition-colors">LGPD</Link></li>
+              <li><Link to="/cookies" className="hover:text-primary transition-colors">Cookies</Link></li>
+              <li><Link to="/refund" className="hover:text-primary transition-colors">Política de Reembolso</Link></li>
+              <li><a href="mailto:dpo@aloclinica.com.br" className="hover:text-primary transition-colors">DPO (LGPD): dpo@aloclinica.com.br</a></li>
             </ul>
           </div>
         </div>

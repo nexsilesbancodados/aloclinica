@@ -1,13 +1,48 @@
+# AloClínica — Telemedicina Digital
+# robots.txt para crawlers de busca
+
 User-agent: *
 Allow: /
+
+# Páginas privadas (dashboard / admin / consultas) — bloqueadas
 Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /consulta/
+Disallow: /sala/
+Disallow: /api/
+Disallow: /funcionario/ativar/
 Disallow: /reset-password
-Disallow: /consulta
-Disallow: /auth
 Disallow: /forgot-password
 Disallow: /payment-success
+Disallow: /kyc-mobile
+Disallow: /auth
 
-User-agent: Googlebot
+# Páginas de auth — não indexar
+Disallow: /paciente/cadastro
+Disallow: /medico/cadastro
+Disallow: /clinica/cadastro
+Disallow: /laudista/cadastro
+Disallow: /oftalmologista/cadastro
+Disallow: /suporte/cadastro
+
+# Permite páginas públicas importantes
 Allow: /
+Allow: /teleconsulta
+Allow: /pingo-card
+Allow: /servicos
+Allow: /sobre
+Allow: /faq
+Allow: /contato
+Allow: /para-empresas
+Allow: /para-medicos
+Allow: /para-clinicas
+Allow: /termo-telemedicina
+Allow: /privacy
+Allow: /lgpd
+Allow: /terms
 
+# Sitemap location
 Sitemap: https://aloclinica.com.br/sitemap.xml
+
+# Crawl delay (1s entre requests pra crawlers agressivos)
+Crawl-delay: 1
