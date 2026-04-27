@@ -49,38 +49,23 @@ serve(async (req) => {
       await sb.from("rate_limits").insert({ identifier, endpoint: "send-whatsapp", window_start: new Date().toISOString() });
     } catch { /* rate limit check failure is non-blocking */ }
 
+    const WAHA_URL = Deno.env.get("WAHA_API_URL");
+    const WAHA_KEY = Deno.env.get("WAHA_API_KEY");
+    const WAHA_SESSION = Deno.env.get("WAHA_SESSION") || "default";
+    const useWaha = !!(WAHA_URL && WAHA_KEY);
+
     const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
     const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
 
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-      console.info("[DEV] WhatsApp would be sent but Evolution API not configured");
+    if (!useWaha && (!EVOLUTION_API_URL || !EVOLUTION_API_KEY)) {
+      console.info("[DEV] WhatsApp would be sent but no provider configured");
       const body: WhatsAppRequest = await req.json();
       console.info("[DEV] Message:", JSON.stringify(body));
       return new Response(
-        JSON.stringify({ success: true, dev: true, message: "WhatsApp logged (Evolution API not configured)" }),
+        JSON.stringify({ success: true, dev: true, message: "WhatsApp logged (no provider configured)" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Find first connected instance dynamically
-    const baseUrl = EVOLUTION_API_URL.replace(/\/+$/, "");
-    const apiHeaders = { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY };
-    
-    const instancesRes = await fetchEvo(`${baseUrl}/instance/fetchInstances`, { method: "GET", headers: apiHeaders });
-    const allInstances = await instancesRes.json();
-    const connectedInstance = Array.isArray(allInstances)
-      ? allInstances.find((i: Record<string, Record<string, string>>) => i?.instance?.status === "open")
-      : null;
-    
-    if (!connectedInstance) {
-      console.error("No connected WhatsApp instance found");
-      return new Response(
-        JSON.stringify({ error: "Nenhuma instância WhatsApp conectada. Configure no painel admin." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const instanceName = connectedInstance.instance.instanceName;
 
     const body: WhatsAppRequest = await req.json();
     const { phone, message } = body;
@@ -92,21 +77,46 @@ serve(async (req) => {
       });
     }
 
-    // Clean phone number - keep only digits
     const cleanPhone = phone.replace(/\D/g, "");
-    // Add country code if not present
     const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
 
-    const apiUrl = `${baseUrl}/message/sendText/${instanceName}`;
+    let res: Response;
+    let apiUrl: string;
 
-    const res = await fetchEvo(apiUrl, {
-      method: "POST",
-      headers: apiHeaders,
-      body: JSON.stringify({
-        number: fullPhone,
-        text: message,
-      }),
-    });
+    if (useWaha) {
+      const wahaBase = WAHA_URL!.replace(/\/+$/, "");
+      apiUrl = `${wahaBase}/api/sendText`;
+      res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Api-Key": WAHA_KEY! },
+        body: JSON.stringify({
+          chatId: `${fullPhone}@c.us`,
+          text: message,
+          session: WAHA_SESSION,
+        }),
+      });
+    } else {
+      const baseUrl = EVOLUTION_API_URL!.replace(/\/+$/, "");
+      const apiHeaders = { "Content-Type": "application/json", apikey: EVOLUTION_API_KEY! };
+      const instancesRes = await fetchEvo(`${baseUrl}/instance/fetchInstances`, { method: "GET", headers: apiHeaders });
+      const allInstances = await instancesRes.json();
+      const connectedInstance = Array.isArray(allInstances)
+        ? allInstances.find((i: Record<string, Record<string, string>>) => i?.instance?.status === "open")
+        : null;
+      if (!connectedInstance) {
+        return new Response(
+          JSON.stringify({ error: "Nenhuma instância WhatsApp conectada. Configure no painel admin." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const instanceName = connectedInstance.instance.instanceName;
+      apiUrl = `${baseUrl}/message/sendText/${instanceName}`;
+      res = await fetchEvo(apiUrl, {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({ number: fullPhone, text: message }),
+      });
+    }
 
     const result = await res.json();
 
