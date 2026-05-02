@@ -85,6 +85,8 @@ const FuneralRequest = lazy(() => import("./pages/FuneralRequest"));
 const Sweepstakes = lazy(() => import("./pages/Sweepstakes"));
 const CompanyCheckout = lazy(() => import("./pages/CompanyCheckout"));
 const EmployeeActivate = lazy(() => import("./pages/EmployeeActivate"));
+const Privacidade = lazy(() => import("./pages/Privacidade"));
+const Status = lazy(() => import("./pages/Status"));
 const TermoTelemedicina = lazy(() => import("./pages/TermoTelemedicina"));
 
 if (typeof window !== "undefined") {
@@ -197,6 +199,8 @@ const AnimatedRoutes = () => {
       <Route path="/cartao/sorteios" element={<Sweepstakes />} />
       <Route path="/empresas/checkout" element={<CompanyCheckout />} />
       <Route path="/funcionario/ativar/:token" element={<EmployeeActivate />} />
+      <Route path="/privacidade/dados" element={<Privacidade />} />
+      <Route path="/status" element={<Status />} />
       <Route path="/termo-telemedicina" element={<TermoTelemedicina />} />
 
       <Route
