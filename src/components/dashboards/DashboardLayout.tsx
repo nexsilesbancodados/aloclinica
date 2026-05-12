@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import GlobalCommand from "@/components/GlobalCommand";
 import { PINGO_LOGO_URL, IS_DEV } from "@/lib/constants";
 import { DevModeToggle } from "@/components/dev/DevModeToggle";
@@ -527,9 +528,11 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
          </div>
  
          <div className="flex items-center gap-2">
+           <LanguageSwitcher />
            <NotificationBell />
-           <button 
+           <button
              onClick={() => navigate("/dashboard/profile")}
+             aria-label="Abrir meu perfil"
              className="relative p-0.5 rounded-full ring-2 ring-primary/20 transition-transform active:scale-95"
            >
              <Avatar className="h-8 w-8">
@@ -581,6 +584,7 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
           )}
 
           <div className="flex items-center gap-1">
+            <LanguageSwitcher />
             <ThemeToggle />
             <NotificationBell />
 
@@ -691,6 +695,8 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
                  const activeColor = ROLE_ACTIVE_COLOR[role] ?? ROLE_ACTIVE_COLOR.patient;
                  return (
                    <Link key={item.href} to={item.href}
+                     aria-label={item.label}
+                     aria-current={item.active ? "page" : undefined}
                      className={`relative flex flex-col items-center justify-center flex-1 h-full select-none transition-all duration-300 ${
                        item.active ? activeColor : "text-muted-foreground/40 hover:text-muted-foreground/60"
                      }`}
