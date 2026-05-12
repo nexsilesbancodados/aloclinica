@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface Plan {
   id: string; name: string; slug: string; tagline: string; description: string;
@@ -60,6 +61,7 @@ const emptyPartner: Partial<Partner> = {
 };
 
 const AdminPingoCard = () => {
+  const confirm = useConfirm();
   const nav = getAdminNav("pingo-card");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -118,7 +120,13 @@ const AdminPingoCard = () => {
   };
 
   const deletePlan = async (id: string) => {
-    if (!confirm("Excluir este plano?")) return;
+    const ok = await confirm({
+      title: "Excluir plano?",
+      description: "Assinaturas existentes nesse plano não serão afetadas, mas novos clientes não poderão mais escolher esse plano.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await db.from("pingo_card_plans").delete().eq("id", id);
     if (error) { toast.error("Erro", { description: error.message }); return; }
     toast.success("Plano excluído");
@@ -143,7 +151,13 @@ const AdminPingoCard = () => {
   };
 
   const deletePartner = async (id: string) => {
-    if (!confirm("Excluir este parceiro?")) return;
+    const ok = await confirm({
+      title: "Excluir parceiro?",
+      description: "O parceiro deixará de aparecer na rede credenciada e não dará mais descontos.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await db.from("pingo_card_partners").delete().eq("id", id);
     if (error) { toast.error("Erro", { description: error.message }); return; }
     toast.success("Parceiro excluído");

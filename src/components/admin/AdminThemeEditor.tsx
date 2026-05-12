@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Palette, Save, RefreshCw, RotateCcw } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Theme = {
   primary: string;
@@ -60,6 +61,7 @@ const COLOR_FIELDS: { key: keyof Theme; label: string; description: string }[] =
 const adminNav = getAdminNav("theme");
 
 const AdminThemeEditor = () => {
+  const confirm = useConfirm();
   const [theme, setTheme] = useState<Theme>(DEFAULT_THEME);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -81,8 +83,13 @@ const AdminThemeEditor = () => {
     setSaving(false);
   };
 
-  const reset = () => {
-    if (!confirm("Resetar tema pra valores padrão?")) return;
+  const reset = async () => {
+    const ok = await confirm({
+      title: "Resetar tema?",
+      description: "As cores e fontes voltam pros valores padrão. Você ainda precisa salvar pra publicar.",
+      confirmLabel: "Resetar",
+    });
+    if (!ok) return;
     setTheme(DEFAULT_THEME);
   };
 

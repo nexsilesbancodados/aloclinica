@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Upload, Copy, Trash2, Search, FileText, Film, ImageIcon, X } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Media = {
   id: string;
@@ -49,6 +50,7 @@ function formatSize(bytes?: number | null): string {
 }
 
 export default function AdminMediaLibrary() {
+  const confirm = useConfirm();
   const [items, setItems] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -139,7 +141,13 @@ export default function AdminMediaLibrary() {
   };
 
   const remove = async (m: Media) => {
-    if (!confirm(`Remover ${m.name}?`)) return;
+    const ok = await confirm({
+      title: "Remover arquivo?",
+      description: `"${m.name}" será excluído da biblioteca e do storage.`,
+      confirmLabel: "Remover",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error: stErr } = await db.storage.from("site-media").remove([m.path]);
     if (stErr) toast.error(stErr.message);
     const { error: delErr } = await (db as any).from("site_media").delete().eq("id", m.id);

@@ -14,6 +14,7 @@ import { AdminPageHeader } from "./AdminPageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -85,6 +86,7 @@ const statusBadgeTx = (status: string) => {
 };
 
 const AdminBilling = () => {
+  const confirm = useConfirm();
   const [txs, setTxs] = useState<Tx[]>([]);
   const [subs, setSubs] = useState<Sub[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +185,13 @@ const AdminBilling = () => {
   };
 
   const cancelSubManual = async (sub: Sub) => {
-    if (!confirm(`Cancelar assinatura de ${sub.user_name || sub.user_id}?`)) return;
+    const ok = await confirm({
+      title: "Cancelar assinatura?",
+      description: `Você está cancelando a assinatura de ${sub.user_name || sub.user_id}. O usuário não será cobrado novamente.`,
+      confirmLabel: "Cancelar assinatura",
+      destructive: true,
+    });
+    if (!ok) return;
     setActionLoading(sub.id);
     const { data, error } = await db.functions.invoke("mercadopago-cancel-subscription", {
       body: { subscription_id: sub.id },

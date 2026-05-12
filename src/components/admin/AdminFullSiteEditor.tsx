@@ -17,6 +17,7 @@ import {
   Type, Settings, Eye, Search, AlertCircle, Globe, FileEdit, Undo2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Field = {
   key: string;
@@ -52,6 +53,7 @@ const LANGUAGES = [
 ] as const;
 
 export default function AdminFullSiteEditor() {
+  const confirm = useConfirm();
   const [sections, setSections] = useState<Section[]>([]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<Record<string, any>>({});
@@ -117,9 +119,12 @@ export default function AdminFullSiteEditor() {
 
   const publishSection = async () => {
     if (!selected) return;
-    if (!confirm(`Publicar alterações de "${selected.display_name}"? O site público será atualizado imediatamente.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Publicar alterações?",
+      description: `Você está publicando "${selected.display_name}". O site público será atualizado imediatamente.`,
+      confirmLabel: "Publicar",
+    });
+    if (!ok) return;
     // Snapshot da versão atual no histórico antes de sobrescrever
     if (selected.config && Object.keys(selected.config).length > 0) {
       await (db as any).from("site_sections_history").insert({
@@ -150,7 +155,13 @@ export default function AdminFullSiteEditor() {
 
   const discardDraft = async () => {
     if (!selected || !selected.has_draft) return;
-    if (!confirm("Descartar rascunho e voltar para a versão publicada?")) return;
+    const ok = await confirm({
+      title: "Descartar rascunho?",
+      description: "As alterações não publicadas serão perdidas.",
+      confirmLabel: "Descartar",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await (db as any)
       .from("site_sections")
       .update({ draft_config: null, has_draft: false })
@@ -235,8 +246,16 @@ export default function AdminFullSiteEditor() {
           {/* Selector de idioma */}
           <Select
             value={language}
-            onValueChange={(v) => {
-              if (isDirty && !confirm("Você tem alterações não salvas. Trocar idioma vai descartá-las. Continuar?")) return;
+            onValueChange={async (v) => {
+              if (isDirty) {
+                const ok = await confirm({
+                  title: "Trocar idioma?",
+                  description: "Você tem alterações não salvas — elas serão descartadas.",
+                  confirmLabel: "Trocar",
+                  destructive: true,
+                });
+                if (!ok) return;
+              }
               setLanguage(v);
               setSelectedKey(null);
               setEditing({});
@@ -309,7 +328,12 @@ export default function AdminFullSiteEditor() {
                       className="h-7 px-2 text-xs"
                       onClick={async () => {
                         if (!selected) return;
-                        if (!confirm(`Restaurar esta versão como a publicada agora?\n\nA versão atual será arquivada no histórico.`)) return;
+                        const ok = await confirm({
+                          title: "Restaurar esta versão?",
+                          description: "Vai virar a versão publicada. A atual será arquivada no histórico.",
+                          confirmLabel: "Restaurar",
+                        });
+                        if (!ok) return;
                         // Snapshot atual
                         if (selected.config && Object.keys(selected.config).length > 0) {
                           await (db as any).from("site_sections_history").insert({

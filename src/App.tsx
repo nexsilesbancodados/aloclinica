@@ -1,5 +1,6 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -304,6 +305,7 @@ const App = () => {
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
+              <ConfirmProvider>
               <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AuthProvider>
@@ -339,6 +341,7 @@ const App = () => {
                   )}
                 </AuthProvider>
               </BrowserRouter>
+              </ConfirmProvider>
             </TooltipProvider>
           </QueryClientProvider>
         </ThemeProvider>

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   MessageCircle, QrCode, RefreshCw, Wifi, WifiOff, Trash2, Plus, Smartphone,
   Zap, Bell, CalendarCheck, Clock, Star, Stethoscope, FileText, ShieldCheck,
@@ -144,6 +145,7 @@ const CATEGORY_LABELS: Record<string, { label: string; icon: React.ReactNode }> 
 };
 
 const AdminWhatsApp = () => {
+  const confirm = useConfirm();
   const [instances, setInstances] = useState<Instance[]>([]);
   const [selectedInstance, setSelectedInstance] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -364,7 +366,13 @@ const AdminWhatsApp = () => {
   }, [polling, selectedInstance]);
 
   const deleteInstance = async (name: string) => {
-    if (!confirm(`Excluir instância "${name}"?`)) return;
+    const ok = await confirm({
+      title: "Excluir instância WhatsApp?",
+      description: `"${name}" será desconectado e removido. Mensagens em transit podem falhar.`,
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await callApi("delete", name);
       toast.success("Instância excluída");
