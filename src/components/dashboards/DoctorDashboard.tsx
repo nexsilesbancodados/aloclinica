@@ -158,6 +158,20 @@ const DoctorDashboard = () => {
           <CrmApprovalTimeline doctor={data.approval} />
         </div>
       )}
+      {!loading && data?.crm && data?.approval?.is_approved && (data?.slotsCount ?? 0) === 0 && (
+        <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-200 dark:bg-amber-900 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-amber-700 dark:text-amber-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-amber-900 dark:text-amber-100">Você ainda não tem horários disponíveis</p>
+            <p className="text-xs text-amber-800/80 dark:text-amber-200/80">Pacientes não conseguem agendar consultas com você até definir sua disponibilidade.</p>
+          </div>
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0" onClick={() => navigate("/dashboard/availability")}>
+            Configurar
+          </Button>
+        </div>
+      )}
       {isError && (
         <div className="mx-auto my-6 flex flex-col items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-center">
           <p className="text-sm font-semibold text-destructive">Erro ao carregar dados do painel</p>

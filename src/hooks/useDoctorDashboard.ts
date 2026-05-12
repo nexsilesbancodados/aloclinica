@@ -26,7 +26,7 @@ export const useDoctorStats = () => {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
       sevenDaysAgo.setHours(0, 0, 0, 0);
 
-      const [todayRes, totalPatientsRes, prescriptionsRes, completedRes, upcomingRes, weekRes] = await Promise.all([
+      const [todayRes, totalPatientsRes, prescriptionsRes, completedRes, upcomingRes, weekRes, slotsRes] = await Promise.all([
         db.from("appointments")
           .select("id, scheduled_at, status, patient_id, duration_minutes")
           .eq("doctor_id", doctorId)
@@ -47,6 +47,8 @@ export const useDoctorStats = () => {
           .eq("doctor_id", doctorId)
           .gte("scheduled_at", sevenDaysAgo.toISOString())
           .lte("scheduled_at", todayEnd.toISOString()),
+        db.from("availability_slots").select("id", { count: "exact", head: true })
+          .eq("doctor_id", doctorId).eq("is_active", true),
       ]);
 
       const uniquePatients = new Set(totalPatientsRes.data?.map(a => a.patient_id) ?? []);
@@ -116,6 +118,7 @@ export const useDoctorStats = () => {
         todayAppts,
         upcomingAppts: upcoming,
         weekSeries,
+        slotsCount: slotsRes.count ?? 0,
       };
     },
     enabled: !!user,
