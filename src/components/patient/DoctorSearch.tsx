@@ -103,6 +103,9 @@ const DoctorSearch = () => {
   const [sortBy, setSortBy] = useState<string>("rating");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [insuranceOnly, setInsuranceOnly] = useState(false);
+  const [totalDoctors, setTotalDoctors] = useState<number>(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     fetchSpecialties();
@@ -142,28 +145,37 @@ const DoctorSearch = () => {
     if (data) setSpecialties(data);
   };
 
-  const fetchDoctors = async () => {
-    setLoading(true);
-    // Request rich optional columns; fall back gracefully if schema lacks them.
+  const fetchDoctors = async (loadMore = false) => {
+    if (loadMore) setLoadingMore(true);
+    else setLoading(true);
+
+    const offset = loadMore ? doctors.length : 0;
     const richCols = "id, user_id, crm, crm_state, bio, short_description, consultation_price, consultation_duration_min, rating, total_reviews, experience_years, available_now, available_now_since, display_name, crm_verified, accepts_insurance, languages";
+
     let resp: any = await db
       .from("doctor_profiles")
-      .select(richCols)
+      .select(richCols, { count: "exact" })
       .eq("is_approved", true)
       .eq("doctor_type" as any, doctorType)
-      .limit(100);
+      .order("rating", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
     if (resp.error) {
-      // Retry with minimal columns if any optional column is missing
       resp = await db
         .from("doctor_profiles")
-        .select("id, user_id, crm, crm_state, bio, consultation_price, rating, total_reviews, experience_years, available_now, available_now_since, display_name, crm_verified")
+        .select("id, user_id, crm, crm_state, bio, consultation_price, rating, total_reviews, experience_years, available_now, available_now_since, display_name, crm_verified", { count: "exact" })
         .eq("is_approved", true)
         .eq("doctor_type" as any, doctorType)
-        .limit(100);
+        .order("rating", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
     }
     const doctorData = resp.data as any[] | null;
+    setTotalDoctors(resp.count ?? 0);
 
-    if (!doctorData) { setLoading(false); return; }
+    if (!doctorData) {
+      if (loadMore) setLoadingMore(false);
+      else setLoading(false);
+      return;
+    }
 
     const doctorIds = doctorData.map(d => d.id);
     const userIds = doctorData.map(d => d.user_id);
@@ -211,10 +223,18 @@ const DoctorSearch = () => {
       careAreas: careAreasMap.get(d.id) ?? [],
     }));
 
-    const maxPrice = Math.max(...results.map(d => d.consultation_price), 500);
-    setPriceRange([0, maxPrice]);
-    setDoctors(results);
-    setLoading(false);
+    if (loadMore) {
+      // Concatena com doctors já carregados, evita duplicatas via Map
+      const merged = [...doctors, ...results];
+      const dedupe = Array.from(new Map(merged.map(d => [d.id, d])).values());
+      setDoctors(dedupe);
+      setLoadingMore(false);
+    } else {
+      const maxPrice = Math.max(...results.map(d => d.consultation_price), 500);
+      setPriceRange([0, maxPrice]);
+      setDoctors(results);
+      setLoading(false);
+    }
   };
 
   const filtered = doctors
@@ -606,6 +626,18 @@ const DoctorSearch = () => {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+                {doctors.length < totalDoctors && (
+                  <div className="pt-3 text-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => fetchDoctors(true)}
+                      disabled={loadingMore}
+                      className="rounded-full px-6"
+                    >
+                      {loadingMore ? "Carregando…" : `Carregar mais (${totalDoctors - doctors.length} restantes)`}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>
