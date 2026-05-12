@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useGsapEntrance } from "@/hooks/use-gsap-entrance";
+import { exportCSV as exportCSVUtil } from "@/lib/csvExport";
 import { HeroBanner } from "./HeroBanner";
 import { StatBento } from "./StatBento";
 import { ActionPills } from "./ActionPills";
@@ -138,26 +139,17 @@ const ReceptionDashboard = () => {
   };
 
   const exportCSV = () => {
-    const rows = [
-      ["Horário", "Paciente", "Telefone", "Médico", "Duração", "Status"],
-      ...filteredAppts.map(a => [
-        format(new Date(a.scheduled_at), "HH:mm"),
-        a.patient_name, a.patient_phone ?? "", a.doctor_name,
-        `${a.duration_minutes || 30}min`,
-        statusLabel[a.status] ?? a.status,
-      ]),
-    ];
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const el = document.createElement("a");
-    el.href = url;
-    el.download = `agenda-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    document.body.appendChild(el);
-    el.click();
-    document.body.removeChild(el);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    toast.success("Agenda exportada em CSV!");
+    const day = format(selectedDate, "yyyy-MM-dd");
+    exportCSVUtil(`agenda-${day}.csv`, filteredAppts, [
+      { key: "scheduled_at", header: "Hor\u00E1rio", format: (v: string) => format(new Date(v), "HH:mm") },
+      { key: "patient_name", header: "Paciente" },
+      { key: "patient_phone", header: "Telefone" },
+      { key: "doctor_name", header: "M\u00E9dico" },
+      { key: "duration_minutes", header: "Dura\u00E7\u00E3o", format: (v: number | null) => `${v ?? 30}min` },
+      { key: "status", header: "Status", format: (v: string) => statusLabel[v] ?? v },
+      { key: "appointment_type", header: "Tipo" },
+    ]);
+    toast.success(`${filteredAppts.length} consulta${filteredAppts.length === 1 ? "" : "s"} exportada${filteredAppts.length === 1 ? "" : "s"}`);
   };
 
   const filteredAppts = todayAppts.filter(a => {
@@ -245,6 +237,58 @@ const ReceptionDashboard = () => {
             }))}
           />
         )}
+
+        {/* Date navigator */}
+        <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/30 bg-card p-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-9 w-9 p-0 rounded-lg"
+            onClick={() => setSelectedDate(d => subDays(d, 1))}
+            aria-label="Dia anterior"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 font-semibold text-sm">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="capitalize">
+                  {isToday ? "Hoje" : format(selectedDate, "EEEE, dd 'de' MMM", { locale: ptBR })}
+                </span>
+                {!isToday && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); setSelectedDate(new Date()); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setSelectedDate(new Date()); } }}
+                    className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded-full cursor-pointer hover:bg-primary/20"
+                  >
+                    Hoje
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <CalendarComp
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => { if (d) { setSelectedDate(d); setCalendarOpen(false); } }}
+                locale={ptBR}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-9 w-9 p-0 rounded-lg"
+            onClick={() => setSelectedDate(d => addDays(d, 1))}
+            aria-label="Próximo dia"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
 
         {/* Search + filter */}
         <div className="flex items-center gap-2 flex-wrap">
