@@ -30,6 +30,9 @@ const AdminReports = () => {
    
   const [summaryStats, setSummaryStats] = useState({
     totalRevenue: 0, totalAppts: 0, totalCancelled: 0, totalNoShow: 0, avgTicket: 0, avgNps: 0,
+    mrr: 0,                  // Monthly Recurring Revenue (Pingo Card + subscriptions)
+    activeCards: 0,          // Pingo Cards ativos
+    churnRate: 0,            // % cancelados nos últimos 30d / ativos no início
   });
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("6");
@@ -145,6 +148,40 @@ const AdminReports = () => {
       ? activeSubs.reduce((acc, s) => acc + (planPriceMap.get(s.plan_id) ?? 0), 0) / activeSubs.length
       : 0;
 
+    // ─── Métricas SaaS — MRR + Churn + Cartões ativos ───
+    // MRR de Pingo Card: soma price_monthly dos planos ativos × assinaturas ativas
+    const [pingoSubsRes, pingoPlansRes] = await Promise.all([
+      db.from("pingo_card_subscriptions").select("plan_id, status, billing_cycle, started_at, canceled_at"),
+      db.from("pingo_card_plans").select("id, price_monthly, price_yearly"),
+    ]);
+    const pingoPlanMap = new Map<string, { monthly: number; yearly: number }>(
+      (pingoPlansRes.data ?? []).map(p => [p.id, { monthly: Number(p.price_monthly), yearly: Number(p.price_yearly) }])
+    );
+    const activeCards = (pingoSubsRes.data ?? []).filter(s => s.status === "active").length;
+    const mrrFromCards = (pingoSubsRes.data ?? [])
+      .filter(s => s.status === "active")
+      .reduce((sum, s) => {
+        const p = pingoPlanMap.get(s.plan_id);
+        if (!p) return sum;
+        // Anual normalizado pra mês (yearly / 12)
+        return sum + (s.billing_cycle === "yearly" ? p.yearly / 12 : p.monthly);
+      }, 0);
+    const mrrFromGenericSubs = activeSubs.reduce((acc, s) => acc + (planPriceMap.get(s.plan_id) ?? 0), 0);
+    const mrr = mrrFromCards + mrrFromGenericSubs;
+
+    // Churn rate: cancelados nos últimos 30d / total ativos há 30d
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const cancelledLast30d = (pingoSubsRes.data ?? []).filter(
+      s => s.canceled_at && new Date(s.canceled_at) >= thirtyDaysAgo
+    ).length;
+    const activeAt30dAgo = (pingoSubsRes.data ?? []).filter(s => {
+      if (!s.started_at) return false;
+      if (new Date(s.started_at) > thirtyDaysAgo) return false; // ainda não existia
+      if (s.canceled_at && new Date(s.canceled_at) <= thirtyDaysAgo) return false; // já tinha cancelado
+      return true;
+    }).length;
+    const churnRate = activeAt30dAgo > 0 ? (cancelledLast30d / activeAt30dAgo) * 100 : 0;
+
     setSummaryStats({
       totalRevenue: totalRevAll,
       totalAppts,
@@ -152,6 +189,9 @@ const AdminReports = () => {
       totalNoShow,
       avgTicket,
       avgNps,
+      mrr,
+      activeCards,
+      churnRate,
     });
 
     setLoading(false);
@@ -198,6 +238,9 @@ const AdminReports = () => {
     doc.text("Indicadores Principais", 20, 45);
     doc.setFontSize(10);
     const kpis = [
+      `MRR (Receita Recorrente Mensal): R$ ${summaryStats.mrr.toFixed(2)}`,
+      `Cartões Pingo Ativos: ${summaryStats.activeCards}`,
+      `Churn Rate (30d): ${summaryStats.churnRate.toFixed(1)}%`,
       `Receita Total: R$ ${summaryStats.totalRevenue.toFixed(2)}`,
       `Total de Consultas: ${summaryStats.totalAppts}`,
       `Ticket Médio: R$ ${summaryStats.avgTicket.toFixed(2)}`,
@@ -270,7 +313,53 @@ const AdminReports = () => {
 
         {loading ? <div className="shimmer-v2 h-20 rounded-2xl"/> : (
           <>
-            {/* Summary KPIs */}
+            {/* Métricas SaaS — destaque com gradiente */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/[0.02] border border-emerald-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">MRR</p>
+                </div>
+                <p className="text-2xl font-extrabold text-foreground">R$ {summaryStats.mrr.toFixed(0)}</p>
+                <p className="text-[11px] text-muted-foreground">Receita recorrente mensal</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/[0.02] border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                    <Users className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Cartões ativos</p>
+                </div>
+                <p className="text-2xl font-extrabold text-foreground">{summaryStats.activeCards}</p>
+                <p className="text-[11px] text-muted-foreground">Pingo Card pagantes</p>
+              </div>
+              <div className={`p-4 rounded-2xl border ${
+                summaryStats.churnRate > 10
+                  ? "bg-gradient-to-br from-destructive/10 to-destructive/[0.02] border-destructive/20"
+                  : "bg-gradient-to-br from-blue-500/10 to-blue-500/[0.02] border-blue-500/20"
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    summaryStats.churnRate > 10 ? "bg-destructive/15" : "bg-blue-500/15"
+                  }`}>
+                    <UserX className={`w-4 h-4 ${
+                      summaryStats.churnRate > 10 ? "text-destructive" : "text-blue-600 dark:text-blue-400"
+                    }`} />
+                  </div>
+                  <p className={`text-[10px] font-bold uppercase tracking-wider ${
+                    summaryStats.churnRate > 10 ? "text-destructive" : "text-blue-700 dark:text-blue-400"
+                  }`}>Churn (30d)</p>
+                </div>
+                <p className="text-2xl font-extrabold text-foreground">{summaryStats.churnRate.toFixed(1)}%</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {summaryStats.churnRate > 10 ? "🚨 Ação urgente — analise causas" : "Saudável (< 10%/mês)"}
+                </p>
+              </div>
+            </div>
+
+            {/* Summary KPIs operacionais */}
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
               <div className="text-center p-3 rounded-lg bg-muted/50">
                 <DollarSign className="w-4 h-4 mx-auto text-primary mb-1" />
