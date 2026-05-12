@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     const status = mapMpStatus(payment.data.status);
 
     // Persiste transação
-    await admin.from("payment_transactions").insert({
+    await admin.from("payment_transactions").upsert({
       user_id: userId,
       gateway: "mercadopago",
       mp_payment_id: String(payment.data.id),
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
       resource_type: extractResourceType(reference_id),
       paid_at: status === "approved" ? new Date().toISOString() : null,
       raw_response: payment.data,
-    } as any);
+    } as any, { onConflict: "mp_payment_id" });
 
     return json({
       payment_id: String(payment.data.id),

@@ -184,8 +184,9 @@ async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
     .single();
   if (!sub) return;
 
-  // Cria transação registrando a cobrança recorrente
-  await admin.from("payment_transactions").insert({
+  // UPSERT idempotente: MP reenvia mesma notificação várias vezes (retry).
+  // UNIQUE em mp_payment_id garante que não duplica linha.
+  await admin.from("payment_transactions").upsert({
     user_id: sub.user_id,
     gateway: "mercadopago",
     mp_payment_id: String(res.data.payment?.id ?? authPaymentId),
@@ -197,7 +198,7 @@ async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
     resource_id: sub.id,
     resource_type: "subscription",
     raw_response: res.data,
-  } as any);
+  } as any, { onConflict: "mp_payment_id" });
 
   await admin
     .from("subscriptions")

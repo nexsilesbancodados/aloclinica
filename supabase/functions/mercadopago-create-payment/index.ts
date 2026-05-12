@@ -190,7 +190,8 @@ Deno.serve(async (req) => {
       txPayload.mp_boleto_url = mpRes.data.transaction_details?.external_resource_url ?? null;
     }
 
-    await admin.from("payment_transactions").insert(txPayload);
+    // UPSERT idempotente: se cliente fizer retry, mp_payment_id é único — vira no-op
+    await admin.from("payment_transactions").upsert(txPayload, { onConflict: "mp_payment_id" });
 
     // Atualiza appointment payment_status pra approved imediato em saved_card aprovado
     if (internalStatus === "approved" && reference_id.startsWith("appointment_")) {
