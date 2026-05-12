@@ -1380,13 +1380,23 @@ SOAP atual: S=${soap.notes.subjective}, O=${soap.notes.objective}, A=${soap.note
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.4 }}
+                onDragEnd={(_, info) => {
+                  // Swipe-down to close: > 100px ou velocidade alta
+                  if (info.offset.y > 100 || info.velocity.y > 500) {
+                    closeAllPanels();
+                  }
+                }}
                 className="absolute bottom-0 left-0 right-0 z-40 bg-[hsl(220,25%,8%)/95] backdrop-blur-xl rounded-t-3xl border-t border-[hsl(220,15%,12%)] flex flex-col shadow-2xl"
                 style={{
                   maxHeight: "85dvh",
                   paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
                 }}
               >
-                <div className="flex justify-center pt-3 pb-1">
+                {/* Drag handle agora é interativo — usuário puxa pra baixo pra fechar */}
+                <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
                   <div className="w-10 h-1 rounded-full bg-[hsl(220,15%,20%)]" />
                 </div>
                 <div className="px-4 pb-3 flex items-center justify-between">
