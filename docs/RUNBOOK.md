@@ -94,10 +94,12 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
 4. Tabela `kyc_verificacoes` recebendo inserts? `SELECT count(*) FROM kyc_verificacoes WHERE created_at > now() - interval '24h';`
 
 ### "Pagamento não funciona"
-1. PagBank: chamar `pagbank-create-payment` com PIX R$ 1 e ler resposta.
-2. Se "whitelist access required": ligar pra PagBank pedir liberação da Orders API.
-3. Webhook chega? `SELECT * FROM activity_logs WHERE action LIKE 'pagbank_%' ORDER BY created_at DESC LIMIT 10;`
-4. URL configurada no painel PagBank: `https://pwxvvimdtmvziynbspgx.supabase.co/functions/v1/pagbank-webhook`
+1. Mercado Pago: chamar `mercadopago-create-payment` com PIX R$ 1 e ler resposta. Use a tela `/dashboard/admin/payment-test`.
+2. Se "MERCADOPAGO_ACCESS_TOKEN não configurado": setar em Supabase Dashboard → Edge Functions → Secrets.
+3. Se "unauthorized": token está errado ou inativo. Pegar novo em https://www.mercadopago.com.br/developers/panel/credentials.
+4. Webhook chega? `SELECT * FROM payment_transactions WHERE gateway = 'mercadopago' AND status = 'approved' ORDER BY created_at DESC LIMIT 10;`
+5. URL no painel MP: `https://pwxvvimdtmvziynbspgx.supabase.co/functions/v1/mercadopago-webhook` (eventos: payment, subscription_preapproval, subscription_authorized_payment)
+6. Saque médico não saiu? Pode ser Money Out não habilitado — admin processa manualmente no painel MP, registro fica em `withdrawal_requests` com `status='pending_manual'`.
 
 ### "Site fora do ar"
 1. Cloudflare/DNS resolvendo? `nslookup aloclinica.com.br`
@@ -111,7 +113,7 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
 
 ### Diária (automatizada via pg_cron)
 - 04:00 UTC — `archive_old_activity_logs` move logs >90d
-- 09:00 UTC — `process_recurring_subscriptions` cobra assinaturas
+- Assinaturas recorrentes: cobrança automatizada pelo Mercado Pago (Pre-Approval), sem cron próprio
 
 ### Semanal (manual)
 - Verificar fila KYC via `/dashboard/admin/kyc-review` — pendentes >24h em vermelho
@@ -121,7 +123,7 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
 ### Mensal
 - Backup do banco: Supabase faz automático mas vale exportar dump
 - Revisar `withdrawal_requests` pendentes
-- Conferir secrets que podem expirar (Brevo, PagBank tokens)
+- Conferir secrets que podem expirar (Brevo, MERCADOPAGO_ACCESS_TOKEN)
 
 ---
 
@@ -172,7 +174,7 @@ Curto prazo:
 - [x] Sentry DSN ativo (já em prod)
 - [x] pg_cron archive_activity_logs >90d
 - [x] AdminKycReview com SLA visual >24h
-- [ ] Testar PagBank com R$ 1 real (via `/dashboard/admin/payment-test`) — depende de whitelist
+- [ ] Testar Mercado Pago com R$ 1 real (via `/dashboard/admin/payment-test`) — exige `MERCADOPAGO_ACCESS_TOKEN` configurado
 - [ ] Painel Supabase: configurar alertas (CPU, disk, RLS errors) — manual
 
 Médio prazo:

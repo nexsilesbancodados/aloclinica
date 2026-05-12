@@ -29,7 +29,7 @@ sempre que adicionar uma nova integração externa, edge function ou tabela.
                     │                                              │
    ┌────────────────┴────────────────┐         ┌──────────────────┴────────────┐
    │  Integrações externas           │         │  Subdomínios públicos          │
-   │  - PagBank (pagamentos)         │         │  - aloclinica.com.br (front)   │
+   │  - Mercado Pago (pagamentos)    │         │  - aloclinica.com.br (front)   │
    │  - Brevo SMTP (email)           │         │  - face.aloclinica.com.br      │
    │  - DeepSeek/Anthropic (IA)      │         │  - meet.telemedicinaaloclinica │
    │  - DocuSeal (assinatura)        │         │    .sbs (vídeo)                │
@@ -85,7 +85,7 @@ sempre que adicionar uma nova integração externa, edge function ou tabela.
 
 ### Edge Functions (30+)
 Veja `supabase/functions/`. Categorias:
-- **Pagamentos:** `pagbank-create-payment`, `-webhook`, `-save-card`, `-charge-saved-card`, `-create-subscription`, `-cancel-subscription`, `-refund`, `-tokenize-card`
+- **Pagamentos:** `mercadopago-create-payment`, `-webhook`, `-save-card`, `-charge-saved-card`, `-create-subscription`, `-cancel-subscription`, `-refund`, `-withdraw` (saque PIX médico via Money Out)
 - **KYC:** `didit-kyc` (CompreFace + Claude Vision), `compreface-proxy`
 - **Vídeo:** `turn-credentials` (coturn próprio + Google STUN fallback)
 - **Notificações:** `send-email` (Brevo, 40+ templates), `send-whatsapp`, `send-push-notification`
@@ -95,9 +95,9 @@ Veja `supabase/functions/`. Categorias:
 ### pg_cron jobs ativos
 | Nome | Cron | Função |
 |---|---|---|
-| `process_recurring_subscriptions` | `0 9 * * *` | Cobra assinaturas com `next_charge_at <= now` via PagBank |
 | `archive_old_activity_logs` | `0 4 * * *` | Move logs >90 dias para `activity_logs_archive` |
 | `automation_triggers_*` | vários | SLA de laudos, lembretes de consulta |
+| ~~`process_recurring_subscriptions`~~ | — | Removido. Mercado Pago Pre-Approval cobra assinaturas recorrentes automaticamente |
 
 ---
 
