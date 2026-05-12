@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import { getAdminNav } from "./adminNav";
 import { AdminPageHeader } from "./AdminPageHeader";
 import { AdminLoading, AdminEmpty } from "./AdminStateBlocks";
-import { Search, Shield, Eye, Users as UsersIcon } from "lucide-react";
+import { Search, Shield, Eye, Users as UsersIcon, Download } from "lucide-react";
+import { exportCSV } from "@/lib/csvExport";
 
 const ROLE_LABELS: Record<string, string> = {
   patient: "Paciente",
@@ -131,6 +132,20 @@ const AdminUsers = () => {
     return matchesSearch && matchesRole;
   });
 
+  const handleExportCSV = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const filename = `usuarios-aloclinica-${today}${roleFilter ? "-" + roleFilter : ""}.csv`;
+    exportCSV(filename, filtered, [
+      { key: "first_name", header: "Nome" },
+      { key: "last_name", header: "Sobrenome" },
+      { key: "cpf", header: "CPF" },
+      { key: "phone", header: "Telefone" },
+      { key: "roles", header: "Roles", format: (v: string[]) => (v ?? []).map(r => ROLE_LABELS[r] ?? r).join(", ") },
+      { key: "created_at", header: "Cadastro", format: (v: string) => v ? new Date(v).toLocaleString("pt-BR") : "" },
+    ]);
+    toast.success(`${filtered.length} usuário${filtered.length === 1 ? "" : "s"} exportado${filtered.length === 1 ? "" : "s"}`);
+  };
+
   const roleCounts = users.reduce<Record<string, number>>((acc, u) => {
     u.roles.forEach(r => { acc[r] = (acc[r] ?? 0) + 1; });
     return acc;
@@ -146,6 +161,17 @@ const AdminUsers = () => {
           description="Gerencie papéis e acessos de todos os usuários da plataforma."
           accent="from-blue-500 to-indigo-600"
           badge={{ label: `${filtered.length} ${filtered.length === 1 ? "usuário" : "usuários"}`, tone: "info" }}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              disabled={filtered.length === 0}
+              className="gap-1.5"
+            >
+              <Download className="w-4 h-4" /> Exportar CSV
+            </Button>
+          }
         />
 
         <div className="space-y-3">

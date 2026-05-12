@@ -14,9 +14,10 @@ import { toast } from "sonner";
 import { getAdminNav } from "./adminNav";
 import { AdminPageHeader } from "./AdminPageHeader";
 import { AdminLoading, AdminEmpty } from "./AdminStateBlocks";
-import { Check, X, Clock, UserCheck, Building2, Handshake, ExternalLink, ShieldCheck, Fingerprint, Stethoscope } from "lucide-react";
+import { Check, X, Clock, UserCheck, Building2, Handshake, ExternalLink, ShieldCheck, Fingerprint, Stethoscope, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { ApprovalItem } from "@/types/domain";
+import { exportCSV } from "@/lib/csvExport";
 
 const AdminApprovals = () => {
   const [pendingDoctors, setPendingDoctors] = useState<ApprovalItem[]>([]);
@@ -217,6 +218,25 @@ const AdminApprovals = () => {
   const totalPending = pendingDoctors.length + pendingClinics.length + pendingPartners.length;
   const partnerTypeLabel: Record<string, string> = { pharmacy: "Farmácia", laboratory: "Laboratório", clinic: "Clínica", other: "Outro" };
 
+  const exportPendingDoctors = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    exportCSV(`medicos-pendentes-${today}.csv`, pendingDoctors, [
+      { key: "first_name", header: "Nome" },
+      { key: "last_name", header: "Sobrenome" },
+      { key: "crm", header: "CRM" },
+      { key: "crm_state", header: "UF" },
+      { key: "cpf", header: "CPF" },
+      { key: "phone", header: "Telefone" },
+      { key: "consultation_price", header: "Preço Consulta" },
+      { key: "experience_years", header: "Anos Experiência" },
+      { key: "specialties", header: "Especialidades", format: (v: string[]) => (v ?? []).join(", ") },
+      { key: "kyc_status", header: "Status KYC" },
+      { key: "crm_verified", header: "CRM Verificado", format: (v: boolean) => v ? "Sim" : "Não" },
+      { key: "created_at", header: "Cadastro", format: (v: string) => v ? new Date(v).toLocaleDateString("pt-BR") : "" },
+    ]);
+    toast.success(`${pendingDoctors.length} médico${pendingDoctors.length === 1 ? "" : "s"} exportado${pendingDoctors.length === 1 ? "" : "s"}`);
+  };
+
   const renderApprovalCard = (item: ApprovalItem, type: "doctor" | "clinic" | "partner", isApproved: boolean) => (
     <Card key={item.id} className="card-interactive border-border">
       <CardContent className="p-4">
@@ -366,6 +386,13 @@ const AdminApprovals = () => {
             label: totalPending === 0 ? "Tudo em dia" : `${totalPending} pendente${totalPending === 1 ? "" : "s"}`,
             tone: totalPending === 0 ? "success" : "warning",
           }}
+          actions={
+            pendingDoctors.length > 0 ? (
+              <Button variant="outline" size="sm" onClick={exportPendingDoctors} className="gap-1.5">
+                <Download className="w-4 h-4" /> Exportar pendentes
+              </Button>
+            ) : undefined
+          }
         />
 
         <Tabs defaultValue="doctors">
