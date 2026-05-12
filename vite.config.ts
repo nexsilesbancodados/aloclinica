@@ -167,19 +167,35 @@ export default defineConfig(({ mode }) => ({
       output: {
         // Agrupa libs em chunks por uso, melhora cache HTTP entre deploys.
         // Páginas/componentes do app continuam sendo splittados via React.lazy.
+        // Icons (lucide/phosphor) NÃO são agrupados — cada página chunk inclui só
+        // os ícones que usa, evitando 500KB de ícones em cada visita.
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
           // Libs grandes ficam em chunks separados pra não invalidar tudo
           if (id.includes("recharts")) return "vendor-charts";
           if (id.includes("@tiptap") || id.includes("prosemirror")) return "vendor-editor";
           if (id.includes("jspdf") || id.includes("html2canvas")) return "vendor-pdf";
+          if (id.includes("@sentry")) return "vendor-sentry";
+          if (id.includes("react-markdown") || id.includes("micromark") || id.includes("mdast") || id.includes("hast")) return "vendor-markdown";
           if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("gsap")) return "vendor-gsap";
+          if (id.includes("qrcode")) return "vendor-qrcode";
+          if (id.includes("react-day-picker")) return "vendor-daypicker";
+          if (id.includes("react-hook-form") || id.includes("@hookform")) return "vendor-forms";
+          if (id.includes("zod")) return "vendor-zod";
           if (id.includes("@supabase") || id.includes("@tanstack/react-query")) return "vendor-data";
           if (id.includes("@radix-ui")) return "vendor-ui-radix";
+          // Icons agrupados pra reaproveitar entre páginas (tree-shaking ainda
+          // mantém só os ícones usados em algum lugar do app)
           if (id.includes("lucide-react") || id.includes("@phosphor-icons")) return "vendor-icons";
           if (id.includes("react-router")) return "vendor-router";
           if (id.includes("date-fns")) return "vendor-dates";
-          if (id.includes("react-dom") || id.includes("/react/")) return "vendor-react";
+          // react-core: apenas o pacote react/react-dom/scheduler — NÃO catch-all com /react/
+          if (
+            /node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id) ||
+            id.endsWith("/react/index.js") ||
+            id.endsWith("/react-dom/index.js")
+          ) return "vendor-react";
           return "vendor";
         },
       },
