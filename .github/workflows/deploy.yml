@@ -32,6 +32,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          # Public key Mercado Pago — pública por design (acessível no bundle JS)
+          VITE_MERCADOPAGO_PUBLIC_KEY: APP_USR-b35f421a-132b-4421-8499-cef0b3decf54
           NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Copy artifacts to VPS via SCP
