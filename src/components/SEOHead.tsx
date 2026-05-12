@@ -8,9 +8,10 @@ interface SEOHeadProps {
   jsonLd?: Record<string, unknown>;
 }
 
-const SITE_NAME = "AloClinica – Telemedicina Online";
-const DEFAULT_OG_IMAGE = "https://storage.googleapis.com/gpt-engineer-file-uploads/0XILPRqqUbSOh99ow53X5OBDOCC3/social-images/social-1771223927717-mascot-wave-DmAVveg6-removebg-preview.webp";
-const BASE_URL = "https://allo-medico-care.lovable.app";
+const SITE_NAME = "AloClínica — Telemedicina Online";
+const DEFAULT_OG_IMAGE = "https://aloclinica.com.br/og-image.png";
+// Produção; canonical/og:url devem apontar pra ela pra Google nao indexar preview
+const BASE_URL = "https://aloclinica.com.br";
 
 const upsertMeta = (attr: string, key: string, content: string) => {
   let el = document.querySelector(`meta[${attr}="${key}"]`) as HTMLMetaElement | null;

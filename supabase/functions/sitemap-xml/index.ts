@@ -45,7 +45,7 @@ Deno.serve(async () => {
       .eq("is_active", true)
       .limit(500);
     dynamicUrls = (specs ?? []).map((s: any) => ({
-      loc: `${BASE}/especialidade/${s.slug}`,
+      loc: `${BASE}/especialidades/${s.slug}`,
       lastmod: s.updated_at?.slice(0, 10),
     }));
   } catch { /* tabela pode não existir; não-bloqueante */ }
