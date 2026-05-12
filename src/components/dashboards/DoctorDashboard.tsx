@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, DollarSign, Users, TrendingUp, Video, BarChart2, ArrowRight, Clock, ShieldCheck } from "lucide-react";
 import DoctorAnalyticsCharts from "./DoctorAnalyticsCharts";
 import DoctorOnboarding from "@/components/doctor/DoctorOnboarding";
+import CrmApprovalTimeline from "@/components/doctor/CrmApprovalTimeline";
 import { useDoctorStats } from "@/hooks/useDoctorDashboard";
 import { useQueryClient } from "@tanstack/react-query";
 import { HeroBanner } from "./HeroBanner";
@@ -152,6 +153,11 @@ const DoctorDashboard = () => {
   return (
     <DashboardLayout title="Médico" nav={getDoctorNav("home")} role="doctor">
       {!loading && !data?.crm && <DoctorOnboarding />}
+      {!loading && data?.crm && data?.approval && !data.approval.is_approved && (
+        <div className="mb-5">
+          <CrmApprovalTimeline doctor={data.approval} />
+        </div>
+      )}
       {isError && (
         <div className="mx-auto my-6 flex flex-col items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-center">
           <p className="text-sm font-semibold text-destructive">Erro ao carregar dados do painel</p>

@@ -243,6 +243,15 @@ export function usePrescriptionData(appointmentId?: string) {
     }));
   }, []);
 
+  const loadTemplate = useCallback((tpl: { diagnosis: string; medications: Medication[]; observations: string }) => {
+    setData(prev => ({
+      ...prev,
+      diagnosis: tpl.diagnosis || prev.diagnosis,
+      observations: tpl.observations || prev.observations,
+      medications: tpl.medications.length > 0 ? tpl.medications.map(m => ({ ...m })) : prev.medications,
+    }));
+  }, []);
+
   // ─── Salvar rascunho ──────────────────────────────────────────────────────
   const saveDraft = useCallback(async () => {
     if (!validate()) return false;
@@ -278,6 +287,7 @@ export function usePrescriptionData(appointmentId?: string) {
     addMedication,
     removeMedication,
     clearMedications,
+    loadTemplate,
     saveDraft,
     hasErrors: errors.length > 0,
     validMedications: data.medications.filter(m => m.name?.trim()),

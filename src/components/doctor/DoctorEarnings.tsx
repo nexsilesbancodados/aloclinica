@@ -266,6 +266,62 @@ const DoctorEarnings = () => {
           <span>Repasse de {clinicInfo ? clinicInfo.percent : DEFAULT_DOCTOR_PERCENT}% por consulta</span>
         </div>
 
+        {/* Breakdown explicado: como ganho de R$100 vira R$X no bolso */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-600" /> Como funciona o repasse
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            {(() => {
+              const docPct = clinicInfo ? clinicInfo.percent : DEFAULT_DOCTOR_PERCENT;
+              const platPct = clinicInfo ? Math.max(0, 100 - docPct) : PLATFORM_PERCENT;
+              return (
+                <>
+                  <p className="text-muted-foreground mb-3">
+                    Para uma consulta de <span className="font-bold text-foreground">R$ 100,00</span>:
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/40">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-sm font-semibold text-foreground">Para você</span>
+                        <span className="text-[11px] text-muted-foreground">({docPct}%)</span>
+                      </div>
+                      <span className="font-extrabold text-emerald-600">R$ {docPct.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/30">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                        <span className="text-sm font-medium text-foreground">
+                          {clinicInfo ? `Clínica ${clinicInfo.name}` : "Plataforma AloClínica"}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">({platPct}%)</span>
+                      </div>
+                      <span className="font-bold text-foreground">R$ {platPct.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-border/30 space-y-1.5 text-[12px] text-muted-foreground">
+                    <p className="flex items-start gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                      Pagamento liberado <strong className="text-foreground">após confirmação da consulta</strong> (paciente comparece + status = concluída).
+                    </p>
+                    <p className="flex items-start gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
+                      Saque PIX cai em <strong className="text-foreground">3-5 dias úteis</strong> após solicitação.
+                    </p>
+                    <p className="flex items-start gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                      Não cobramos taxa de saque. Tarifas do PIX seguem regra do seu banco (em geral, R$ 0,00 PF).
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
         <Card className="border-border mb-8">
           <CardHeader><CardTitle className="text-lg flex items-center gap-2"><TrendingUp className="w-5 h-5" /> Faturamento Mensal</CardTitle></CardHeader>
           <CardContent>

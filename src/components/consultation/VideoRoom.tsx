@@ -937,9 +937,24 @@ SOAP atual: S=${soap.notes.subjective}, O=${soap.notes.objective}, A=${soap.note
   const notesPanel = (
     <div className="flex-1 flex flex-col p-4 gap-3 overflow-auto">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-medium text-[hsl(220,15%,65%)]">Prontuário SOAP</p>
-          <p className="text-[10px] text-[hsl(220,15%,40%)] mt-0.5">Estruturado · Salvo automaticamente</p>
+          <p className="text-[10px] mt-0.5 flex items-center gap-1.5">
+            {soap.isSaving ? (
+              <span className="text-amber-400 flex items-center gap-1">
+                <Loader2 className="w-2.5 h-2.5 animate-spin" /> Salvando…
+              </span>
+            ) : soap.isDirty ? (
+              <span className="text-amber-400/90">● Alterações não salvas</span>
+            ) : soap.lastSaved ? (
+              <span className="text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Salvo {format(new Date(soap.lastSaved), "HH:mm")}
+              </span>
+            ) : (
+              <span className="text-[hsl(220,15%,40%)]">Auto-save a cada 30s</span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-1.5">
           <Button

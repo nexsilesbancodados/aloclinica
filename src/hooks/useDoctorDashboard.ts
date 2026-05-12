@@ -10,7 +10,7 @@ export const useDoctorStats = () => {
       if (!user) return null;
       const { data: docProfile } = await db
         .from("doctor_profiles")
-        .select("id, consultation_price, rating, total_reviews, crm, crm_state, crm_verified")
+        .select("id, consultation_price, rating, total_reviews, crm, crm_state, crm_verified, is_approved, kyc_status, created_at, approved_at, cfm_verified_at, kyc_verified_at, rejection_reason")
         .eq("user_id", user.id)
         .single();
       if (!docProfile) return null;
@@ -97,6 +97,16 @@ export const useDoctorStats = () => {
         crm: docProfile.crm,
         crmState: docProfile.crm_state,
         crmVerified: docProfile.crm_verified,
+        approval: {
+          created_at: (docProfile as any).created_at ?? null,
+          cfm_verified: (docProfile as any).crm_verified ?? false,
+          cfm_verified_at: (docProfile as any).cfm_verified_at ?? null,
+          kyc_status: (docProfile as any).kyc_status ?? null,
+          kyc_verified_at: (docProfile as any).kyc_verified_at ?? null,
+          is_approved: (docProfile as any).is_approved ?? false,
+          approved_at: (docProfile as any).approved_at ?? null,
+          rejection_reason: (docProfile as any).rejection_reason ?? null,
+        },
         stats: {
           today: todayRes.data?.length ?? 0,
           total_patients: uniquePatients.size,

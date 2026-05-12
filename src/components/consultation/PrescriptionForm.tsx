@@ -24,6 +24,7 @@ import { usePrescriptionData } from "@/hooks/usePrescriptionData";
 import { useDigitalSignature } from "@/hooks/useDigitalSignature";
 import type { Medication } from "@/hooks/usePrescriptionData";
 import logoReceita from "@/assets/logo-receita.png";
+import PrescriptionTemplates from "@/components/doctor/PrescriptionTemplates";
 
 const doctorNav = [
   { label: "Início", href: "/dashboard", icon: <Clock className="w-4 h-4" /> },
@@ -609,7 +610,32 @@ const PrescriptionForm = () => {
         </button>
 
         <h1 className="text-2xl font-bold text-foreground mb-1">Receita Médica</h1>
-        <p className="text-muted-foreground mb-6">Prescreva medicamentos para o paciente</p>
+        <p className="text-muted-foreground mb-4">Prescreva medicamentos para o paciente</p>
+
+        {/* Explainer: CFM vs Memed */}
+        <div className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/[0.04] p-4">
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0 text-sm">
+              <p className="font-semibold text-foreground mb-1.5">Qual receita usar?</p>
+              <ul className="space-y-1 text-muted-foreground leading-relaxed">
+                <li>
+                  <span className="font-semibold text-foreground">CFM (oficial)</span> — para receitas
+                  controladas (tarja preta/vermelha) e atestados que precisam de QR e validação no CFM.
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">Memed (digital)</span> — para receitas comuns;
+                  o paciente recebe por WhatsApp/email e usa direto na farmácia parceira.
+                </li>
+              </ul>
+              <p className="text-xs text-muted-foreground/80 mt-2 italic">
+                Pode emitir as duas se necessário. As duas são assinadas digitalmente.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* CFM Official Prescription */}
         {data.doctorInfo && (
@@ -665,11 +691,22 @@ const PrescriptionForm = () => {
         {/* Medications */}
         <Card variant="elevated" className="mb-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <CardTitle className="text-base">Medicamentos</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => prescription.addMedication()}>
-                <Plus className="w-4 h-4 mr-1" /> Adicionar
-              </Button>
+              <div className="flex items-center gap-2">
+                <PrescriptionTemplates
+                  userId={user?.id}
+                  current={{
+                    diagnosis: data.diagnosis,
+                    medications: data.medications,
+                    observations: data.observations,
+                  }}
+                  onApply={(t) => prescription.loadTemplate(t)}
+                />
+                <Button variant="outline" size="sm" onClick={() => prescription.addMedication()}>
+                  <Plus className="w-4 h-4 mr-1" /> Adicionar
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
