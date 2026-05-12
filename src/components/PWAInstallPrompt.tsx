@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { Button } from "@/components/ui/button";
-import { DeviceMobile, X, DownloadSimple, Devices } from "@phosphor-icons/react";
+import { DeviceMobile, X, DownloadSimple, Share, Plus } from "@phosphor-icons/react";
 
 const DISMISSED_KEY = "pwa-install-dismissed";
 const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export default function PWAInstallPrompt() {
-  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
+  const { isInstallable, isInstalled, isIOS, promptInstall } = usePWAInstall();
   const [visible, setVisible] = useState(false);
   const [installing, setInstalling] = useState(false);
 
@@ -86,16 +86,44 @@ export default function PWAInstallPrompt() {
                 ))}
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleDismiss} className="flex-1 text-xs">
-                  Agora não
-                </Button>
-                <Button size="sm" onClick={handleInstall} disabled={installing}
-                  className="flex-1 text-xs gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                  <DownloadSimple size={14} />
-                  {installing ? "Instalando..." : "Instalar"}
-                </Button>
-              </div>
+              {/* iOS Safari: instruções manuais (não tem beforeinstallprompt) */}
+              {isIOS ? (
+                <>
+                  <div className="rounded-xl border border-border/40 bg-muted/30 p-3 mb-3 space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">No iPhone:</span>
+                    </div>
+                    <ol className="space-y-1.5 text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">1.</span>
+                        <span>Toque no ícone <Share weight="fill" className="inline w-3.5 h-3.5 mx-0.5 text-blue-500" /> <strong>Compartilhar</strong> (na barra inferior do Safari)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">2.</span>
+                        <span>Role e toque em <strong>"Adicionar à Tela de Início"</strong> <Plus weight="bold" className="inline w-3.5 h-3.5 mx-0.5" /></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">3.</span>
+                        <span>Toque em <strong>Adicionar</strong> no canto superior direito</span>
+                      </li>
+                    </ol>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleDismiss} className="w-full text-xs">
+                    Entendi, fazer depois
+                  </Button>
+                </>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleDismiss} className="flex-1 text-xs">
+                    Agora não
+                  </Button>
+                  <Button size="sm" onClick={handleInstall} disabled={installing}
+                    className="flex-1 text-xs gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    <DownloadSimple size={14} />
+                    {installing ? "Instalando..." : "Instalar"}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

@@ -6,10 +6,22 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+function detectIOSSafari(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  // iOS device (iPhone/iPad/iPod) — inclui iPad em modo desktop simulado
+  const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes("Mac") && "ontouchend" in document);
+  // Safari (não Chrome iOS, que é "CriOS"; não Firefox iOS, "FxiOS")
+  const isSafari = !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  return isIOS && isSafari;
+}
+
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     // Check if already installed
@@ -17,6 +29,14 @@ export function usePWAInstall() {
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
     setIsInstalled(isStandalone);
+
+    // iOS Safari não dispara beforeinstallprompt — instalação é manual
+    // (Compartilhar → Adicionar à Tela de Início). Detectamos pra mostrar guide.
+    const ios = detectIOSSafari();
+    setIsIOS(ios);
+    if (ios && !isStandalone) {
+      setIsInstallable(true);
+    }
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -49,5 +69,5 @@ export function usePWAInstall() {
     return outcome === "accepted";
   };
 
-  return { isInstallable, isInstalled, promptInstall };
+  return { isInstallable, isInstalled, isIOS, promptInstall };
 }
