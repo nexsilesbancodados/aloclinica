@@ -89,7 +89,35 @@ const Notifications = () => {
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
-  const filtered = filter === "unread" ? notifications.filter(n => !n.is_read) : notifications;
+
+  // Conta por tipo pra ajudar na escolha de chip
+  const countByType = notifications.reduce<Record<string, number>>((acc, n) => {
+    acc[n.type] = (acc[n.type] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+
+  const filtered = notifications.filter(n => {
+    if (filter === "unread" && n.is_read) return false;
+    if (typeFilter && n.type !== typeFilter) return false;
+    return true;
+  });
+
+  const TYPE_LABELS: Record<string, string> = {
+    appointment: "Consultas",
+    consultation: "Atendimentos",
+    payment: "Pagamentos",
+    document: "Documentos",
+    message: "Mensagens",
+    health: "Saúde",
+    system: "Sistema",
+    reminder: "Lembretes",
+    info: "Avisos",
+    approval: "Aprovações",
+    certificate: "Atestados",
+    waitlist: "Sala de espera",
+  };
 
   // Group by time
   const groups: { label: string; items: Notification[] }[] = [];
@@ -175,8 +203,51 @@ const Notifications = () => {
           )}
         </AnimatePresence>
 
+        {/* Filter chips */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-4">
+          <button
+            type="button"
+            onClick={() => setFilter("all")}
+            className={`h-8 px-3 rounded-full text-[12px] font-semibold transition-colors ${
+              filter === "all" ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Todas ({notifications.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("unread")}
+            disabled={unreadCount === 0}
+            className={`h-8 px-3 rounded-full text-[12px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              filter === "unread" ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Não lidas ({unreadCount})
+          </button>
+          {Object.keys(countByType).length > 1 && (
+            <span className="h-6 w-px bg-border mx-1" aria-hidden />
+          )}
+          {Object.entries(countByType)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([type, count]) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setTypeFilter(typeFilter === type ? null : type)}
+                className={`h-8 px-3 rounded-full text-[12px] font-semibold transition-colors ${
+                  typeFilter === type ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {TYPE_LABELS[type] ?? type} ({count})
+              </button>
+            ))}
+        </div>
+
         {/* Section label */}
-        <h4 className="font-[Manrope] font-bold text-muted-foreground text-xs uppercase tracking-[0.2em] px-2 mb-4">Recentes</h4>
+        <h4 className="font-[Manrope] font-bold text-muted-foreground text-xs uppercase tracking-[0.2em] px-2 mb-4">
+          {filter === "unread" ? "Não lidas" : typeFilter ? TYPE_LABELS[typeFilter] ?? "Recentes" : "Recentes"}
+        </h4>
 
         {/* Notifications list */}
         {loading ? (

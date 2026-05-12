@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import PushNotificationToggle from "./PushNotificationToggle";
+import { isNotifAllowed } from "@/lib/notificationPrefs";
 
 interface Notification {
   id: string;
@@ -106,8 +107,12 @@ const NotificationBell = () => {
       { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
       (payload: { new: Notification }) => {
         const newNotif = payload.new;
+        // Sempre adiciona à lista (pra estar visível se o usuário religar a categoria depois)
         setNotifications((prev) => [newNotif, ...prev]);
-        showRealtimeToastRef.current(newNotif);
+        // Mas só toca som/exibe toast se a categoria estiver ativada
+        if (isNotifAllowed(newNotif.type)) {
+          showRealtimeToastRef.current(newNotif);
+        }
       }
     );
     channel.subscribe();
@@ -294,11 +299,16 @@ const NotificationBell = () => {
         </ScrollArea>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-border/20 bg-gradient-to-r from-card/80 to-muted/10 flex items-center justify-between">
+        <div className="px-5 py-3 border-t border-border/20 bg-gradient-to-r from-card/80 to-muted/10 flex items-center justify-between gap-2">
           <PushNotificationToggle />
-          {notifications.length > 0 && (
-            <span className="text-[10px] text-muted-foreground font-medium">{notifications.length} notificaçõ{notifications.length !== 1 ? "es" : ""}</span>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[11px] h-7 rounded-lg font-semibold gap-1"
+            onClick={() => { setOpen(false); navigate("/dashboard/notifications"); }}
+          >
+            Ver todas
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

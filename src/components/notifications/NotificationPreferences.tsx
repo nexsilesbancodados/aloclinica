@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import PushNotificationToggle from "./PushNotificationToggle";
 import { toast } from "sonner";
 
-const STORAGE_KEY = "alo:notif-prefs";
+import { NOTIF_PREFS_KEY as STORAGE_KEY } from "@/lib/notificationPrefs";
 
 type Category = {
   id: string;
