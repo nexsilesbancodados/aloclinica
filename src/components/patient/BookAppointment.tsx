@@ -29,43 +29,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getFeriadosNacionais } from "@/lib/feriados";
 
 import { getPatientNav } from "./patientNav";
+import {
+  type PaymentMethod,
+  type DoctorInfo,
+  STEPS,
+  RECURRENCE_OPTIONS,
+  RECURRENCE_WEEKS,
+  KYC_PENDING_KEY,
+} from "./BookAppointment.types";
+import { usePixCountdown } from "@/hooks/usePixCountdown";
+
 const patientNav = getPatientNav("schedule");
-
-type PaymentMethod = "pix" | "card" | "boleto";
-
-interface DoctorInfo {
-  id: string;
-  user_id: string;
-  crm: string;
-  crm_state: string;
-  bio: string | null;
-  consultation_price: number;
-  rating: number;
-  experience_years: number | null;
-  doctor_type?: "telemedicina" | "oftalmologia" | "laudista"; // Added for service type detection
-  first_name: string;
-  last_name: string;
-  specialties: string[];
-  slots: { day_of_week: number; start_time: string; end_time: string }[];
-}
-
-const STEPS = [
-  { key: "date", label: "Data", icon: CalendarDays },
-  { key: "time", label: "Horário", icon: Clock },
-  { key: "confirm", label: "Confirmação", icon: CheckCircle2 },
-  { key: "payment", label: "Pagamento", icon: CreditCard },
-];
-
-const RECURRENCE_OPTIONS = [
-  { value: "none", label: "Sem recorrência" },
-  { value: "weekly", label: "Semanal (mesmo dia/hora)" },
-  { value: "biweekly", label: "Quinzenal" },
-  { value: "monthly", label: "Mensal" },
-];
-
-const RECURRENCE_WEEKS: Record<string, number> = { weekly: 1, biweekly: 2, monthly: 4 };
-
-const KYC_PENDING_KEY = "aloclinica_kyc_pending";
 
 const BookAppointment = () => {
   const { doctorId } = useParams();
@@ -99,8 +73,6 @@ const BookAppointment = () => {
   const [pixCopyPaste, setPixCopyPaste] = useState<string | null>(null);
   const [boletoUrl, setBoletoUrl] = useState<string | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
-  const [pixSecondsLeft, setPixSecondsLeft] = useState(0);
-  const [pixExpired, setPixExpired] = useState(false);
   const [cardName, setCardName] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
@@ -163,23 +135,9 @@ const BookAppointment = () => {
   }, [selectedDate]);
 
   // PIX expiry countdown (Asaas QR codes expire after 30 minutes)
-  useEffect(() => {
-    if (!pixQrCode) return;
-    setPixSecondsLeft(1800);
-    setPixExpired(false);
-    const timer = setInterval(() => {
-      setPixSecondsLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setPixExpired(true);
-          toast.error("PIX expirado", { description: "O QR Code expirou. Clique em 'Gerar novo PIX' para continuar." });
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [pixQrCode]);
+  const { secondsLeft: pixSecondsLeft, expired: pixExpired } = usePixCountdown(pixQrCode, () => {
+    toast.error("PIX expirado", { description: "O QR Code expirou. Clique em 'Gerar novo PIX' para continuar." });
+  });
 
   // Realtime payment confirmation with fallback polling
   useEffect(() => {
@@ -1083,7 +1041,7 @@ const BookAppointment = () => {
                             <p className="text-muted-foreground mb-8">O código PIX tem validade de 30 minutos.</p>
                             <Button
                               className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20"
-                              onClick={() => { setPixQrCode(null); setPixExpired(false); handlePayment(); }}
+                              onClick={() => { setPixQrCode(null); handlePayment(); }}
                               disabled={processing}
                             >
                               {processing ? <Loader2 className="animate-spin mr-2" /> : <Clock className="w-5 h-5 mr-2" />}
