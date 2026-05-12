@@ -26,6 +26,8 @@ export const FEATURE_FLAGS = {
   mock_payments: false,
   /** Tour interativo da primeira consulta. */
   first_tour: true,
+  /** Assinatura ICP-Brasil real via VIDaaS (caso contrário usa hash local). */
+  icp_brasil_signature: false,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURE_FLAGS;

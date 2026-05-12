@@ -315,6 +315,7 @@ const Dashboard = () => {
       <Route path="prescriptions" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><DoctorPrescriptions /></ContextGuard></RoleGuard>} />
       <Route path="earnings" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><DoctorEarnings /></ContextGuard></RoleGuard>} />
       <Route path="certificates" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><MedicalCertificate /></ContextGuard></RoleGuard>} />
+      <Route path="medical-certificate/:appointmentId" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><MedicalCertificate /></ContextGuard></RoleGuard>} />
       <Route path="doctor/consultations" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><DoctorConsultations /></ContextGuard></RoleGuard>} />
       <Route path="doctor/calendar" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><DoctorCalendar /></ContextGuard></RoleGuard>} />
       <Route path="doctor/waiting-room" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><DoctorWaitingRoom /></ContextGuard></RoleGuard>} />

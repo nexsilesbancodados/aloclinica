@@ -25,6 +25,7 @@ import { useDigitalSignature } from "@/hooks/useDigitalSignature";
 import type { Medication } from "@/hooks/usePrescriptionData";
 import logoReceita from "@/assets/logo-receita.png";
 import PrescriptionTemplates from "@/components/doctor/PrescriptionTemplates";
+import { isFeatureEnabled } from "@/lib/featureFlags";
 
 const doctorNav = [
   { label: "Início", href: "/dashboard", icon: <Clock className="w-4 h-4" /> },
@@ -611,6 +612,22 @@ const PrescriptionForm = () => {
 
         <h1 className="text-2xl font-bold text-foreground mb-1">Receita Médica</h1>
         <p className="text-muted-foreground mb-4">Prescreva medicamentos para o paciente</p>
+
+        {/* Aviso: assinatura simplificada (sem ICP-Brasil) */}
+        {!isFeatureEnabled("icp_brasil_signature") && (
+          <div className="mb-4 rounded-2xl border border-amber-300/40 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-xs">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-900 dark:text-amber-100">Assinatura simplificada ativa</p>
+                <p className="text-amber-800/80 dark:text-amber-200/80 leading-relaxed mt-0.5">
+                  As receitas são assinadas com hash SHA-256 + carimbo digital (válido pra uso comum).
+                  Para receitas controladas que exigem ICP-Brasil real (e-CPF), configure VIDaaS no admin.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Explainer: CFM vs Memed */}
         <div className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/[0.04] p-4">

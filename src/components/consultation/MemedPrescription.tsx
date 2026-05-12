@@ -144,7 +144,17 @@ const MemedPrescription = ({
 
   // 3. Listen for Memed events
   const setupMemedEvents = useCallback(() => {
+    let elapsed = 0;
+    const POLL_INTERVAL_MS = 200;
+    const POLL_MAX_MS = 30_000; // 30s max — se SDK não carregou, desiste e mostra erro
     const checkMemed = setInterval(() => {
+      elapsed += POLL_INTERVAL_MS;
+      if (elapsed >= POLL_MAX_MS) {
+        clearInterval(checkMemed);
+        setErrorMsg("SDK da Memed não respondeu em 30s — verifique sua conexão ou recarregue");
+        setStatus("error");
+        return;
+      }
       if (window.MdSinapsePrescricao) {
         clearInterval(checkMemed);
 

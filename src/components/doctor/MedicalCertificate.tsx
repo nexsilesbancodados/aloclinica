@@ -1,5 +1,6 @@
 import { logError } from "@/lib/logger";
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyCertificateSent } from "@/lib/notifications";
 import { db } from "@/integrations/supabase/untyped";
@@ -21,7 +22,8 @@ import { ptBR } from "date-fns/locale";
 
 const MedicalCertificate = () => {
   const { profile, user } = useAuth();
-  
+  const { appointmentId } = useParams<{ appointmentId?: string }>();
+
   const [patientName, setPatientName] = useState("");
   const [patientCpf, setPatientCpf] = useState("");
   const [days, setDays] = useState(1);
@@ -160,9 +162,10 @@ const MedicalCertificate = () => {
     doc.setTextColor(255, 255, 255);
     doc.text("AloClínica — Telemedicina Digital · contato@aloclinica.com.br · www.aloclinica.com.br", 105, 294, { align: "center" });
 
+    // Download local pro médico imediato
     doc.save(`${certType}-${patientName.replace(/\s/g, "-").toLowerCase()}.pdf`);
 
-    // Generate digital hash for document integrity
+    // Hash de integridade
     const docContent = JSON.stringify({
       type: certType,
       patient: patientName,
@@ -177,7 +180,7 @@ const MedicalCertificate = () => {
     });
     const documentHash = await gerarHashDocumento(docContent);
 
-    // Persist verification code to DB with hash
+    // Persist verification code (pra /validar/<codigo> público)
     db.from("document_verifications").insert({
       verification_code: verificationCode,
       document_type: certType,
@@ -190,6 +193,53 @@ const MedicalCertificate = () => {
     }).then(({ error }) => {
       if (error) logError("Failed to persist certificate verification", error);
     });
+
+    // Upload PDF pra storage + insert em medical_certificates (pra paciente ver depois)
+    if (user && profile) {
+      try {
+        const pdfBlob = doc.output("blob");
+        const fileName = `${verificationCode}.pdf`;
+        const storagePath = `certificates/${user.id}/${fileName}`;
+
+        const { error: upErr } = await db.storage
+          .from("patient-documents")
+          .upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: false });
+
+        let pdfUrl: string | null = null;
+        if (!upErr) {
+          const { data: urlData } = db.storage.from("patient-documents").getPublicUrl(storagePath);
+          pdfUrl = urlData?.publicUrl ?? null;
+        }
+
+        // Resolve patient_id se temos appointmentId
+        let patientUserId: string | null = null;
+        if (appointmentId) {
+          const { data: appt } = await db.from("appointments").select("patient_id").eq("id", appointmentId).single();
+          patientUserId = appt?.patient_id ?? null;
+        }
+
+        const { error: insertErr } = await (db as any).from("medical_certificates").insert({
+          appointment_id: appointmentId ?? null,
+          doctor_id: user.id,
+          patient_id: patientUserId,
+          type: certType,
+          patient_name: patientName,
+          patient_cpf: patientCpf || null,
+          doctor_name: doctorName,
+          doctor_crm: crmText,
+          days: certType === "absence" ? days : null,
+          reason: reason || null,
+          cid: cid || null,
+          pdf_url: pdfUrl,
+          storage_path: upErr ? null : storagePath,
+          verification_code: verificationCode,
+          document_hash: documentHash,
+        });
+        if (insertErr) logError("Failed to persist medical_certificate", insertErr);
+      } catch (e) {
+        logError("Certificate persistence error", e);
+      }
+    }
 
     setGenerating(false);
     setHistory(prev => [{ name: patientName, date: today, type: certConfig.label }, ...prev.slice(0, 9)]);
