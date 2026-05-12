@@ -108,10 +108,18 @@ if (typeof window !== "undefined") {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
+      // Cache 10min: reduz refetch desnecessário ao trocar de aba
+      staleTime: 10 * 60 * 1000,
+      // Mantém em memória 30min depois do último uso (PWA volta rápido)
+      gcTime: 30 * 60 * 1000,
+      // Não refetch ao voltar pra aba (evita storm de queries)
       refetchOnWindowFocus: false,
+      // Não refetch ao reconectar (deixa o usuário decidir)
+      refetchOnReconnect: false,
+      // offlineFirst: usa cache se sem rede (PWA experience)
+      networkMode: "offlineFirst",
       retry: (failureCount, error) => {
+        // Não retry em 4xx (erro do cliente — não vai melhorar)
         if (error && typeof error === "object" && "status" in error) {
           const status = (error as { status: number }).status;
           if (status >= 400 && status < 500) return false;
@@ -122,6 +130,8 @@ const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
+      // Mutations sempre exigem rede (não dá pra "agendar" cobrança quando offline)
+      networkMode: "always",
     },
   },
 });
