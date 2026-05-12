@@ -7,11 +7,13 @@ import { getPatientNav } from "./patientNav";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Share2, Calendar, Clock, MapPin, AlertTriangle, Check, RotateCcw, X, Star, Video, ShieldCheck } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowLeft, Share2, Calendar, Clock, MapPin, AlertTriangle, Check, RotateCcw, X, Star, Video, ShieldCheck, FileText, Stamp, Download, Loader2 } from "lucide-react";
+import { format, formatDistanceToNow, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorMessages";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface AppointmentData {
   id: string;
@@ -25,16 +27,30 @@ interface AppointmentData {
   rating: number | null;
 }
 
+type Prescription = { id: string; created_at: string; pdf_url: string | null };
+type Certificate = { id: string; created_at: string; pdf_url: string | null; type?: string | null };
+
 const AppointmentDetail = () => {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [appt, setAppt] = useState<AppointmentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (user && appointmentId) fetchAppointment();
   }, [user, appointmentId]);
+
+  // Tick a cada 30s pra atualizar o countdown
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const fetchAppointment = async () => {
     const { data } = await db
@@ -86,7 +102,51 @@ const AppointmentDetail = () => {
       specialties,
       rating: doc?.rating ?? null,
     });
+
+    // Carrega receitas/atestados em paralelo (só faz sentido se completed)
+    if (data.status === "completed") {
+      const [prescRes, certRes] = await Promise.all([
+        db.from("prescriptions").select("id, created_at, pdf_url").eq("appointment_id", appointmentId!).order("created_at", { ascending: false }),
+        (db as any).from("medical_certificates").select("id, created_at, pdf_url, type").eq("appointment_id", appointmentId!).order("created_at", { ascending: false }),
+      ]);
+      setPrescriptions((prescRes.data ?? []) as Prescription[]);
+      setCertificates((certRes?.data ?? []) as Certificate[]);
+    }
     setLoading(false);
+  };
+
+  const handleCancel = async () => {
+    if (!appointmentId) return;
+    setCancelling(true);
+    try {
+      const { error } = await db
+        .from("appointments")
+        .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancelled_by: user?.id ?? null } as any)
+        .eq("id", appointmentId);
+      if (error) throw error;
+      toast.success("Consulta cancelada", { description: "Você receberá confirmação por email." });
+      setShowCancel(false);
+      navigate("/dashboard/appointments?role=patient");
+    } catch (e) {
+      toastError(toast, e, "agendamento");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const text = appt ? `Consulta com ${appt.doctor_name} em ${format(new Date(appt.scheduled_at), "dd/MM 'às' HH:mm")}` : "Consulta AloClínica";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Consulta AloClínica", text, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copiado!");
+      }
+    } catch (e) {
+      // Cancelled by user — silent
+    }
   };
 
   const prepInstructions = [
@@ -135,7 +195,11 @@ const AppointmentDetail = () => {
           <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" /> Voltar
           </button>
-          <button className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <button
+            onClick={handleShare}
+            aria-label="Compartilhar consulta"
+            className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
             <Share2 className="w-4 h-4" />
           </button>
         </div>
@@ -163,12 +227,48 @@ const AppointmentDetail = () => {
             <h2 className="font-[Manrope] text-[22px] font-extrabold text-primary-foreground">
               {appt.doctor_name}
             </h2>
-            {appt.rating && (
-              <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm">
-                <Star className="w-3.5 h-3.5 text-warning fill-warning" />
-                <span className="text-sm font-bold text-primary-foreground">{appt.rating.toFixed(1)}</span>
-              </div>
-            )}
+            <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+              {appt.rating && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm">
+                  <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+                  <span className="text-sm font-bold text-primary-foreground">{appt.rating.toFixed(1)}</span>
+                </div>
+              )}
+              {appt.status === "scheduled" && (() => {
+                const mins = differenceInMinutes(new Date(appt.scheduled_at), new Date(now));
+                if (mins < 0) return null;
+                if (mins <= 60) {
+                  return (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/30 backdrop-blur-sm border border-emerald-300/30 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      <span className="text-sm font-bold text-primary-foreground">
+                        {mins === 0 ? "Começando agora" : `Em ${mins} min`}
+                      </span>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm">
+                    <Clock className="w-3.5 h-3.5 text-primary-foreground/80" />
+                    <span className="text-sm font-bold text-primary-foreground">
+                      {formatDistanceToNow(new Date(appt.scheduled_at), { locale: ptBR, addSuffix: true })}
+                    </span>
+                  </div>
+                );
+              })()}
+              {appt.status === "completed" && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/25 backdrop-blur-sm border border-emerald-300/30">
+                  <Check className="w-3.5 h-3.5 text-emerald-100" />
+                  <span className="text-sm font-bold text-primary-foreground">Concluída</span>
+                </div>
+              )}
+              {appt.status === "cancelled" && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/30 backdrop-blur-sm">
+                  <X className="w-3.5 h-3.5 text-primary-foreground" />
+                  <span className="text-sm font-bold text-primary-foreground">Cancelada</span>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -254,6 +354,64 @@ const AppointmentDetail = () => {
           </ul>
         </motion.div>
 
+        {/* Documents — só aparece se concluída e tem algo */}
+        {appt.status === "completed" && (prescriptions.length > 0 || certificates.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.27 }}
+            className="bg-card rounded-2xl p-5 border border-border/20 shadow-sm mb-3"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">Documentos da consulta</p>
+            <div className="space-y-2">
+              {prescriptions.map((p) => (
+                <a
+                  key={p.id}
+                  href={p.pdf_url ?? `/dashboard/patient/prescriptions?appt=${appt.id}`}
+                  target={p.pdf_url ? "_blank" : undefined}
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/40 hover:border-primary/30 hover:bg-primary/[0.04] transition-colors group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground">Receita</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {format(new Date(p.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  <Download className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                </a>
+              ))}
+              {certificates.map((c) => (
+                <a
+                  key={c.id}
+                  href={c.pdf_url ?? `/dashboard/patient/health?appt=${appt.id}`}
+                  target={c.pdf_url ? "_blank" : undefined}
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/40 hover:border-primary/30 hover:bg-primary/[0.04] transition-colors group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                      <Stamp className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground">Atestado{c.type ? ` · ${c.type}` : ""}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {format(new Date(c.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  <Download className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                </a>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Actions */}
         {appt.status === "scheduled" && (
           <motion.div
@@ -262,24 +420,32 @@ const AppointmentDetail = () => {
             transition={{ delay: 0.3 }}
             className="space-y-3"
           >
-            <Button
-              className="w-full h-[52px] rounded-full bg-primary text-primary-foreground font-[Manrope] font-bold text-[15px] shadow-[0_4px_16px_hsl(215_75%_32%/0.3)]"
-              onClick={() => toast.info("Check-in disponível 15 min antes da consulta")}
-            >
-              <ShieldCheck className="w-5 h-5 mr-2" /> Realizar Check-in Agora
-            </Button>
+            {(() => {
+              const mins = differenceInMinutes(new Date(appt.scheduled_at), new Date(now));
+              const checkInOpen = mins >= -60 && mins <= 15;
+              return (
+                <Button
+                  className="w-full h-[52px] rounded-full bg-primary text-primary-foreground font-[Manrope] font-bold text-[15px] shadow-[0_4px_16px_hsl(215_75%_32%/0.3)] disabled:opacity-50"
+                  disabled={!checkInOpen}
+                  onClick={() => navigate(`/dashboard/consultation/${appt.id}`)}
+                >
+                  <ShieldCheck className="w-5 h-5 mr-2" />
+                  {checkInOpen ? "Entrar na consulta" : `Disponível 15 min antes`}
+                </Button>
+              );
+            })()}
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
                 className="h-12 rounded-full gap-2 border-border/30 hover:bg-muted/30"
-                onClick={() => toast.info("Em breve: reagendamento")}
+                onClick={() => toast.info("Reagendamento", { description: "Cancele esta consulta e agende um novo horário." })}
               >
                 <RotateCcw className="w-4 h-4" /> Reagendar
               </Button>
               <Button
                 variant="outline"
                 className="h-12 rounded-full gap-2 bg-destructive/[0.04] border-destructive/15 text-destructive hover:bg-destructive/10"
-                onClick={() => toast.info("Em breve: cancelamento")}
+                onClick={() => setShowCancel(true)}
               >
                 <X className="w-4 h-4" /> Cancelar
               </Button>
@@ -287,6 +453,39 @@ const AppointmentDetail = () => {
           </motion.div>
         )}
       </div>
+
+      <AlertDialog open={showCancel} onOpenChange={setShowCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar consulta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está cancelando a consulta com <strong>{appt.doctor_name}</strong> em{" "}
+              {format(new Date(appt.scheduled_at), "dd/MM 'às' HH:mm", { locale: ptBR })}.
+              {(() => {
+                const hoursToAppt = differenceInMinutes(new Date(appt.scheduled_at), new Date()) / 60;
+                if (hoursToAppt < 24 && hoursToAppt > 0) {
+                  return (
+                    <div className="mt-3 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-700 dark:text-amber-300">
+                      <strong>Atenção:</strong> cancelamentos com menos de 24h podem não ter reembolso integral.
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Cancelando…</> : "Sim, cancelar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
