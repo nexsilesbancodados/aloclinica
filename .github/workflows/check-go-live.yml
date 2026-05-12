@@ -1,0 +1,70 @@
+name: One-shot — Diagnóstico Go-Live
+
+# Roda queries de checagem do banco e imprime resultado no summary.
+# Útil pra confirmar dados essenciais antes de iniciar vendas.
+
+on:
+  workflow_dispatch:
+
+env:
+  SUPABASE_PROJECT_REF: pwxvvimdtmvziynbspgx
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar dados essenciais
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -e
+
+          run_query() {
+            local label="$1"
+            local sql="$2"
+            jq -n --arg q "$sql" '{query: $q}' > /tmp/q.json
+            local resp
+            resp=$(curl -sS -X POST \
+              -H "Authorization: Bearer $SBP_TOKEN" \
+              -H "Content-Type: application/json" \
+              -A "Mozilla/5.0 (compatible; aloclinica/1.0)" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              --data-binary @/tmp/q.json)
+            echo "### $label" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            echo "$resp" | jq . >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          }
+
+          echo "## 🚀 Diagnóstico Go-Live AloClínica" > $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          run_query "1. Médicos aprovados (precisa pra vender consultas)" \
+            "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_approved=true) AS aprovados, COUNT(*) FILTER (WHERE crm_verified=true) AS crm_verificados, COUNT(*) FILTER (WHERE kyc_status='approved') AS kyc_ok FROM doctor_profiles;"
+
+          run_query "2. Especialidades cadastradas" \
+            "SELECT COUNT(*) AS total FROM specialties;"
+
+          run_query "3. Plans Pingo Card ativos" \
+            "SELECT id, name, price_monthly, price_yearly, is_active FROM pingo_card_plans ORDER BY display_order;"
+
+          run_query "4. Pacientes cadastrados" \
+            "SELECT COUNT(*) AS total FROM profiles;"
+
+          run_query "5. Status migration MP (gateway das tabelas)" \
+            "SELECT * FROM payment_gateway_status;"
+
+          run_query "6. Coluna mp_preapproval_id existe em pingo_card_subscriptions?" \
+            "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='pingo_card_subscriptions' AND column_name LIKE 'mp_%';"
+
+          run_query "7. RLS ativo nas tabelas críticas?" \
+            "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='public' AND tablename IN ('appointments','prescriptions','payment_transactions','subscriptions','pingo_card_subscriptions','saved_cards','profiles');"
+
+          run_query "8. Doctor types disponíveis (telemedicina/oftalmologia)" \
+            "SELECT doctor_type, COUNT(*) FROM doctor_profiles WHERE is_approved=true GROUP BY doctor_type;"
+
+          run_query "9. Médicos com slots de disponibilidade" \
+            "SELECT COUNT(DISTINCT doctor_id) AS doctors_with_slots FROM availability_slots WHERE is_active=true;"
+
+          run_query "10. Site sections enabled (landing pública)" \
+            "SELECT key, is_enabled FROM site_sections WHERE language='pt-BR' ORDER BY key;"
