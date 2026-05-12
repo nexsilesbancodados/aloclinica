@@ -14,7 +14,8 @@ serve(async (req) => {
 
   try {
     const payload = await req.json();
-    console.log("DocuSeal webhook received:", JSON.stringify(payload));
+    // Não loga payload inteiro (contém URLs assinadas + emails de submitters).
+    console.log(`DocuSeal webhook: event=${payload.event_type || payload.event}`);
 
     const eventType = payload.event_type || payload.event;
     const submissionData = payload.data || payload;
@@ -38,7 +39,7 @@ serve(async (req) => {
           (s.documents || []).map((d: any) => ({ url: d.url, filename: d.name || d.filename }))
         );
 
-    console.log("Submission completed:", submissionId, "docs:", signedDocs.length);
+    console.log(`Submission completed: id=${submissionId} docs=${signedDocs.length}`);
 
     // Initialize Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -76,9 +77,8 @@ serve(async (req) => {
           .eq("entity_id", String(submissionId))
           .maybeSingle();
         if (logEntry?.entity_id) {
-          // entity_id here is the submission_id; we need to find the laudo
-          // Check if any laudo references this in its details
-          console.log("Found activity log for submission:", submissionId);
+          // entity_id é o submission_id; ainda precisaríamos buscar o laudo nas details
+          // Não logamos o submission_id aqui pra não vazar info no stdout
         }
       }
 
@@ -97,7 +97,7 @@ serve(async (req) => {
         if (laudoError) {
           console.error("Error updating laudo:", laudoError.message);
         } else {
-          console.log("Updated laudo:", matchedLaudoId, "with signed PDF");
+          console.log(`Updated laudo: ${String(matchedLaudoId).slice(0, 8)}*** with signed PDF`);
 
           // Also update related exame status
           const { data: laudo } = await supabase

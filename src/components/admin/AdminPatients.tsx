@@ -14,6 +14,7 @@ import { AdminPageHeader } from "./AdminPageHeader";
 import { Search, Eye, Edit, Download, ChevronLeft, ChevronRight, Users, Calendar, Filter } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { exportToCSV } from "@/lib/csv";
+import { maskCPF, maskPhone } from "@/lib/maskPII";
 
 const PAGE_SIZE = 20;
 
@@ -244,8 +245,8 @@ const AdminPatients = () => {
                           <span className="font-medium text-foreground">{p.first_name} {p.last_name}</span>
                         </div>
                       </TableCell>
-                      <TableCell data-label="Telefone" className="hidden sm:table-cell text-muted-foreground">{p.phone || "—"}</TableCell>
-                      <TableCell data-label="CPF" className="hidden md:table-cell text-muted-foreground">{p.cpf || "—"}</TableCell>
+                      <TableCell data-label="Telefone" className="hidden sm:table-cell text-muted-foreground" title="CPF/telefone completos no detalhe (LGPD)">{maskPhone(p.phone)}</TableCell>
+                      <TableCell data-label="CPF" className="hidden md:table-cell text-muted-foreground" title="CPF/telefone completos no detalhe (LGPD)">{maskCPF(p.cpf)}</TableCell>
                       <TableCell data-label="Cadastro" className="hidden md:table-cell text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</TableCell>
                       <TableCell data-label="">
                         <Button size="sm" variant="ghost" onClick={() => openDetail(p)}>

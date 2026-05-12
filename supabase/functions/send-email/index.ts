@@ -940,7 +940,9 @@ serve(async (req) => {
       });
     }
 
-    console.log("Email sent via Brevo:", type, "to:", to, "id:", result.messageId);
+    // Não loga endereço de email (LGPD/PII). Usa hash dos primeiros chars + domínio.
+    const emailDigest = to ? `${String(to).slice(0, 1)}***@${String(to).split("@")[1] ?? ""}` : "?";
+    console.log(`Email sent via Brevo: type=${type} to=${emailDigest} msgId=${result.messageId}`);
     await logEvent("sent", undefined, result.messageId);
     return new Response(JSON.stringify({ success: true, id: result.messageId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
