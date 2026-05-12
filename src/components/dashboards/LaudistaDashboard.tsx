@@ -273,7 +273,7 @@ const LaudistaDashboard = () => {
                           className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
                         />
                       </div>
-                      <p className="text-[10px] text-muted-foreground">{earningsLoading ? "Carregando..." : `${percentage}% da meta atingida`}</p>
+                      <p className="text-[10px] text-muted-foreground">{earningsLoading ? <span className="inline-block w-20 h-3 bg-muted rounded animate-pulse" /> : `${percentage}% da meta atingida`}</p>
                     </div>
                   </CardContent>
                 </Card>

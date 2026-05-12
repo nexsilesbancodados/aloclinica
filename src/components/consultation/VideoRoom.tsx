@@ -130,18 +130,28 @@ const VideoRoom = () => {
       setCheckingConsent(false);
       return;
     }
+    // Failsafe: nunca deixa consent check travar UI por mais de 8s
+    const failsafeTimer = setTimeout(() => setCheckingConsent(false), 8000);
     const checkConsent = async () => {
-      const { data } = await db
-        .from("patient_consents")
-        .select("id")
-        .eq("appointment_id", appointmentId ?? '')
-        .eq("patient_id", user.id)
-        .is("revoked_at", null)
-        .limit(1);
-      setHasConsent((data?.length ?? 0) > 0);
-      setCheckingConsent(false);
+      try {
+        const { data } = await db
+          .from("patient_consents")
+          .select("id")
+          .eq("appointment_id", appointmentId ?? '')
+          .eq("patient_id", user.id)
+          .is("revoked_at", null)
+          .limit(1);
+        setHasConsent((data?.length ?? 0) > 0);
+      } catch {
+        // Falha silenciosa: assume sem consent (UI vai pedir TCLE)
+        setHasConsent(false);
+      } finally {
+        clearTimeout(failsafeTimer);
+        setCheckingConsent(false);
+      }
     };
     checkConsent();
+    return () => clearTimeout(failsafeTimer);
   }, [appointmentId, user, isDoctor]);
 
   useEffect(() => {

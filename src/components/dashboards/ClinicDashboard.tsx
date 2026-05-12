@@ -72,7 +72,13 @@ const ClinicDashboard = () => {
     setDoctors(affiliations ?? []);
     const doctorIds = (affiliations ?? []).map((a: { doctor_id: string }) => a.doctor_id);
     if (doctorIds.length > 0) {
-      const { data: appts } = await db.from("appointments").select("*, doctor_profiles(consultation_price)").in("doctor_id", doctorIds).gte("scheduled_at", subMonths(new Date(), 6).toISOString()).order("scheduled_at", { ascending: false });
+      // Limit 2000 — protege contra clínicas com milhares de consultas em 6m
+      const { data: appts } = await db.from("appointments")
+        .select("*, doctor_profiles(consultation_price)")
+        .in("doctor_id", doctorIds)
+        .gte("scheduled_at", subMonths(new Date(), 6).toISOString())
+        .order("scheduled_at", { ascending: false })
+        .limit(2000);
       setAppointments(appts ?? []);
 
       // Calculate total slots from availability_slots table
