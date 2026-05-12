@@ -30,6 +30,9 @@ jobs:
               -A "Mozilla/5.0 (compatible; aloclinica/1.0)" \
               "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
               --data-binary @/tmp/q.json)
+            echo "===== $label ====="
+            echo "$resp" | jq -c .
+            echo ""
             echo "### $label" >> $GITHUB_STEP_SUMMARY
             echo '```json' >> $GITHUB_STEP_SUMMARY
             echo "$resp" | jq . >> $GITHUB_STEP_SUMMARY
