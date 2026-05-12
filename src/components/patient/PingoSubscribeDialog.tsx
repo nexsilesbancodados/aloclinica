@@ -71,6 +71,7 @@ export function PingoSubscribeDialog({ open, onOpenChange, plan, billingCycle, o
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return; // Guard double-submit
     if (!user) return;
     if (!cpf) { toast.error("CPF obrigatório", { description: "Complete seu cadastro primeiro." }); return; }
     if (!agreed) { toast.error("Aceite os termos pra continuar."); return; }

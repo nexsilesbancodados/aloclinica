@@ -234,6 +234,7 @@ const UrgentCareQueue = () => {
   const handleStartPayment = () => setShowPayment(true);
 
   const handlePayment = async () => {
+    if (processing) return; // Guard double-submit
     if (!user || !shiftInfo) return;
     if (paymentMethod === "card") { const cardError = validateCard(cardName, cardNumber, cardExpiry, cardCvv); if (cardError) { toast.error(cardError); return; } }
     setProcessing(true);

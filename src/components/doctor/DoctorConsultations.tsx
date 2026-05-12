@@ -60,21 +60,29 @@ const DoctorConsultations = () => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarStep, setCalendarStep] = useState<"from" | "to">("from");
 
+  const [doctorIdLocal, setDoctorIdLocal] = useState<string | null>(null);
+
   useEffect(() => { if (user) fetchAppointments(); }, [user]);
 
-  // Realtime sync
+  // Realtime sync — FILTRADO por doctor_id (antes recebia eventos de todos os medicos)
   useEffect(() => {
-    if (!user) return;
+    if (!user || !doctorIdLocal) return;
     const channel = db
-      .channel("doctor-consultations-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => fetchAppointments())
+      .channel(`doctor-consultations-${doctorIdLocal}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "appointments",
+        filter: `doctor_id=eq.${doctorIdLocal}`,
+      }, () => fetchAppointments())
       .subscribe();
     return () => { db.removeChannel(channel); };
-  }, [user]);
+  }, [user, doctorIdLocal]);
 
   const fetchAppointments = async () => {
     const { data: docProfile } = await db.from("doctor_profiles").select("id").eq("user_id", user!.id).single();
     if (!docProfile) { setLoading(false); return; }
+    setDoctorIdLocal(docProfile.id);
 
     const { data } = await db.from("appointments")
       .select("id, scheduled_at, status, patient_id, duration_minutes, notes, guest_patient_id")

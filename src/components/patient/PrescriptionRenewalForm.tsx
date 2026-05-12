@@ -104,6 +104,7 @@ const PrescriptionRenewalForm = () => {
   };
 
   const handlePayment = async () => {
+    if (processing) return; // Guard double-submit
     if (!user || !renewalId) return;
     if (paymentMethod === "card" && (!cardName || !cardNumber || !cardExpiry || !cardCvv)) {
       toast.error("Preencha todos os campos do cartão"); return;

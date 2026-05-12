@@ -416,8 +416,9 @@ const BookAppointment = () => {
     }
   };
 
-  // Step 2: Process payment via Asaas
+  // Step 2: Process payment via Mercado Pago — protegido contra double-submit
   const handlePayment = async () => {
+    if (processing) return; // Defesa síncrona extra (StrictMode, F5, double-click)
     if (!user || !doctor || !appointmentId) return;
     if (paymentMethod === "card") {
       const cardError = validateCard(cardName, cardNumber, cardExpiry, cardCvv);
