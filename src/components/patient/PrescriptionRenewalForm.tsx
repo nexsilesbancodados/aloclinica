@@ -113,55 +113,62 @@ const PrescriptionRenewalForm = () => {
       const { data: profile } = await db.from("profiles").select("first_name, last_name, cpf, phone").eq("user_id", user.id).single();
       if (!profile?.cpf) { toast.error("CPF obrigatório"); setProcessing(false); return; }
 
-      const customerName = `${profile.first_name} ${profile.last_name}`.trim();
-      const billingTypeMap: Record<PaymentMethod, string> = { pix: "PIX", card: "CREDIT_CARD", boleto: "BOLETO" };
-
+      const methodMap: Record<PaymentMethod, "pix" | "credit_card" | "boleto"> = {
+        pix: "pix", card: "credit_card", boleto: "boleto",
+      };
       const payload: Record<string, any> = {
-        customerName,
-        customerCpf: profile.cpf,
-        customerEmail: user.email || "",
-        customerMobilePhone: profile.phone || "",
-        billingType: billingTypeMap[paymentMethod],
-        value: finalPrice,
-        description: `Renovação de Receita - AloClínica`,
-        appointmentId: `renewal_${renewalId}`,
+        amount: finalPrice,
+        payment_method: methodMap[paymentMethod],
+        reference_id: `renewal_${renewalId}`,
+        description: "Renovação de Receita - AloClínica",
       };
 
       if (paymentMethod === "card") {
         const [expiryMonth, expiryYear] = cardExpiry.split("/");
-        const { data: tokenData, error: tokenError } = await db.functions.invoke("pagbank-tokenize-card", {
-          body: {
-            customerName, customerCpf: profile.cpf, customerEmail: user.email, customerPhone: profile.phone,
-            cardHolderName: cardName, cardNumber: cardNumber.replace(/\s/g, ""),
-            cardExpiryMonth: expiryMonth, cardExpiryYear: `20${expiryYear}`, cardCcv: cardCvv,
-            cardHolderCpf: profile.cpf, cardHolderPhone: profile.phone, remoteIp: "0.0.0.0",
-          },
-        });
-        if (tokenError || !tokenData?.success) { toast.error("Erro no cartão", { description: tokenData?.error }); setProcessing(false); return; }
-        payload.creditCardToken = tokenData.creditCardToken;
+        try {
+          const { createCardToken, detectCardBrand } = await import("@/lib/mercadopago");
+          const token = await createCardToken({
+            cardNumber: cardNumber.replace(/\s/g, ""),
+            cardholderName: cardName,
+            cardExpirationMonth: expiryMonth,
+            cardExpirationYear: expiryYear,
+            securityCode: cardCvv,
+            identificationType: "CPF",
+            identificationNumber: profile.cpf,
+          });
+          payload.card_token = token.id;
+          payload.payment_method_id = token.payment_method_id ?? detectCardBrand(cardNumber);
+          payload.installments = 1;
+        } catch (e) {
+          toast.error("Erro no cartão", { description: e instanceof Error ? e.message : String(e) });
+          setProcessing(false); return;
+        }
       }
 
-      const { data, error } = await db.functions.invoke("pagbank-create-payment", { body: payload });
-      if (error || !data?.success) { toast.error("Erro no pagamento", { description: data?.error }); setProcessing(false); return; }
+      const { data, error } = await db.functions.invoke("mercadopago-create-payment", { body: payload });
+      if (error || !data?.payment_id || data?.error) {
+        toast.error("Erro no pagamento", { description: data?.error || error?.message });
+        setProcessing(false); return;
+      }
 
-      if (paymentMethod === "pix" && data.pixQrCode) {
-        setPixQrCode(data.pixQrCode);
-        setPixCopyPaste(data.pixCopyPaste || "");
+      if (paymentMethod === "pix") {
+        setPixQrCode(data.qr_code_base64 || null);
+        setPixCopyPaste(data.qr_code || "");
         setProcessing(false);
         toast.success("PIX gerado! 🎉");
         return;
       }
 
       if (paymentMethod === "boleto") {
-        setBoletoUrl(data.bankSlipUrl || data.invoiceUrl);
+        setBoletoUrl(data.boleto_url || null);
         setProcessing(false);
         toast.success("Boleto gerado!");
         return;
       }
 
       // Card — instant
-      if (data.status === "CONFIRMED" || data.status === "RECEIVED") {
-        await db.from("prescription_renewals").update({ paid_at: new Date().toISOString(), status: "pending_review", payment_id: data.paymentId }).eq("id", renewalId);
+      if (data.status === "approved") {
+        await db.from("prescription_renewals").update({ paid_at: new Date().toISOString(), status: "pending_review", payment_id: data.payment_id } as any).eq("id", renewalId);
         toast.success("Pagamento confirmado! 🎉", { description: "Um médico analisará sua receita em breve." });
         resetForm();
         fetchRenewals();

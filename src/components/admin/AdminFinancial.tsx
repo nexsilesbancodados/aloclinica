@@ -254,7 +254,7 @@ const AdminFinancial = () => {
   ) => {
     setActionLoading(withdrawal.id);
     try {
-      const { data, error } = await db.functions.invoke("process-withdrawal", {
+      const { data, error } = await db.functions.invoke("mercadopago-withdraw", {
         body: {
           withdrawal_id: withdrawal.id,
           action,
@@ -262,9 +262,14 @@ const AdminFinancial = () => {
         },
       });
 
-      if (error) {
-        const errMsg = (data as { error?: string } | null)?.error ?? error.message ?? "Erro ao processar ação";
-        toast.error(errMsg);
+      if (error || (data as any)?.error) {
+        const errMsg = (data as { error?: string } | null)?.error ?? error?.message ?? "Erro ao processar ação";
+        const needsManual = (data as any)?.needs_manual;
+        if (needsManual) {
+          toast.warning("Money Out não habilitado", { description: errMsg });
+        } else {
+          toast.error(errMsg);
+        }
         return;
       }
 

@@ -1,16 +1,19 @@
 /**
  * AddCardForm — formulário inline para adicionar novo cartão ao vault.
  *
- * Coleta dados, chama useSavedCards.addCard (que tokeniza no PagBank).
+ * Coleta dados, chama useSavedCards.addCard (que tokeniza no Mercado Pago).
  * NÃO armazena número/CVV em estado por mais tempo que o necessário.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CreditCard, Loader2 } from "lucide-react";
 import { useSavedCards } from "./useSavedCards";
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/integrations/supabase/untyped";
+import { toast } from "sonner";
 
 type Props = {
   onSaved?: (cardId: string) => void;
@@ -19,22 +22,36 @@ type Props = {
 };
 
 export function AddCardForm({ onSaved, onCancel, defaultIsDefault = false }: Props) {
+  const { user } = useAuth();
   const { addCard, adding } = useSavedCards();
   const [holder, setHolder] = useState("");
   const [number, setNumber] = useState("");
   const [expiryMonth, setExpiryMonth] = useState("");
   const [expiryYear, setExpiryYear] = useState("");
   const [cvv, setCvv] = useState("");
+  const [cpf, setCpf] = useState("");
   const [isDefault, setIsDefault] = useState(defaultIsDefault);
+
+  // Pre-fill CPF do profile (usuário não precisa redigitar)
+  useEffect(() => {
+    if (!user) return;
+    db.from("profiles").select("cpf").eq("user_id", user.id).single()
+      .then(({ data }) => { if (data?.cpf) setCpf(data.cpf); });
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!cpf) {
+      toast.error("CPF não encontrado", { description: "Complete seu cadastro com CPF antes de salvar um cartão." });
+      return;
+    }
     const card = await addCard({
       holder: holder.trim(),
       number: number.replace(/\D/g, ""),
       expiryMonth,
       expiryYear,
       cvv,
+      cpf,
       isDefault,
     });
     if (card) {

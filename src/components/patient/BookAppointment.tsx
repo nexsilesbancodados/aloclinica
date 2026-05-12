@@ -438,82 +438,68 @@ const BookAppointment = () => {
         return;
       }
 
-      const customerName = `${profile.first_name} ${profile.last_name}`.trim();
-      const billingTypeMap: Record<PaymentMethod, string> = { pix: "PIX", card: "CREDIT_CARD", boleto: "BOLETO" };
-
-      const payload: Record<string, any> = {
-        customerName,
-        customerCpf: profile.cpf,
-        customerEmail: user.email || "",
-        customerMobilePhone: profile.phone || "",
-        billingType: billingTypeMap[paymentMethod],
-        value: totalPrice,
-        description: `Consulta Médica - AloClinica`,
-        appointmentId,
-        doctorProfileId: doctor.id,
+      const methodMap: Record<PaymentMethod, "pix" | "credit_card" | "boleto"> = {
+        pix: "pix",
+        card: "credit_card",
+        boleto: "boleto",
       };
 
-      // Card tokenization
+      const payload: Record<string, any> = {
+        amount: totalPrice,
+        payment_method: methodMap[paymentMethod],
+        reference_id: `appointment_${appointmentId}`,
+        description: `Consulta médica AloClínica`,
+      };
+
+      // Card tokenization via Mercado Pago JS SDK
       if (paymentMethod === "card") {
         const [expiryMonth, expiryYear] = cardExpiry.split("/");
-        const { data: tokenData, error: tokenError } = await db.functions.invoke("pagbank-tokenize-card", {
-          body: {
-            customerName,
-            customerCpf: profile.cpf,
-            customerEmail: user.email || "",
-            customerPhone: profile.phone || "",
-            cardHolderName: cardName,
+        try {
+          const { createCardToken, detectCardBrand } = await import("@/lib/mercadopago");
+          const token = await createCardToken({
             cardNumber: cardNumber.replace(/\s/g, ""),
-            cardExpiryMonth: expiryMonth,
-            cardExpiryYear: `20${expiryYear}`,
-            cardCcv: cardCvv,
-            cardHolderCpf: profile.cpf,
-            cardHolderPhone: profile.phone || "",
-            remoteIp: "0.0.0.0",
-          },
-        });
-        if (tokenError || !tokenData?.success) {
-          toastError(toast, tokenData?.error || tokenError?.message || "card_declined", "pagamento");
+            cardholderName: cardName,
+            cardExpirationMonth: expiryMonth,
+            cardExpirationYear: expiryYear,
+            securityCode: cardCvv,
+            identificationType: "CPF",
+            identificationNumber: profile.cpf,
+          });
+          payload.card_token = token.id;
+          payload.payment_method_id = token.payment_method_id ?? detectCardBrand(cardNumber);
+          payload.installments = 1;
+        } catch (e) {
+          toastError(toast, e, "pagamento");
           setProcessing(false);
           return;
         }
-        payload.creditCardToken = tokenData.creditCardToken;
       }
 
-      const { data, error } = await db.functions.invoke("pagbank-create-payment", { body: payload });
+      const { data, error } = await db.functions.invoke("mercadopago-create-payment", { body: payload });
 
-      if (error || !data?.success) {
+      if (error || !data?.payment_id || data?.error) {
         toastError(toast, data?.error || error?.message || "pagamento_falhou", "pagamento");
         setProcessing(false);
         return;
       }
 
-      // Handle PIX→BOLETO fallback
-      if (data.fallbackUsed && data.billingType === "BOLETO") {
-        setBoletoUrl(data.bankSlipUrl || data.invoiceUrl || null);
-        setPaymentMethod("boleto");
-        setProcessing(false);
-        toast.warning("PIX indisponível", { description: "Boleto gerado automaticamente." });
-        return;
-      }
-
       if (paymentMethod === "pix") {
-        setPixQrCode(data.pixQrCode || null);
-        setPixCopyPaste(data.pixCopyPaste || null);
+        setPixQrCode(data.qr_code_base64 || null);
+        setPixCopyPaste(data.qr_code || null);
         setProcessing(false);
         toast.success("PIX gerado! 🎉", { description: "Escaneie o QR Code para pagar." });
         return;
       }
 
       if (paymentMethod === "boleto") {
-        setBoletoUrl(data.bankSlipUrl || data.invoiceUrl || null);
+        setBoletoUrl(data.boleto_url || null);
         setProcessing(false);
         toast.success("Boleto gerado! 📄");
         return;
       }
 
       // Card — usually instant
-      if (data.status === "CONFIRMED" || data.status === "RECEIVED") {
+      if (data.status === "approved") {
         await db.from("appointments").update({
           payment_status: "approved",
           payment_confirmed_at: new Date().toISOString(),

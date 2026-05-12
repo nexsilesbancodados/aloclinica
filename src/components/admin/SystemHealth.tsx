@@ -192,7 +192,7 @@ const SystemHealth = () => {
     // 11+. Integrações Externas (Edge Functions)
     const integrations = [
       { name: "WhatsApp (Evolution API)", fn: "whatsapp-notify", icon: <MessageCircle className="w-5 h-5" /> },
-      { name: "PagBank (Pagamentos)", fn: "pagbank-create-payment", icon: <CreditCard className="w-5 h-5" /> },
+      { name: "Mercado Pago (Pagamentos)", fn: "mercadopago-create-payment", icon: <CreditCard className="w-5 h-5" /> },
       { name: "Lovable AI Gateway", fn: "ai-assistant", icon: <Brain className="w-5 h-5" /> },
       { name: "Sugestão de Laudo (Claude)", fn: "sugerir-laudo", icon: <Brain className="w-5 h-5" /> },
       { name: "Memed (Prescrições)", fn: "memed-prescriber", icon: <Stethoscope className="w-5 h-5" /> },

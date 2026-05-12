@@ -121,10 +121,10 @@ export function BillingPortal() {
   const cancelSubscription = async () => {
     const sub = cancelDialog.sub;
     if (!sub) return;
-    const { data, error } = await db.functions.invoke("pagbank-cancel-subscription", {
-      body: { subscriptionId: sub.id, reason: cancelDialog.reason || undefined },
+    const { data, error } = await db.functions.invoke("mercadopago-cancel-subscription", {
+      body: { subscription_id: sub.id },
     });
-    if (error || !(data as any)?.ok) {
+    if (error || (data as any)?.error || !(data as any)?.ok) {
       toast.error("Erro ao cancelar", { description: (data as any)?.error || error?.message });
       return;
     }

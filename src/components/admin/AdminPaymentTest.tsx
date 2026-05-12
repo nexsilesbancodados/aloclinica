@@ -99,7 +99,7 @@ export default function AdminPaymentTest() {
 
   // Helper para extrair mensagem REAL do erro retornado pela edge function
   // (db.functions.invoke esconde o body em erros 4xx/5xx)
-  const invokePagBankFn = async (fnName: string, body: any) => {
+  const invokeMpFn = async (fnName: string, body: any) => {
     try {
       const session = await db.auth.getSession();
       const token = session.data.session?.access_token;
@@ -120,10 +120,11 @@ export default function AdminPaymentTest() {
     }
   };
 
-  // Mensagem amigável quando erro é de whitelist PagBank
-  const explainPagBankError = (msg: string): string => {
-    if (msg && msg.toLowerCase().includes("whitelist")) {
-      return `${msg}\n→ A conta PagBank precisa ser liberada para a Orders API. Contato: 4002-4023 (PagBank Empresas) ou painel "Atendimento" pedindo liberação da Orders API.`;
+  // Mensagem amigável quando erro Mercado Pago
+  const explainMpError = (msg: string): string => {
+    if (!msg) return "Erro desconhecido";
+    if (msg.toLowerCase().includes("access_token") || msg.toLowerCase().includes("unauthorized")) {
+      return `${msg}\n→ Verifique se MERCADOPAGO_ACCESS_TOKEN está configurado em Supabase → Edge Functions → Secrets.`;
     }
     return msg;
   };
@@ -133,29 +134,24 @@ export default function AdminPaymentTest() {
     try {
       const id = appointmentId || (await createAppointment());
       if (!id) return;
-      const { data: profile } = await db.from("profiles").select("cpf, phone").eq("id", user!.id).maybeSingle();
-      const r = await invokePagBankFn("pagbank-create-payment", {
-        customerName: user!.email || "Admin Teste",
-        customerCpf: profile?.cpf || "12345678909",
-        customerEmail: user!.email,
-        customerPhone: profile?.phone || "11999999999",
-        billingType: "PIX",
-        value: 1.0,
-        description: "Teste PagBank R$1",
-        appointmentId: id,
+      const r = await invokeMpFn("mercadopago-create-payment", {
+        amount: 1.0,
+        payment_method: "pix",
+        reference_id: `appointment_${id}`,
+        description: "Teste Mercado Pago R$1",
       });
-      if (!r.ok || !r.data?.success) {
-        const real = r.data?.error || r.data?.details?.error_messages?.[0]?.description || r.raw?.slice(0, 200) || "Erro desconhecido";
-        const explained = explainPagBankError(real);
+      if (!r.ok || !r.data?.payment_id || r.data?.error) {
+        const real = r.data?.error || r.raw?.slice(0, 200) || "Erro desconhecido";
+        const explained = explainMpError(real);
         log(`❌ Erro PIX (HTTP ${r.status}): ${explained}`);
         toast.error("Erro PIX", { description: real });
         return;
       }
       const data = r.data;
-      setPixQr(data.pixQrCode || null);
-      setPixCopy(data.pixCopyPaste || null);
-      setOrderId(data.orderId || data.id || null);
-      log(`💸 PIX gerado (orderId=${data.orderId || "?"}). Aguardando webhook…`);
+      setPixQr(data.qr_code_base64 || null);
+      setPixCopy(data.qr_code || null);
+      setOrderId(data.payment_id || null);
+      log(`💸 PIX gerado (payment_id=${data.payment_id}). Aguardando webhook…`);
       startPolling(id);
     } finally { setBusy(false); }
   };
@@ -167,49 +163,43 @@ export default function AdminPaymentTest() {
       if (!id) return;
       const { data: profile } = await db.from("profiles").select("cpf, phone").eq("id", user!.id).maybeSingle();
       const cpf = profile?.cpf || "12345678909";
-      const phone = profile?.phone || "11999999999";
       const [m, y] = cardExp.split("/");
-      const tokR = await invokePagBankFn("pagbank-tokenize-card", {
-        customerName: user!.email,
-        customerCpf: cpf,
-        customerEmail: user!.email,
-        customerPhone: phone,
-        cardHolderName: cardName,
-        cardNumber: cardNumber.replace(/\s/g, ""),
-        cardExpiryMonth: m,
-        cardExpiryYear: `20${y}`,
-        cardCcv: cardCvv,
-        cardHolderCpf: cpf,
-        cardHolderPhone: phone,
-        remoteIp: "0.0.0.0",
-      });
-      if (!tokR.ok || !tokR.data?.success) {
-        const real = tokR.data?.error || tokR.raw?.slice(0, 200) || "Erro desconhecido";
-        log(`❌ Tokenização falhou (HTTP ${tokR.status}): ${explainPagBankError(real)}`);
-        toast.error("Erro tokenização", { description: real });
+      let token;
+      try {
+        const { createCardToken, detectCardBrand } = await import("@/lib/mercadopago");
+        token = await createCardToken({
+          cardNumber: cardNumber.replace(/\s/g, ""),
+          cardholderName: cardName,
+          cardExpirationMonth: m,
+          cardExpirationYear: y,
+          securityCode: cardCvv,
+          identificationType: "CPF",
+          identificationNumber: cpf,
+        });
+        log(`🔐 Cartão tokenizado (${token.payment_method_id ?? detectCardBrand(cardNumber)})`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        log(`❌ Tokenização falhou: ${msg}`);
+        toast.error("Erro tokenização", { description: msg });
         return;
       }
-      log(`🔐 Cartão tokenizado`);
-      const r = await invokePagBankFn("pagbank-create-payment", {
-        customerName: user!.email,
-        customerCpf: cpf,
-        customerEmail: user!.email,
-        customerPhone: phone,
-        billingType: "CREDIT_CARD",
-        value: 1.0,
+      const r = await invokeMpFn("mercadopago-create-payment", {
+        amount: 1.0,
+        payment_method: "credit_card",
+        reference_id: `appointment_${id}`,
         description: "Teste cartão R$1",
-        appointmentId: id,
-        creditCardToken: tokR.data.creditCardToken,
-        installmentCount: 1,
+        card_token: token.id,
+        payment_method_id: token.payment_method_id,
+        installments: 1,
       });
-      if (!r.ok || !r.data?.success) {
-        const real = r.data?.error || r.data?.details?.error_messages?.[0]?.description || r.raw?.slice(0, 200) || "Erro desconhecido";
-        log(`❌ Erro cartão (HTTP ${r.status}): ${explainPagBankError(real)}`);
+      if (!r.ok || !r.data?.payment_id || r.data?.error) {
+        const real = r.data?.error || r.raw?.slice(0, 200) || "Erro desconhecido";
+        log(`❌ Erro cartão (HTTP ${r.status}): ${explainMpError(real)}`);
         toast.error("Erro cartão", { description: real });
         return;
       }
       const data = r.data;
-      setOrderId(data.orderId || data.id || null);
+      setOrderId(data.payment_id || null);
       log(`💳 Cartão enviado (status=${data.status || "?"}). Aguardando webhook…`);
       startPolling(id);
     } finally { setBusy(false); }

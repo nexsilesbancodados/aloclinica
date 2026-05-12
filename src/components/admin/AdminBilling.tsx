@@ -164,20 +164,19 @@ const AdminBilling = () => {
     const tx = refundDialog.tx;
     if (!tx) return;
     setActionLoading(tx.id);
-    const cents = Math.round(parseFloat(refundDialog.amountInput.replace(",", ".")) * 100);
-    const { data, error } = await db.functions.invoke("pagbank-refund", {
+    const reaisAmount = parseFloat(refundDialog.amountInput.replace(",", "."));
+    const { data, error } = await db.functions.invoke("mercadopago-refund", {
       body: {
-        transactionId: tx.id,
-        amountCents: cents > 0 ? cents : undefined,
-        reason: refundDialog.reason || undefined,
+        transaction_id: tx.id,
+        amount: reaisAmount > 0 ? reaisAmount : undefined,
       },
     });
-    if (error || !(data as any)?.ok) {
+    if (error || (data as any)?.error || !(data as any)?.ok) {
       toast.error("Erro no estorno", { description: (data as any)?.error || error?.message });
       setActionLoading(null);
       return;
     }
-    toast.success("Estornado!", { description: `${(data as any).full ? "Total" : "Parcial"}: R$ ${((data as any).refund_amount_cents/100).toFixed(2)}` });
+    toast.success("Estornado!", { description: `${(data as any).is_partial ? "Parcial" : "Total"}: R$ ${Number((data as any).amount).toFixed(2)}` });
     setActionLoading(null);
     setRefundDialog({ open: false, tx: null, amountInput: "", reason: "" });
     await fetchAll();
@@ -186,10 +185,10 @@ const AdminBilling = () => {
   const cancelSubManual = async (sub: Sub) => {
     if (!confirm(`Cancelar assinatura de ${sub.user_name || sub.user_id}?`)) return;
     setActionLoading(sub.id);
-    const { data, error } = await db.functions.invoke("pagbank-cancel-subscription", {
-      body: { subscriptionId: sub.id, reason: "Cancelado por admin" },
+    const { data, error } = await db.functions.invoke("mercadopago-cancel-subscription", {
+      body: { subscription_id: sub.id },
     });
-    if (error || !(data as any)?.ok) {
+    if (error || (data as any)?.error || !(data as any)?.ok) {
       toast.error("Erro", { description: (data as any)?.error || error?.message });
     } else {
       toast.success("Assinatura cancelada");

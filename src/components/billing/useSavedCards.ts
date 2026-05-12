@@ -1,9 +1,9 @@
 /**
- * Hook para gerenciar cartões salvos (vault PagBank).
+ * Hook para gerenciar cartões salvos (vault Mercado Pago).
  *
  * Funcionalidades:
  *   - list(): lista cartões ativos do usuário
- *   - addCard(form): tokeniza no PagBank + salva localmente via pagbank-save-card
+ *   - addCard(form): tokeniza no MP via SDK client + salva via mercadopago-save-card
  *   - remove(cardId): soft-delete (status=removed)
  *   - setDefault(cardId): marca como default
  */
@@ -12,10 +12,13 @@ import { db } from "@/integrations/supabase/untyped";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { warn } from "@/lib/logger";
+import { createCardToken } from "@/lib/mercadopago";
+import { toastError } from "@/lib/errorMessages";
 
 export type SavedCard = {
   id: string;
-  pagbank_card_id: string;
+  mp_card_id: string | null;
+  pagbank_card_id?: string | null;
   last4: string;
   brand: string;
   holder_name: string;
@@ -23,6 +26,7 @@ export type SavedCard = {
   expiry_year: string;
   is_default: boolean;
   status: "active" | "expired" | "removed";
+  gateway?: "mercadopago" | "pagbank";
   created_at: string;
 };
 
@@ -32,6 +36,7 @@ export type AddCardInput = {
   expiryMonth: string;
   expiryYear: string;
   cvv: string;
+  cpf: string;
   isDefault?: boolean;
 };
 
@@ -65,22 +70,48 @@ export function useSavedCards() {
     }
     setAdding(true);
     try {
-      const { data, error } = await db.functions.invoke("pagbank-save-card", {
-        body: input,
+      // Tokeniza client-side via SDK Mercado Pago (número/CVV nunca trafegam pro backend)
+      const token = await createCardToken({
+        cardNumber: input.number,
+        cardholderName: input.holder,
+        cardExpirationMonth: input.expiryMonth,
+        cardExpirationYear: input.expiryYear,
+        securityCode: input.cvv,
+        identificationType: "CPF",
+        identificationNumber: input.cpf,
       });
-      if (error || !data?.ok) {
-        const msg = (data as any)?.error || error?.message || "Erro ao salvar cartão";
-        toast.error("Não foi possível salvar o cartão", { description: msg });
+
+      const { data, error } = await db.functions.invoke("mercadopago-save-card", {
+        body: {
+          card_token: token.id,
+          holder_name: input.holder,
+          is_default: input.isDefault ?? false,
+        },
+      });
+      if (error || data?.error || !data?.saved_card_id) {
+        toastError(toast, data?.error || error?.message, "pagamento");
         return null;
       }
       toast.success("Cartão salvo!", {
-        description: `${data.card.brand} •••• ${data.card.last4}`,
+        description: `${data.brand ?? ""} •••• ${data.last4}`,
       });
       await list();
-      return data.card as SavedCard;
+      return {
+        id: data.saved_card_id,
+        mp_card_id: data.mp_card_id,
+        last4: data.last4,
+        brand: data.brand,
+        holder_name: input.holder,
+        expiry_month: input.expiryMonth,
+        expiry_year: input.expiryYear,
+        is_default: input.isDefault ?? false,
+        status: "active",
+        gateway: "mercadopago",
+        created_at: new Date().toISOString(),
+      };
     } catch (e) {
       warn("[useSavedCards] addCard error", e);
-      toast.error("Erro inesperado");
+      toastError(toast, e, "pagamento");
       return null;
     } finally {
       setAdding(false);
