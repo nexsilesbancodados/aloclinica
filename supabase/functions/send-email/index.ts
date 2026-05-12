@@ -147,8 +147,30 @@ const TEMPLATE_BANNER: Record<string, string> = {
   newsletter_welcome: "welcome",
 };
 
+// Lista de templates promocionais que precisam de unsubscribe explícito (LGPD/CAN-SPAM)
+const MARKETING_TEMPLATES = new Set([
+  "newsletter_welcome",
+  "card_activated",
+  "subscription_expiring",
+  "card_expiring",
+  "nps_survey",
+  "waitlist_slot_available",
+  "prescription_expiring",
+]);
+
+const COMPANY_ADDRESS = Deno.env.get("EMAIL_COMPANY_ADDRESS")
+  || "AloClínica Telemedicina · Brasil";
+const SUPPORT_EMAIL = Deno.env.get("EMAIL_SUPPORT_ADDRESS")
+  || "suporte@aloclinica.com.br";
+
 const wrap = (body: string, templateType = "default") => {
   const bannerHtml = banner(TEMPLATE_BANNER[templateType] || "default");
+  const isMarketing = MARKETING_TEMPLATES.has(templateType);
+  const unsubLink = isMarketing
+    ? `<p style="color:${BRAND.muted};font-size:11px;text-align:center;margin:8px 0 0;">
+         <a href="${PROTOCOL}${ROOT_DOMAIN}/dashboard/notifications" style="color:${BRAND.muted};text-decoration:underline;">Gerenciar preferências de e-mail</a>
+       </p>`
+    : "";
   return `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -158,9 +180,15 @@ const wrap = (body: string, templateType = "default") => {
     ${bannerHtml}
     ${body}
     <hr style="border:none;border-top:1px solid ${BRAND.border};margin:32px 0 16px;" />
-    <p style="color:${BRAND.muted};font-size:11px;text-align:center;margin:0;">
-      AloClínica — Telemedicina Digital<br/>
-      Este é um e-mail automático. Não responda.
+    <p style="color:${BRAND.muted};font-size:11px;text-align:center;margin:0;line-height:1.6;">
+      <strong>AloClínica</strong> · Telemedicina Digital<br/>
+      ${COMPANY_ADDRESS}<br/>
+      Precisa de ajuda? <a href="mailto:${SUPPORT_EMAIL}" style="color:${BRAND.color};text-decoration:none;">${SUPPORT_EMAIL}</a>
+    </p>
+    ${unsubLink}
+    <p style="color:${BRAND.muted};font-size:10px;text-align:center;margin:12px 0 0;opacity:0.7;">
+      Este e-mail foi enviado pra você porque está cadastrado na AloClínica.<br/>
+      Não responda — usamos ${SUPPORT_EMAIL} pra qualquer dúvida.
     </p>
   </div>
 </body>
@@ -898,6 +926,14 @@ serve(async (req) => {
         to: [{ email: to }],
         subject,
         htmlContent: html,
+        // Reply-To pro suporte (usuário responde, cai no suporte real, não no noreply)
+        replyTo: { email: SUPPORT_EMAIL, name: "Suporte AloClínica" },
+        // Headers anti-spam
+        headers: {
+          "X-Mailer": "AloClinica/1.0",
+          "List-Unsubscribe": `<mailto:${SUPPORT_EMAIL}?subject=Unsubscribe>, <${PROTOCOL}${ROOT_DOMAIN}/dashboard/notifications>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
       }),
     });
 
