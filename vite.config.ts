@@ -163,18 +163,26 @@ export default defineConfig(({ mode }) => ({
     minify: "esbuild",
     sourcemap: false,
     cssCodeSplit: true,
-    // Only modulepreload critical-path chunks; let others load on demand
-    // modulePreload: {
-    //   resolveDependencies: (_filename, deps, { hostId: _hostId, hostType }) => {
-    //     // ...
-    //   },
-    // },
-    // rollupOptions: {
-    //   output: {
-    //     manualChunks(id) {
-    //       // ...
-    //     },
-    //   },
-    // },
+    rollupOptions: {
+      output: {
+        // Agrupa libs em chunks por uso, melhora cache HTTP entre deploys.
+        // Páginas/componentes do app continuam sendo splittados via React.lazy.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          // Libs grandes ficam em chunks separados pra não invalidar tudo
+          if (id.includes("recharts")) return "vendor-charts";
+          if (id.includes("@tiptap") || id.includes("prosemirror")) return "vendor-editor";
+          if (id.includes("jspdf") || id.includes("html2canvas")) return "vendor-pdf";
+          if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("@supabase") || id.includes("@tanstack/react-query")) return "vendor-data";
+          if (id.includes("@radix-ui")) return "vendor-ui-radix";
+          if (id.includes("lucide-react") || id.includes("@phosphor-icons")) return "vendor-icons";
+          if (id.includes("react-router")) return "vendor-router";
+          if (id.includes("date-fns")) return "vendor-dates";
+          if (id.includes("react-dom") || id.includes("/react/")) return "vendor-react";
+          return "vendor";
+        },
+      },
+    },
   },
 }));

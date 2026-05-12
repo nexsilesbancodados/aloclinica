@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   CheckCircle2, Clock, FileText, Pill, Star, ArrowRight,
-  MessageSquare, Shield, Send, CalendarPlus, Download
+  MessageSquare, Shield, Send, CalendarPlus, Download, Stamp, Users
 } from "lucide-react";
 
 interface PostConsultationSummaryProps {
@@ -32,8 +32,10 @@ const PostConsultationSummary = ({
   const { user } = useAuth();
   const [hasNotes, setHasNotes] = useState(false);
   const [hasPrescription, setHasPrescription] = useState(false);
+  const [hasCertificate, setHasCertificate] = useState(false);
   const [otherPartyName, setOtherPartyName] = useState("");
   const [doctorIdRaw, setDoctorIdRaw] = useState<string | null>(null);
+  const [nextWaiting, setNextWaiting] = useState<{ id: string; patient_name: string } | null>(null);
 
   // Rating state
   const [existingRating, setExistingRating] = useState<number | null>(null);
@@ -46,15 +48,15 @@ const PostConsultationSummary = ({
 
   useEffect(() => {
     const load = async () => {
-      const [notesRes, prescRes, apptRes] = await Promise.all([
+      const [notesRes, prescRes, certRes, apptRes] = await Promise.all([
         db.from("consultation_notes").select("id").eq("appointment_id", appointmentId).limit(1),
         db.from("prescriptions").select("id").eq("appointment_id", appointmentId).limit(1),
+        (db as any).from("medical_certificates").select("id").eq("appointment_id", appointmentId).limit(1),
         db.from("appointments").select("patient_id, doctor_id").eq("id", appointmentId).single(),
       ]);
       setHasNotes((notesRes.data?.length ?? 0) > 0);
       setHasPrescription((prescRes.data?.length ?? 0) > 0);
-
-      // patient_rating column may not exist yet — skip rating preload
+      setHasCertificate((certRes?.data?.length ?? 0) > 0);
 
       if (apptRes.data) {
         const otherId = isDoctor ? apptRes.data.patient_id : null;
@@ -68,6 +70,25 @@ const PostConsultationSummary = ({
           if (doc) {
             const { data: p } = await db.from("profiles").select("first_name, last_name").eq("user_id", doc.user_id).single();
             if (p) setOtherPartyName(`Dr(a). ${p.first_name} ${p.last_name}`);
+          }
+        }
+
+        // Para o médico: descobre próximo paciente em fila pra evitar voltar pro dashboard
+        if (isDoctor && apptRes.data.doctor_id) {
+          const { data: nx } = await db
+            .from("appointments")
+            .select("id, patient_id, scheduled_at")
+            .eq("doctor_id", apptRes.data.doctor_id)
+            .in("status", ["waiting", "in_progress"])
+            .neq("id", appointmentId)
+            .order("scheduled_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (nx?.patient_id) {
+            const { data: nxProf } = await db.from("profiles").select("first_name, last_name").eq("user_id", nx.patient_id).single();
+            if (nxProf) {
+              setNextWaiting({ id: nx.id, patient_name: `${nxProf.first_name} ${nxProf.last_name}` });
+            }
           }
         }
       }
@@ -176,6 +197,14 @@ const PostConsultationSummary = ({
                   {hasPrescription ? "Receita emitida" : "Nenhuma receita emitida"}
                 </span>
               </div>
+              <div className="flex items-center gap-3">
+                <div className={`w-7 h-7 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0 ${hasCertificate ? "bg-success/15" : "bg-muted"}`}>
+                  <Stamp className={`w-3.5 h-3.5 ${hasCertificate ? "text-success" : "text-muted-foreground"}`} />
+                </div>
+                <span className={`text-sm ${hasCertificate ? "text-foreground" : "text-muted-foreground"}`}>
+                  {hasCertificate ? "Atestado emitido" : "Sem atestado"}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -270,13 +299,37 @@ const PostConsultationSummary = ({
 
         {/* Actions */}
         <div className="space-y-3">
+          {/* Médico: próximo paciente em fila — handoff direto sem voltar pro dashboard */}
+          {isDoctor && nextWaiting && (
+            <Button
+              onClick={() => navigate(`/dashboard/consultation/${nextWaiting.id}`)}
+              className="w-full h-12 rounded-xl font-semibold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Users className="w-5 h-5" />
+              Atender {nextWaiting.patient_name.split(" ")[0]} agora
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          )}
+
           {isDoctor && !hasPrescription && (
             <Button
               onClick={() => navigate(`/dashboard/prescribe/${appointmentId}`)}
+              variant={nextWaiting ? "outline" : "default"}
               className="w-full h-12 rounded-xl font-semibold gap-2"
             >
               <Pill className="w-5 h-5" />
               Emitir Receita
+            </Button>
+          )}
+
+          {isDoctor && !hasCertificate && (
+            <Button
+              onClick={() => navigate(`/dashboard/medical-certificate/${appointmentId}`)}
+              variant="outline"
+              className="w-full h-12 rounded-xl font-semibold gap-2"
+            >
+              <Stamp className="w-5 h-5" />
+              Emitir atestado
             </Button>
           )}
 

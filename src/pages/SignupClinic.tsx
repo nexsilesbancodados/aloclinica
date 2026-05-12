@@ -21,6 +21,7 @@ import {
   validarNome,
 } from "@/lib/form-validators";
 import { ArrowLeft, Eye, EyeSlash } from "@phosphor-icons/react";
+import { toastError } from "@/lib/errorMessages";
 
 interface FormData {
   company_name: string;
@@ -129,7 +130,7 @@ export default function SignupClinic() {
       toast.success("Cadastro realizado com sucesso! Verifique seu email.");
       navigate("/clinica");
     } catch (error) {
-      toast.error((error as Error).message || "Erro ao cadastrar");
+      toastError(toast, error, "signup");
       console.error(error);
     } finally {
       setLoading(false);
