@@ -13,6 +13,9 @@ import {
 import { toast } from "sonner";
 import { Upload, Copy, Trash2, Search, FileText, Film, ImageIcon, X } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Media = {
   id: string;
@@ -51,6 +54,7 @@ function formatSize(bytes?: number | null): string {
 
 export default function AdminMediaLibrary() {
   const confirm = useConfirm();
+  const sel = useBulkSelection();
   const [items, setItems] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -138,6 +142,32 @@ export default function AdminMediaLibrary() {
   const copyUrl = async (url: string) => {
     await navigator.clipboard.writeText(url);
     toast.success("URL copiada");
+  };
+
+  const bulkRemove = async () => {
+    const ids = sel.toArray();
+    if (ids.length === 0) return;
+    const ok = await confirm({
+      title: `Remover ${ids.length} arquivo${ids.length === 1 ? "" : "s"}?`,
+      description: "Os arquivos serão excluídos da biblioteca e do storage. Não pode ser desfeito.",
+      confirmLabel: "Remover tudo",
+      destructive: true,
+    });
+    if (!ok) return;
+    const targets = items.filter(i => ids.includes(i.id));
+    const paths = targets.map(t => t.path);
+    if (paths.length > 0) {
+      const { error: stErr } = await db.storage.from("site-media").remove(paths);
+      if (stErr) toast.error(stErr.message);
+    }
+    const { error: delErr } = await (db as any).from("site_media").delete().in("id", ids);
+    if (delErr) {
+      toast.error(delErr.message);
+      return;
+    }
+    toast.success(`${ids.length} arquivo${ids.length === 1 ? "" : "s"} removido${ids.length === 1 ? "" : "s"}`);
+    sel.clear();
+    load();
   };
 
   const remove = async (m: Media) => {
@@ -264,9 +294,32 @@ export default function AdminMediaLibrary() {
         </Card>
       )}
 
+      <BulkActionBar count={sel.size} onClear={sel.clear} noun="arquivos">
+        <Button variant="destructive" size="sm" onClick={bulkRemove} className="gap-1.5">
+          <Trash2 className="w-3.5 h-3.5" /> Remover selecionados
+        </Button>
+      </BulkActionBar>
+
+      {filtered.length > 0 && (
+        <div className="flex items-center gap-2 text-xs">
+          <Checkbox
+            checked={sel.isAllSelected(filtered.map(m => m.id))}
+            onCheckedChange={() => sel.selectAll(filtered.map(m => m.id))}
+            aria-label="Selecionar todos"
+          />
+          <span className="text-muted-foreground">Selecionar todos da página ({filtered.length})</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {filtered.map((m) => (
-          <Card key={m.id} className="p-2 space-y-2">
+          <Card key={m.id} className={`p-2 space-y-2 relative ${sel.has(m.id) ? "ring-2 ring-primary" : ""}`}>
+            <Checkbox
+              checked={sel.has(m.id)}
+              onCheckedChange={() => sel.toggle(m.id)}
+              className="absolute top-2 right-2 z-10 bg-card shadow-sm"
+              aria-label={`Selecionar ${m.name}`}
+            />
             {renderPreview(m)}
             <div className="text-xs truncate" title={m.name}>{m.name}</div>
             <div className="text-[10px] text-muted-foreground flex items-center justify-between">
