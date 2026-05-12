@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PingoSubscribeDialog } from "./PingoSubscribeDialog";
 
 interface Plan {
   id: string; name: string; slug: string; tagline: string | null;
@@ -103,40 +104,30 @@ const PingoCardPanel = () => {
     setLoading(false);
   };
 
-  const subscribe = async (plan: Plan, billingCycle: "monthly" | "yearly") => {
-    if (!user) return;
-    const { data, error } = await db
-      .from("pingo_card_subscriptions")
-      .insert({
-        user_id: user.id,
-        plan_id: plan.id,
-        card_number: generateCardNumber(),
-        status: "active",
-        billing_cycle: billingCycle,
-        current_period_end: new Date(Date.now() + (billingCycle === "yearly" ? 365 : 30) * 86400_000).toISOString(),
-      })
-      .select("*, plan:pingo_card_plans(*)")
-      .single();
-
-    if (error) {
-      toast.error("Erro ao criar assinatura", { description: error.message });
+  // Subscribe agora abre dialog de pagamento (cobra de verdade via Mercado Pago)
+  const [subscribeDialog, setSubscribeDialog] = useState<{ plan: Plan | null; cycle: "monthly" | "yearly" }>({
+    plan: null,
+    cycle: "monthly",
+  });
+  const subscribe = (plan: Plan, billingCycle: "monthly" | "yearly") => {
+    if (!user) {
+      toast.error("Faça login pra assinar");
       return;
     }
-    toast.success("Bem-vindo ao Pingo Card!", { description: `Plano ${plan.name} ativado.` });
-    setSubscription(data as Subscription);
+    setSubscribeDialog({ plan, cycle: billingCycle });
   };
 
   const cancel = async () => {
     if (!subscription) return;
-    const { error } = await db
-      .from("pingo_card_subscriptions")
-      .update({ status: "canceled", canceled_at: new Date().toISOString() })
-      .eq("id", subscription.id);
-    if (error) {
-      toast.error("Erro ao cancelar", { description: error.message });
+    // Cancela no Mercado Pago + marca local
+    const { data, error } = await db.functions.invoke("mercadopago-cancel-subscription", {
+      body: { subscription_id: subscription.id, table: "pingo_card_subscriptions" },
+    });
+    if (error || (data as any)?.error) {
+      toast.error("Erro ao cancelar", { description: (data as any)?.error || error?.message });
       return;
     }
-    toast.success("Assinatura cancelada");
+    toast.success("Assinatura cancelada", { description: "Você não será cobrado novamente." });
     void load();
   };
 
@@ -447,6 +438,13 @@ const PingoCardPanel = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <PingoSubscribeDialog
+        open={!!subscribeDialog.plan}
+        onOpenChange={(open) => !open && setSubscribeDialog({ plan: null, cycle: "monthly" })}
+        plan={subscribeDialog.plan}
+        billingCycle={subscribeDialog.cycle}
+        onSubscribed={() => void load()}
+      />
     </DashboardLayout>
   );
 };

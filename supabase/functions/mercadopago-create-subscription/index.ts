@@ -6,10 +6,13 @@
  *
  * Body:
  *   {
- *     plan_id: string,           // UUID em plans
- *     card_token: string,        // tokenizado client-side
- *     payer_email: string,       // pode ser do user.email
- *     external_reference?: string
+ *     plan_id: string,                                  // UUID
+ *     plan_table?: "plans" | "pingo_card_plans",        // default: "plans"
+ *     billing_cycle?: "monthly" | "yearly",             // default: "monthly"
+ *     card_token: string,                               // tokenizado client-side
+ *     payer_email: string,                              // pode ser do user.email
+ *     external_reference?: string,
+ *     metadata?: Record<string, unknown>                // attach extra info
  *   }
  *
  * Retorna: { subscription_id, mp_preapproval_id, status, init_point }
@@ -38,19 +41,36 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { plan_id, card_token, payer_email, external_reference } = await req.json();
+    const {
+      plan_id,
+      plan_table = "plans",
+      billing_cycle = "monthly",
+      card_token,
+      payer_email,
+      external_reference,
+      metadata,
+      skip_db_insert = false,  // pra plan_table != "plans", frontend insere na tabela específica
+    } = await req.json();
+
     if (!plan_id) return json({ error: "plan_id obrigatório" }, 400);
     if (!card_token) return json({ error: "card_token obrigatório" }, 400);
 
+    // Whitelist de tabelas pra evitar SQL injection no nome
+    const ALLOWED_TABLES = new Set(["plans", "pingo_card_plans"]);
+    if (!ALLOWED_TABLES.has(plan_table)) {
+      return json({ error: `plan_table inválido: ${plan_table}` }, 400);
+    }
+
     // Busca plano
-    const { data: plan } = await admin
-      .from("plans")
+    const { data: plan } = await (admin as any)
+      .from(plan_table)
       .select("id, name, slug, price_monthly, price_yearly")
       .eq("id", plan_id)
       .single();
     if (!plan) return json({ error: "Plano não encontrado" }, 404);
 
-    const amount = Number(plan.price_monthly);
+    const isYearly = billing_cycle === "yearly";
+    const amount = Number(isYearly ? plan.price_yearly : plan.price_monthly);
     if (!amount || amount <= 0) return json({ error: "Preço inválido no plano" }, 400);
 
     const email = payer_email || user.email || "";
@@ -60,13 +80,16 @@ Deno.serve(async (req) => {
     const startDate = new Date();
     startDate.setSeconds(0, 0);
     const preapprovalBody = {
-      reason: `Plano ${plan.name} - AloClínica`,
-      external_reference: external_reference || `sub_user_${user.id}_plan_${plan_id}`,
+      reason: `${plan.name} - AloClínica`,
+      external_reference: external_reference || `sub_user_${user.id}_plan_${plan_id}_${billing_cycle}`,
       payer_email: email,
       card_token_id: card_token,
       auto_recurring: {
         frequency: 1,
-        frequency_type: "months",
+        frequency_type: isYearly ? "months" : "months",
+        // anual: 12 meses entre cobranças. mensal: 1 mês.
+        // (Mercado Pago não tem "yearly" — usa frequency=12, frequency_type="months")
+        ...(isYearly ? { frequency: 12 } : { frequency: 1 }),
         start_date: startDate.toISOString(),
         transaction_amount: amount,
         currency_id: "BRL",
@@ -85,6 +108,19 @@ Deno.serve(async (req) => {
       }, 400);
     }
 
+    // Frontend pode pedir pra pular o insert (ex: Pingo Card insere em pingo_card_subscriptions
+    // com FK específica em pingo_card_plans, não cabe na tabela genérica subscriptions)
+    if (skip_db_insert) {
+      return json({
+        subscription_id: null,
+        mp_preapproval_id: res.data.id,
+        status: res.data.status,
+        init_point: res.data.init_point,
+        next_payment_date: res.data.next_payment_date,
+        amount,
+      });
+    }
+
     // Persiste em subscriptions
     const { data: sub, error } = await admin.from("subscriptions").insert({
       user_id: user.id,
@@ -94,11 +130,12 @@ Deno.serve(async (req) => {
       mp_payer_id: res.data.payer_id,
       amount_cents: Math.round(amount * 100),
       currency: "BRL",
-      interval_days: 30,
+      interval_days: isYearly ? 365 : 30,
+      billing_cycle,
       status: res.data.status === "authorized" ? "active" : "pending",
       started_at: new Date().toISOString(),
       next_charge_at: res.data.next_payment_date || null,
-      metadata: res.data,
+      metadata: { ...res.data, ...(metadata ?? {}), plan_table },
     } as any).select("id").single();
 
     if (error) {

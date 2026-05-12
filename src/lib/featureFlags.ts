@@ -20,8 +20,8 @@ export const FEATURE_FLAGS = {
   sweepstakes: false,
   /** Assistência funeral via cartão — não está no escopo atual. */
   funeral: false,
-  /** Cartão de benefícios PingoCard — desativado até relançamento. */
-  cartao_pingo: false,
+  /** Cartão de benefícios PingoCard — assinatura via Mercado Pago Pre-Approval. */
+  cartao_pingo: true,
   /** Mock de pagamentos (apenas dev/QA). */
   mock_payments: false,
   /** Tour interativo da primeira consulta. */

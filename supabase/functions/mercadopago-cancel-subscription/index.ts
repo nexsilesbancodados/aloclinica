@@ -29,34 +29,48 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { subscription_id } = await req.json();
-    if (!subscription_id) return json({ error: "subscription_id obrigatório" }, 400);
+    const { subscription_id, table = "subscriptions", mp_preapproval_id: directPreapprovalId } = await req.json();
+    if (!subscription_id && !directPreapprovalId) {
+      return json({ error: "subscription_id ou mp_preapproval_id obrigatório" }, 400);
+    }
 
-    const { data: sub } = await admin
-      .from("subscriptions")
-      .select("id, user_id, mp_preapproval_id, gateway")
-      .eq("id", subscription_id)
-      .eq("user_id", user.id)
-      .single();
+    const ALLOWED_TABLES = new Set(["subscriptions", "pingo_card_subscriptions"]);
+    if (!ALLOWED_TABLES.has(table)) return json({ error: `table inválida: ${table}` }, 400);
 
-    if (!sub) return json({ error: "Assinatura não encontrada" }, 404);
+    let preapprovalId = directPreapprovalId;
+    let gateway = "mercadopago";
 
-    if (sub.gateway === "mercadopago" && sub.mp_preapproval_id) {
-      const cancel = await mpRequest("PUT", `/preapproval/${sub.mp_preapproval_id}`, { status: "cancelled" });
+    if (subscription_id) {
+      const { data: sub } = await (admin as any)
+        .from(table)
+        .select("id, user_id, mp_preapproval_id, gateway")
+        .eq("id", subscription_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!sub) return json({ error: "Assinatura não encontrada" }, 404);
+      preapprovalId = sub.mp_preapproval_id;
+      gateway = sub.gateway ?? "mercadopago";
+    }
+
+    if (gateway === "mercadopago" && preapprovalId) {
+      const cancel = await mpRequest("PUT", `/preapproval/${preapprovalId}`, { status: "cancelled" });
       if (!cancel.ok) {
         console.error("[mp-cancel-sub] falha ao cancelar no MP", cancel.data);
         // Continua atualizando local mesmo se MP falhou — pode estar já cancelado lá
       }
     }
 
-    await admin
-      .from("subscriptions")
-      .update({
-        status: "cancelled",
-        cancelled_at: new Date().toISOString(),
-        next_charge_at: null,
-      } as any)
-      .eq("id", subscription_id);
+    if (subscription_id) {
+      await (admin as any)
+        .from(table)
+        .update({
+          status: "cancelled",
+          cancelled_at: new Date().toISOString(),
+          next_charge_at: null,
+        })
+        .eq("id", subscription_id);
+    }
 
     return json({ ok: true });
   } catch (e) {

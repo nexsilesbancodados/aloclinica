@@ -1,0 +1,49 @@
+name: One-shot — Aplicar migration específica
+
+# Workflow utilitário pra aplicar 1 migration via Supabase Management API.
+# Útil pra catch-up de schema entre PRs sem rodar `supabase db push` completo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_file:
+        description: "Caminho da migration relativo ao repo (ex: supabase/migrations/20260512c_pingo_card_mp.sql)"
+        required: true
+        type: string
+
+env:
+  SUPABASE_PROJECT_REF: pwxvvimdtmvziynbspgx
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aplicar migration
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          MIGRATION: ${{ inputs.migration_file }}
+        run: |
+          set -e
+          if [ ! -f "$MIGRATION" ]; then
+            echo "Arquivo não encontrado: $MIGRATION"
+            exit 1
+          fi
+          echo "→ Aplicando $MIGRATION"
+          jq -Rs '{query: .}' "$MIGRATION" > /tmp/payload.json
+          HTTP_CODE=$(curl -sS -w "%{http_code}" -o /tmp/resp.txt \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H "Content-Type: application/json" \
+            -A "Mozilla/5.0 (compatible; aloclinica-deploy/1.0)" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @/tmp/payload.json)
+          BODY=$(head -c 500 /tmp/resp.txt)
+          echo "HTTP $HTTP_CODE"
+          echo "Body: $BODY"
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+            exit 1
+          fi
+          echo "## ✅ Migration aplicada" >> $GITHUB_STEP_SUMMARY
+          echo "Arquivo: \`$MIGRATION\`" >> $GITHUB_STEP_SUMMARY
