@@ -30,6 +30,47 @@ const AdminApprovals = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<{ id: string; type: "doctor" | "clinic" | "partner"; name: string; email?: string } | null>(null);
+  const [selectedDoctorIds, setSelectedDoctorIds] = useState<Set<string>>(new Set());
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+
+  const toggleDoctorSelection = (id: string) => {
+    setSelectedDoctorIds(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const selectAllPending = () => {
+    setSelectedDoctorIds(new Set(pendingDoctors.map(d => d.id)));
+  };
+
+  const clearSelection = () => setSelectedDoctorIds(new Set());
+
+  const bulkApproveDoctors = async () => {
+    if (selectedDoctorIds.size === 0) return;
+    setBulkSubmitting(true);
+    try {
+      const ids = Array.from(selectedDoctorIds);
+      // Update em massa
+      const { error } = await db.from("doctor_profiles").update({ is_approved: true }).in("id", ids);
+      if (error) throw error;
+      // Notifica em background, não bloqueia
+      const docs = pendingDoctors.filter(d => ids.includes(d.id));
+      docs.forEach(doc => {
+        notifyDoctorApproval(doc.user_id ?? '', `${doc.first_name ?? ''} ${doc.last_name ?? ''}`, true)
+          .catch(err => logError("notifyDoctorApproval failed (bulk)", err));
+      });
+      toast.success(`${ids.length} médico${ids.length > 1 ? "s" : ""} aprovado${ids.length > 1 ? "s" : ""} ✅`);
+      clearSelection();
+      fetchAll();
+    } catch (e) {
+      logError("bulkApproveDoctors failed", e);
+      toast.error("Erro na aprovação em massa", { description: "Tente individualmente." });
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -352,8 +393,46 @@ const AdminApprovals = () => {
               <TabsContent value="doctors" className="mt-4 space-y-4">
                 {pendingDoctors.length > 0 && (
                   <>
-                    <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1"><Clock className="w-4 h-4" /> Pendentes</h3>
-                    {pendingDoctors.map(d => renderApprovalCard(d, "doctor", false))}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1"><Clock className="w-4 h-4" /> Pendentes ({pendingDoctors.length})</h3>
+                      <div className="flex items-center gap-2">
+                        {selectedDoctorIds.size === 0 ? (
+                          <Button variant="ghost" size="sm" onClick={selectAllPending} className="text-xs h-7">
+                            Selecionar todos
+                          </Button>
+                        ) : (
+                          <>
+                            <span className="text-xs text-muted-foreground">{selectedDoctorIds.size} selecionado{selectedDoctorIds.size > 1 ? "s" : ""}</span>
+                            <Button variant="ghost" size="sm" onClick={clearSelection} className="text-xs h-7">
+                              Limpar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={bulkApproveDoctors}
+                              disabled={bulkSubmitting}
+                              className="text-xs h-7 bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              {bulkSubmitting ? "Aprovando…" : `Aprovar ${selectedDoctorIds.size}`}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {pendingDoctors.map(d => (
+                      <div key={d.id} className="flex items-start gap-2">
+                        <div className="pt-6 pl-2">
+                          <Checkbox
+                            checked={selectedDoctorIds.has(d.id)}
+                            onCheckedChange={() => toggleDoctorSelection(d.id)}
+                            aria-label={`Selecionar ${d.first_name} ${d.last_name}`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {renderApprovalCard(d, "doctor", false)}
+                        </div>
+                      </div>
+                    ))}
                   </>
                 )}
                 {approvedDoctors.length > 0 && (

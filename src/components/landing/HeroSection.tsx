@@ -6,6 +6,7 @@ import { usePrefetchRoute } from "@/hooks/use-prefetch-route";
 import OptimizedImage from "@/components/ui/optimized-image";
 import { ArrowRight, ShieldCheck, Lock, Star, CheckCircle, CreditCard, Clock, Heartbeat, VideoCamera } from "@phosphor-icons/react";
 import heroPingoFamily from "@/assets/hero-pingo-family.png";
+import { isFeatureEnabled } from "@/lib/featureFlags";
 
 const trustItems = [
   { label: "Regulamentado CFM", icon: ShieldCheck },
@@ -97,27 +98,29 @@ const HeroSection = memo(
                   <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" weight="bold" />
                 </Button>
 
-                 <motion.div
-                   whileHover={{ scale: 1.03 }}
-                   whileTap={{ scale: 0.98 }}
-                   className="w-full sm:w-auto"
-                 >
-                   <Button
-                     size="lg"
-                     variant="outline"
-                     className="w-full sm:w-auto rounded-2xl h-[60px] px-8 text-[15px] font-bold border-amber-400/60 bg-amber-400/5 hover:bg-amber-400/10 hover:border-amber-500 text-foreground transition-all duration-300 gap-3 group relative overflow-hidden"
-                     onClick={() => navigate("/pingo-card")}
+                 {isFeatureEnabled("cartao_pingo") && (
+                   <motion.div
+                     whileHover={{ scale: 1.03 }}
+                     whileTap={{ scale: 0.98 }}
+                     className="w-full sm:w-auto"
                    >
-                     <div className="absolute inset-0 bg-gradient-to-r from-amber-400/0 via-amber-400/5 to-amber-400/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                     <div className="w-9 h-9 rounded-xl bg-amber-400 flex items-center justify-center shadow-[0_4px_12px_rgba(245,158,11,0.3)] group-hover:shadow-[0_4px_20px_rgba(245,158,11,0.5)] transition-all shrink-0">
-                       <CreditCard className="w-5 h-5 text-amber-950" weight="fill" />
-                     </div>
-                     <div className="flex flex-col items-start leading-tight">
-                       <span className="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Cartão de Benefícios</span>
-                       <span className="text-[16px]">Pingo Card</span>
-                     </div>
-                   </Button>
-                 </motion.div>
+                     <Button
+                       size="lg"
+                       variant="outline"
+                       className="w-full sm:w-auto rounded-2xl h-[60px] px-8 text-[15px] font-bold border-amber-400/60 bg-amber-400/5 hover:bg-amber-400/10 hover:border-amber-500 text-foreground transition-all duration-300 gap-3 group relative overflow-hidden"
+                       onClick={() => navigate("/pingo-card")}
+                     >
+                       <div className="absolute inset-0 bg-gradient-to-r from-amber-400/0 via-amber-400/5 to-amber-400/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                       <div className="w-9 h-9 rounded-xl bg-amber-400 flex items-center justify-center shadow-[0_4px_12px_rgba(245,158,11,0.3)] group-hover:shadow-[0_4px_20px_rgba(245,158,11,0.5)] transition-all shrink-0">
+                         <CreditCard className="w-5 h-5 text-amber-950" weight="fill" />
+                       </div>
+                       <div className="flex flex-col items-start leading-tight">
+                         <span className="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Cartão de Benefícios</span>
+                         <span className="text-[16px]">Pingo Card</span>
+                       </div>
+                     </Button>
+                   </motion.div>
+                 )}
                 
                 <div className="flex -space-x-2 ml-2 hidden xl:flex">
                   {[1, 2, 3, 4].map((i) => (

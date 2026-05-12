@@ -62,6 +62,7 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<UserWithRoles | null>(null);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -123,9 +124,17 @@ const AdminUsers = () => {
     fetchUsers();
   };
 
-  const filtered = users.filter(u =>
-    `${u.first_name} ${u.last_name} ${u.cpf || ""}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = users.filter(u => {
+    const haystack = `${u.first_name} ${u.last_name} ${u.cpf || ""} ${u.phone || ""}`.toLowerCase();
+    const matchesSearch = !search || haystack.includes(search.toLowerCase());
+    const matchesRole = !roleFilter || u.roles.includes(roleFilter);
+    return matchesSearch && matchesRole;
+  });
+
+  const roleCounts = users.reduce<Record<string, number>>((acc, u) => {
+    u.roles.forEach(r => { acc[r] = (acc[r] ?? 0) + 1; });
+    return acc;
+  }, {});
 
   return (
     <DashboardLayout title="Administração" nav={getAdminNav("users")}>
@@ -139,9 +148,39 @@ const AdminUsers = () => {
           badge={{ label: `${filtered.length} ${filtered.length === 1 ? "usuário" : "usuários"}`, tone: "info" }}
         />
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou CPF..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome, CPF ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+          </div>
+          {Object.keys(roleCounts).length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mr-1">Filtrar:</span>
+              <button
+                type="button"
+                onClick={() => setRoleFilter(null)}
+                className={`h-7 px-3 rounded-full text-[11px] font-semibold transition-colors ${
+                  roleFilter === null ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                Todos ({users.length})
+              </button>
+              {Object.entries(roleCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([role, count]) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setRoleFilter(roleFilter === role ? null : role)}
+                    className={`h-7 px-3 rounded-full text-[11px] font-semibold transition-colors ${
+                      roleFilter === role ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {ROLE_LABELS[role] ?? role} ({count})
+                  </button>
+                ))}
+            </div>
+          )}
         </div>
 
         {loading ? (
