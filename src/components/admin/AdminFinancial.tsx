@@ -121,14 +121,21 @@ const AdminFinancial = () => {
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - parseInt(period));
 
-    const { data: appts } = await db
+    const FINANCIAL_FETCH_LIMIT = 5000;
+    const { data: appts, count: totalAppts } = await db
       .from("appointments")
-      .select("id, status, payment_status, scheduled_at, created_at, payment_confirmed_at, cancel_reason, doctor_id, patient_id, guest_patient_id")
+      .select("id, status, payment_status, scheduled_at, created_at, payment_confirmed_at, cancel_reason, doctor_id, patient_id, guest_patient_id", { count: "exact" })
       .gte("created_at", daysAgo.toISOString())
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(FINANCIAL_FETCH_LIMIT);
 
     if (!appts) { setLoading(false); return; }
+    if ((totalAppts ?? 0) > FINANCIAL_FETCH_LIMIT) {
+      // Avisa admin que KPIs podem estar incompletos
+      toast.warning(`Período tem ${totalAppts} consultas, calculando KPIs com as ${FINANCIAL_FETCH_LIMIT} mais recentes`, {
+        description: "Reduza o período pra ver dados completos.",
+      });
+    }
 
     // Fetch doctor names and prices
     const doctorIds = [...new Set(appts.map(a => a.doctor_id))];

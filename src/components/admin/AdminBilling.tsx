@@ -15,6 +15,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -97,19 +99,23 @@ const AdminBilling = () => {
     open: false, tx: null, amountInput: "", reason: "",
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const txPg = usePagination({ pageSize: 25 });
+  const subPg = usePagination({ pageSize: 25 });
 
   const fetchAll = async () => {
     setLoading(true);
     const [txRes, subRes] = await Promise.all([
       db.from("payment_transactions")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(500),
+        .range(txPg.from, txPg.to),
       (db as any).from("subscriptions")
-        .select("*, plans(name)")
+        .select("*, plans(name)", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(500),
+        .range(subPg.from, subPg.to),
     ]);
+    txPg.setTotal(txRes.count ?? 0);
+    subPg.setTotal((subRes as any).count ?? 0);
 
     // Enrich com profiles
     const userIds = [
@@ -136,7 +142,7 @@ const AdminBilling = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(); }, [txPg.page, txPg.pageSize, subPg.page, subPg.pageSize]);
 
   const filteredTxs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -369,6 +375,7 @@ const AdminBilling = () => {
                 )}
               </CardContent>
             </Card>
+            <PaginationBar pg={txPg} noun="transações" />
           </TabsContent>
 
           <TabsContent value="subscriptions" className="space-y-3 mt-4">
@@ -428,6 +435,7 @@ const AdminBilling = () => {
                 </CardContent>
               </Card>
             )}
+            <PaginationBar pg={subPg} noun="assinaturas" />
           </TabsContent>
 
           <TabsContent value="upcoming" className="space-y-3 mt-4">

@@ -13,6 +13,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { AdminAppointmentRow } from "@/types/domain";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 
 const statusLabel: Record<string, string> = {
   scheduled: "Agendada", waiting: "Esperando", in_progress: "Em andamento",
@@ -31,8 +33,9 @@ const AdminAppointments = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [liveCount, setLiveCount] = useState(0);
   const [waitingCount, setWaitingCount] = useState(0);
+  const pg = usePagination({ pageSize: 25 });
 
-  useEffect(() => { fetchAppointments(); }, []);
+  useEffect(() => { fetchAppointments(); }, [pg.page, pg.pageSize, filterStatus, debouncedSearch]);
 
   // Realtime updates
   useEffect(() => {
@@ -46,13 +49,20 @@ const AdminAppointments = () => {
   }, []);
 
   const fetchAppointments = async () => {
-    const { data } = await db.from("appointments")
-      .select("id, scheduled_at, status, patient_id, doctor_id, duration_minutes, notes, appointment_type")
-      .order("scheduled_at", { ascending: false }).limit(200);
+    setLoading(true);
+    let query = db.from("appointments")
+      .select("id, scheduled_at, status, patient_id, doctor_id, duration_minutes, notes, appointment_type", { count: "exact" })
+      .order("scheduled_at", { ascending: false });
+    if (filterStatus !== "all") query = query.eq("status", filterStatus);
+    const { data, count } = await query.range(pg.from, pg.to);
     if (!data) { setLoading(false); return; }
+    pg.setTotal(count ?? 0);
 
-    setLiveCount(data.filter(a => a.status === "in_progress").length);
-    setWaitingCount(data.filter(a => a.status === "waiting").length);
+    // Realtime counts (rápidos, separados da paginação)
+    const { count: liveC } = await db.from("appointments").select("id", { count: "exact", head: true }).eq("status", "in_progress");
+    const { count: waitingC } = await db.from("appointments").select("id", { count: "exact", head: true }).eq("status", "waiting");
+    setLiveCount(liveC ?? 0);
+    setWaitingCount(waitingC ?? 0);
 
     const patientIds = [...new Set(data.map(a => a.patient_id).filter((id): id is string => Boolean(id)))];
     const doctorIds = [...new Set(data.map(a => a.doctor_id))];
@@ -174,6 +184,7 @@ const AdminAppointments = () => {
               </TableBody>
             </Table>
             </div>
+            <PaginationBar pg={pg} noun="consultas" className="px-3 py-2 border-t border-border/40" />
           </div>
         )}
       </div>
