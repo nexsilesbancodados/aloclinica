@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { getAdminNav } from "./adminNav";
 import { AdminPageHeader } from "./AdminPageHeader";
-import { Search, Eye, Edit, Download, ChevronLeft, ChevronRight, Users, Calendar, Filter } from "lucide-react";
+import { Search, Eye, Edit, Download, Users, Calendar, Filter } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { exportToCSV } from "@/lib/csv";
 import { maskCPF, maskPhone } from "@/lib/maskPII";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 
-const PAGE_SIZE = 20;
 
 interface PatientProfile {
   user_id: string;
@@ -45,55 +46,59 @@ const AdminPatients = () => {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", phone: "", cpf: "" });
   const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
-  const [page, setPage] = useState(0);
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
+  const pg = usePagination({ pageSize: 25 });
 
-  useEffect(() => { fetchPatients(); }, []);
+  useEffect(() => { fetchPatients(); }, [debouncedSearch, dateFilter, sortBy, pg.page, pg.pageSize]);
+  // Reset page quando filtro/busca muda
+  useEffect(() => { pg.setPage(0); }, [debouncedSearch, dateFilter, sortBy]);
 
   const fetchPatients = async () => {
+    setLoading(true);
+    // Resolve userIds dos pacientes (1 query agregada com count)
     const { data: roles } = await db.from("user_roles").select("user_id").eq("role", "patient");
-    if (!roles || roles.length === 0) { setLoading(false); return; }
+    if (!roles || roles.length === 0) { setPatients([]); pg.setTotal(0); setLoading(false); return; }
     const userIds = roles.map(r => r.user_id);
-    const { data: profiles } = await db.from("profiles")
-      .select("user_id, first_name, last_name, phone, cpf, date_of_birth, created_at")
-      .in("user_id", userIds)
-      .order("created_at", { ascending: false });
+
+    let q = db.from("profiles")
+      .select("user_id, first_name, last_name, phone, cpf, date_of_birth, created_at", { count: "exact" })
+      .in("user_id", userIds);
+
+    // Server-side search (busca por nome/cpf/telefone)
+    const term = debouncedSearch.trim();
+    if (term) {
+      // Limpa caracteres especiais pra evitar quebrar o OR filter syntax
+      const safe = term.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
+      q = q.or(`first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,cpf.ilike.%${safe}%,phone.ilike.%${safe}%`);
+    }
+
+    // Date filter server-side
+    if (dateFilter !== "all") {
+      const cutoff = new Date();
+      const days = dateFilter === "7d" ? 7 : dateFilter === "30d" ? 30 : 90;
+      cutoff.setDate(cutoff.getDate() - days);
+      q = q.gte("created_at", cutoff.toISOString());
+    }
+
+    // Sort server-side
+    if (sortBy === "name") {
+      q = q.order("first_name", { ascending: true });
+    } else if (sortBy === "oldest") {
+      q = q.order("created_at", { ascending: true });
+    } else {
+      q = q.order("created_at", { ascending: false });
+    }
+
+    const { data: profiles, count } = await q.range(pg.from, pg.to);
     setPatients(profiles ?? []);
+    pg.setTotal(count ?? 0);
     setLoading(false);
   };
 
-  const filtered = useMemo(() => {
-    let result = patients.filter(p =>
-      `${p.first_name} ${p.last_name} ${p.cpf || ""} ${p.phone || ""}`.toLowerCase().includes(debouncedSearch.toLowerCase())
-    );
-
-    // Date filter
-    if (dateFilter !== "all") {
-      const now = new Date();
-      const cutoff = new Date();
-      if (dateFilter === "7d") cutoff.setDate(now.getDate() - 7);
-      else if (dateFilter === "30d") cutoff.setDate(now.getDate() - 30);
-      else if (dateFilter === "90d") cutoff.setDate(now.getDate() - 90);
-      result = result.filter(p => new Date(p.created_at) >= cutoff);
-    }
-
-    // Sort
-    if (sortBy === "name") {
-      result.sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
-    } else if (sortBy === "oldest") {
-      result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    }
-    // "newest" is default from API
-
-    return result;
-  }, [patients, search, dateFilter, sortBy]);
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  // Reset page when filters change
-  useEffect(() => { setPage(0); }, [search, dateFilter, sortBy]);
+  // Search/filter/sort/paginação agora server-side. `filtered` = página atual.
+  const filtered = patients;
+  const paged = patients;
 
   const openDetail = async (p: PatientProfile) => {
     setSelected(p);
@@ -263,22 +268,7 @@ const AdminPatients = () => {
             </div>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-xs text-muted-foreground">
-                  Página {page + 1} de {totalPages}
-                </p>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <PaginationBar pg={pg} noun="pacientes" className="mt-4" />
           </>
         )}
       </div>
