@@ -30,6 +30,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import FirstConsultationTour from "@/components/patient/FirstConsultationTour";
 
 /* ── Constants ── */
 const HEALTH_TIPS = [
@@ -165,10 +167,12 @@ const PatientDashboard = () => {
   return (
     <DashboardLayout title="Perfil do Paciente" nav={getPatientNav("home")} role="patient">
       {showOnboarding && <PatientOnboarding onComplete={() => setShowOnboarding(false)} />}
+      {!showOnboarding && <FirstConsultationTour />}
       <div ref={scrollRef} className="space-y-6 pb-24 md:pb-12 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-8 space-y-6">
             <HeroSection firstName={firstName} nextAppt={nextAppt} upcoming={upcoming} stats={stats} getGreeting={getGreeting} getAvatarRingColor={getAvatarRingColor} getContextualSubtitle={getContextualSubtitle} profile={profile} />
+            <DoctorSearchHero navigate={navigate} hasNextAppt={!!nextAppt} />
             <UrgentAlerts nextAppt={nextAppt} minutesUntilNext={minutesUntilNext} waitingAppt={waitingAppt} sections={sections} navigate={navigate} />
             <section>
               <h3 className="text-sm font-bold text-foreground mb-4 px-1">Ações rápidas</h3>
@@ -288,6 +292,82 @@ const HeroSection = ({ firstName, nextAppt, upcoming, stats, getGreeting, getAva
     </div>
   </section>
 );
+
+const QUICK_SPECIALTIES = [
+  { label: "Clínico Geral", icon: Stethoscope, query: "Clínico" },
+  { label: "Pediatria", icon: Heart, query: "Pediatria" },
+  { label: "Saúde Mental", icon: Sparkle, query: "Psiquiatria" },
+  { label: "Dermatologia", icon: Heart, query: "Dermatologia" },
+];
+
+const DoctorSearchHero = ({ navigate, hasNextAppt }: { navigate: any; hasNextAppt: boolean }) => {
+  const [term, setTerm] = useState("");
+  const submit = (q?: string) => {
+    const value = (q ?? term).trim();
+    const path = value
+      ? `/dashboard/schedule?role=patient&q=${encodeURIComponent(value)}`
+      : "/dashboard/schedule?role=patient";
+    navigate(path);
+  };
+  return (
+    <motion.section
+      data-tour="search"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] via-card to-card p-5 md:p-6 shadow-sm"
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div className="hidden sm:flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 shrink-0">
+          <MagnifyingGlass size={22} weight="fill" className="text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base md:text-lg font-bold text-foreground leading-tight">
+            {hasNextAppt ? "Precisa de outro especialista?" : "Encontre um médico em segundos"}
+          </h3>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
+            Mais de 100 especialistas verificados pelo CFM. Atendimento em até 15 min.
+          </p>
+        </div>
+      </div>
+      <form
+        onSubmit={(e) => { e.preventDefault(); submit(); }}
+        className="flex flex-col sm:flex-row gap-2"
+      >
+        <div className="relative flex-1">
+          <MagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Especialidade, sintoma ou nome do médico"
+            className="h-12 pl-11 rounded-2xl bg-card border-border/50 text-sm md:text-base"
+            aria-label="Buscar médico ou especialidade"
+          />
+        </div>
+        <Button
+          type="submit"
+          size="lg"
+          className="h-12 rounded-2xl px-6 font-bold shadow-sm gap-1.5"
+        >
+          Buscar <ArrowRight size={16} weight="bold" />
+        </Button>
+      </form>
+      <div className="flex items-center gap-1.5 flex-wrap mt-3">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mr-1">Rápido:</span>
+        {QUICK_SPECIALTIES.map((s) => (
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => submit(s.query)}
+            className="h-8 px-3 rounded-full text-[12px] font-semibold bg-muted/60 hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground"
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+    </motion.section>
+  );
+};
 
 const UrgentAlerts = ({ nextAppt, minutesUntilNext, waitingAppt, sections, navigate }: any) => (
   <div className="space-y-4">

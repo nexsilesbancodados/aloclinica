@@ -16,6 +16,7 @@ const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute"));
 import { logError } from "@/lib/logger";
 import { prefetchOnIdle } from "./hooks/use-prefetch-route";
 import ScrollToTop from "./components/ScrollToTop";
+import { isFeatureEnabled } from "@/lib/featureFlags";
 import { PingoAssistantChat } from "@/components/ai/PingoAssistantChat";
 
 const Auth = lazy(() => import("./pages/Auth"));
@@ -196,9 +197,9 @@ const AnimatedRoutes = () => {
       <Route path="/faq" element={<FAQ />} />
       <Route path="/ajuda" element={<Ajuda />} />
       <Route path="/para-empresas" element={<ParaEmpresas />} />
-      <Route path="/pingo-card" element={<PingoCard />} />
-      <Route path="/cartao/funeral" element={<FuneralRequest />} />
-      <Route path="/cartao/sorteios" element={<Sweepstakes />} />
+      <Route path="/pingo-card" element={isFeatureEnabled("cartao_pingo") ? <PingoCard /> : <Navigate to="/" replace />} />
+      <Route path="/cartao/funeral" element={isFeatureEnabled("funeral") ? <FuneralRequest /> : <Navigate to="/" replace />} />
+      <Route path="/cartao/sorteios" element={isFeatureEnabled("sweepstakes") ? <Sweepstakes /> : <Navigate to="/" replace />} />
       <Route path="/empresas/checkout" element={<CompanyCheckout />} />
       <Route path="/funcionario/ativar/:token" element={<EmployeeActivate />} />
       <Route path="/termo-telemedicina" element={<TermoTelemedicina />} />

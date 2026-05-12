@@ -17,6 +17,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
+import { isFeatureEnabled } from "@/lib/featureFlags";
 
 const ListItem = forwardRef<HTMLLIElement, React.ComponentPropsWithoutRef<"a"> & { icon?: React.ElementType; badge?: string }>(({ 
   className, title, children, href, icon: Icon, badge, ...props
@@ -67,15 +68,21 @@ const Header = memo(forwardRef<HTMLElement, { config?: any }>(({ config }, ref) 
     { label: "Saúde Corporativa", href: "/para-empresas" },
     { label: "Ajuda", href: "/ajuda" },
   ];
-  // Sempre garantir que Pingo Card apareça em destaque, mesmo se vier config do banco sem ele
-  const hasPingoCard = baseMenuItems.some((i: any) => 
+  // Pingo Card só aparece no menu quando o feature flag está habilitado
+  const cartaoEnabled = isFeatureEnabled("cartao_pingo");
+  const filteredBase = cartaoEnabled
+    ? baseMenuItems
+    : baseMenuItems.filter((i: any) => !((i.href || i.url || "").includes("pingo-card") || (i.label || "").toLowerCase().includes("pingo")));
+  const hasPingoCard = filteredBase.some((i: any) =>
     (i.href || i.url || "").includes("pingo-card") || (i.label || "").toLowerCase().includes("pingo")
   );
-  const menuItems = hasPingoCard 
-    ? baseMenuItems.map((i: any) => 
-        ((i.href || i.url || "").includes("pingo-card") ? { ...i, label: "Pingo Card" } : i)
-      )
-    : [{ label: "Pingo Card", href: "/pingo-card" }, ...baseMenuItems];
+  const menuItems = !cartaoEnabled
+    ? filteredBase
+    : hasPingoCard
+      ? filteredBase.map((i: any) =>
+          ((i.href || i.url || "").includes("pingo-card") ? { ...i, label: "Pingo Card" } : i)
+        )
+      : [{ label: "Pingo Card", href: "/pingo-card" }, ...filteredBase];
 
   useEffect(() => {
     const handleScroll = () => {

@@ -80,6 +80,7 @@ const DoctorSearch = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const isUrgency = searchParams.get("urgency") === "true";
+  const initialQ = searchParams.get("q") ?? "";
   const initialType: DoctorTypeFilter =
     searchParams.get("type") === "oftalmologia" ? "oftalmologia" : "telemedicina";
   const [doctorType, setDoctorType] = useState<DoctorTypeFilter>(initialType);
@@ -87,7 +88,7 @@ const DoctorSearch = () => {
   const [availableNowIds, setAvailableNowIds] = useState<Set<string>>(new Set());
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [specialties, setSpecialties] = useState<{ id: string; name: string }[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialQ);
   const debouncedSearch = useDebounce(search, 300);
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
