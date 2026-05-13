@@ -246,7 +246,7 @@ const PrescriptionRenewalForm = () => {
                 <Lock className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
                 <h2 className="text-lg font-bold text-foreground">Pagamento — Renovação de Receita</h2>
                 <p className="text-muted-foreground text-sm">
-                    R$ {RENEWAL_PRICE},00 • Pagamento via Asaas
+                    R$ {RENEWAL_PRICE},00 • Pagamento via Mercado Pago
                 </p>
               </div>
 

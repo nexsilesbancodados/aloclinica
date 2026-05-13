@@ -412,7 +412,7 @@ const UrgentCareQueue = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
-                <div className="flex items-center justify-center gap-2 mt-5 text-xs text-muted-foreground"><Shield className="w-3 h-3" /> Pagamento seguro via Asaas</div>
+                <div className="flex items-center justify-center gap-2 mt-5 text-xs text-muted-foreground"><Shield className="w-3 h-3" /> Pagamento seguro via Mercado Pago</div>
                 <Button variant="ghost" onClick={() => setShowPayment(false)} className="w-full mt-3 text-sm text-muted-foreground rounded-2xl">Voltar</Button>
               </CardContent>
             </Card>
