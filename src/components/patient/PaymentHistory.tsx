@@ -5,9 +5,10 @@ import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { CreditCard, CheckCircle2, Clock, XCircle, Shield, Wifi, Sparkles, ArrowRight } from "lucide-react";
-import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { generateTaxReceipt } from "@/lib/taxReceipt";
+import { toast } from "sonner";
 import { getPatientNav } from "./patientNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
@@ -74,28 +75,31 @@ const PaymentHistory = () => {
 
   const activeSub = subs.find((s) => s.status === "active");
 
-  const generateReceipt = (s: SubscriptionEntry) => {
-    const doc = new jsPDF();
-    const w = doc.internal.pageSize.getWidth();
-    doc.setFillColor(0, 52, 127);
-    doc.rect(0, 0, w, 40, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.text("AloClínica", 20, 22);
-    doc.setFontSize(10);
-    doc.text("Recibo de Pagamento", 20, 32);
-    doc.setTextColor(40, 40, 40);
-    let y = 55;
-    const line = (label: string, value: string) => {
-      doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text(label, 20, y);
-      doc.setFont("helvetica", "bold"); doc.text(value, 90, y); y += 10;
-    };
-    line("Plano:", s.plan_name);
-    line("Valor:", `R$ ${Number(s.plan_price).toFixed(2)}`);
-    line("Status:", s.status === "active" ? "Ativa" : s.status === "cancelled" ? "Cancelada" : "Vencida");
-    line("Data:", format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR }));
-    line("ID:", s.id.slice(0, 8).toUpperCase());
-    doc.save(`recibo-aloclinica-${s.id.slice(0, 8)}.pdf`);
+  const generateReceipt = async (s: SubscriptionEntry) => {
+    if (!user) return;
+    // Busca dados do paciente pra recibo IRPF-compliant (CPF obrigatorio)
+    const { data: profile } = await db
+      .from("profiles")
+      .select("first_name, last_name, cpf")
+      .eq("user_id", user.id)
+      .single();
+    if (!profile?.cpf) {
+      toast.error("CPF não cadastrado", { description: "Complete seu perfil com CPF para gerar recibos válidos pra IR." });
+      return;
+    }
+    generateTaxReceipt({
+      patient: {
+        name: `${profile.first_name} ${profile.last_name}`.trim(),
+        cpf: profile.cpf,
+      },
+      items: [{
+        description: `Plano ${s.plan_name} (${s.plan_interval === "yearly" ? "anual" : "mensal"})`,
+        amount: Number(s.plan_price),
+        date: s.created_at,
+      }],
+      receipt_number: `SUB-${s.id.slice(0, 8).toUpperCase()}`,
+      payment_date: s.created_at,
+    });
   };
 
   return (

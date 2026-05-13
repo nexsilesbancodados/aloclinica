@@ -49,6 +49,7 @@ const AppointmentDetail = lazy(() => import("@/components/patient/AppointmentDet
 const AppointmentConfirmed = lazy(() => import("@/components/patient/AppointmentConfirmed"));
 const MedicalHistory = lazy(() => import("@/components/patient/MedicalHistory"));
 const PaymentHistory = lazy(() => import("@/components/patient/PaymentHistory"));
+const TaxReceipts = lazy(() => import("@/components/patient/TaxReceipts"));
 const PatientExamUpload = lazy(() => import("@/components/patient/PatientExamUpload"));
 const PatientHealth = lazy(() => import("@/components/patient/PatientHealth"));
 const PatientSupportChat = lazy(() => import("@/components/patient/PatientSupportChat"));
@@ -287,6 +288,7 @@ const Dashboard = () => {
       
       <Route path="history" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><MedicalHistory /></ContextGuard></RoleGuard>} />
       <Route path="payment-history" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><PaymentHistory /></ContextGuard></RoleGuard>} />
+      <Route path="recibos" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><TaxReceipts /></ContextGuard></RoleGuard>} />
       <Route path="billing" element={<RoleGuard allowed={["patient", "doctor", "clinic"]} roles={roles}><BillingPortal /></RoleGuard>} />
       <Route path="patient/documents" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><PatientExamUpload /></ContextGuard></RoleGuard>} />
       <Route path="patient/health" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><PatientHealth /></ContextGuard></RoleGuard>} />

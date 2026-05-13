@@ -2,7 +2,7 @@ import {
   House, MagnifyingGlass, Lightning, CalendarCheck, ChatCircleDots,
   Headset, CreditCard, Sliders, UserCircle, Heart, FileText,
   ClipboardText, Upload, BookOpen, Users, Bell, Shield,
-  IdentificationCard, Syringe, FirstAid, Eye
+  IdentificationCard, Syringe, FirstAid, Eye, Receipt
 } from "@phosphor-icons/react";
 import { NavIcon } from "@/components/ui/nav-icon";
 
@@ -22,6 +22,7 @@ import { NavIcon } from "@/components/ui/nav-icon";
  
    // ── Financeiro & Notificações ──
    { label: "Pagamentos", href: "/dashboard/payment-history?role=patient", icon: <NavIcon icon={<CreditCard size={16} weight="fill" />} color="green" />, active: active === "payments", group: "Financeiro & Alertas" },
+   { label: "Recibos IRPF", href: "/dashboard/recibos?role=patient", icon: <NavIcon icon={<Receipt size={16} weight="fill" />} color="emerald" />, active: active === "recibos", group: "Financeiro & Alertas" },
    { label: "Avisos", href: "/dashboard/notifications?role=patient", icon: <NavIcon icon={<Bell size={16} weight="fill" />} color="blue" />, active: active === "notifications", group: "Financeiro & Alertas" },
    { label: "Suporte", href: "/dashboard/patient/support?role=patient", icon: <NavIcon icon={<Headset size={16} weight="fill" />} color="emerald" />, active: active === "support", group: "Financeiro & Alertas" },
    { label: "Chat", href: "/dashboard/chat?role=patient", icon: <NavIcon icon={<ChatCircleDots size={16} weight="fill" />} color="blue" />, active: active === "chat", group: "Financeiro & Alertas" },
