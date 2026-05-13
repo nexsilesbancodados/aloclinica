@@ -73,6 +73,7 @@ const LaudistaReportQueue = lazy(() => import("@/components/laudista/LaudistaRep
 const LaudistaMyReports = lazy(() => import("@/components/laudista/LaudistaMyReports"));
 
 const LaudistaFinanceiro = lazy(() => import("@/components/laudista/LaudistaFinanceiro"));
+const LaudistaTemplates = lazy(() => import("@/components/laudista/LaudistaTemplates"));
 const DoctorWallet = lazy(() => import("@/components/doctor/DoctorWallet"));
 const LaudistaExamRequest = lazy(() => import("@/components/doctor/ExamRequestForm"));
 const LaudistaReportEditor = lazy(() => import("@/components/doctor/ExamReportEditor"));
@@ -407,6 +408,7 @@ const Dashboard = () => {
       <Route path="laudista/my-reports" element={<RoleGuard allowed={["doctor", "laudista"]} roles={roles}><ContextGuard panel="laudista" forceRole={forceRole} roles={roles}><LaudistaMyReports /></ContextGuard></RoleGuard>} />
       <Route path="laudista/report-editor/:examId" element={<RoleGuard allowed={["doctor", "laudista"]} roles={roles}><ContextGuard panel="laudista" forceRole={forceRole} roles={roles}><LaudistaReportEditor /></ContextGuard></RoleGuard>} />
       <Route path="laudista/financeiro" element={<RoleGuard allowed={["doctor", "laudista"]} roles={roles}><ContextGuard panel="laudista" forceRole={forceRole} roles={roles}><LaudistaFinanceiro /></ContextGuard></RoleGuard>} />
+      <Route path="laudista/templates" element={<RoleGuard allowed={["doctor", "laudista", "admin"]} roles={roles}><LaudistaTemplates /></RoleGuard>} />
 
       {/* ─── Cartão Benefícios ─── */}
       <Route path="cartao" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><CartaoDashboard /></ContextGuard></RoleGuard>} />

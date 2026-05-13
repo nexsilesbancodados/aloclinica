@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { db } from "@/integrations/supabase/untyped";
 import { useAuth } from "@/contexts/AuthContext";
+import { IS_DEV } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +20,23 @@ import AdminPageHeader from "./AdminPageHeader";
  * - Polls appointments.payment_status every 3s — webhook should flip it to "approved"
  * - Lets admin clean up the test row
  */
-export default function AdminPaymentTest() {
+/**
+ * Gate: essa página cria appointments REAIS de R$ 1,00 contra o gateway de
+ * pagamento. Em produção, só permite acesso com ?test=1 explícito na URL — em
+ * dev libera direto. Evita cliques acidentais via nav.
+ */
+function AdminPaymentTestGate({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const allowed = IS_DEV || searchParams.get("test") === "1";
+  useEffect(() => {
+    if (!allowed) navigate("/dashboard/admin/panel-center?role=admin", { replace: true });
+  }, [allowed, navigate]);
+  if (!allowed) return null;
+  return <>{children}</>;
+}
+
+function AdminPaymentTestInner() {
   const { user } = useAuth();
   const [doctorId, setDoctorId] = useState<string>("");
   const [appointmentId, setAppointmentId] = useState<string | null>(null);
@@ -336,5 +354,13 @@ export default function AdminPaymentTest() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AdminPaymentTest() {
+  return (
+    <AdminPaymentTestGate>
+      <AdminPaymentTestInner />
+    </AdminPaymentTestGate>
   );
 }

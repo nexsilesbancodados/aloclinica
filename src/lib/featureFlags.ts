@@ -16,9 +16,15 @@
  */
 
 export const FEATURE_FLAGS = {
-  /** Sorteios mensais — funcionalidade do cartão de benefícios, não está no escopo atual. */
+  /**
+   * Sorteios mensais — funcionalidade do cartão de benefícios.
+   * Status (2026-05): mantida flagged-off intencionalmente. Código + tabelas
+   * preservados pra reativação rápida; rotas em App.tsx redirecionam pra "/"
+   * quando off, então não há vazamento. Para reativar: troque pra true OU
+   * `VITE_FEATURE_SWEEPSTAKES=true` no build.
+   */
   sweepstakes: false,
-  /** Assistência funeral via cartão — não está no escopo atual. */
+  /** Assistência funeral via cartão. Mesma estratégia de sweepstakes. */
   funeral: false,
   /** Cartão de benefícios PingoCard — assinatura via Mercado Pago Pre-Approval. */
   cartao_pingo: true,
