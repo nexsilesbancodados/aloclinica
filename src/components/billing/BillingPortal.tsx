@@ -23,6 +23,7 @@ import {
   CreditCard, Calendar, Receipt, RefreshCw, XCircle, CheckCircle2, Clock, AlertTriangle,
 } from "lucide-react";
 import SavedCardsList from "./SavedCardsList";
+import { cancelSubscription as cancelSubscriptionFn } from "@/lib/edgeFunctions";
 import { warn } from "@/lib/logger";
 
 type Subscription = {
@@ -121,11 +122,9 @@ export function BillingPortal() {
   const cancelSubscription = async () => {
     const sub = cancelDialog.sub;
     if (!sub) return;
-    const { data, error } = await db.functions.invoke("mercadopago-cancel-subscription", {
-      body: { subscription_id: sub.id },
-    });
-    if (error || (data as any)?.error || !(data as any)?.ok) {
-      toast.error("Erro ao cancelar", { description: (data as any)?.error || error?.message });
+    const result = await cancelSubscriptionFn(sub.id);
+    if (!result.ok) {
+      toast.error("Erro ao cancelar", { description: result.error });
       return;
     }
     toast.success("Assinatura cancelada", { description: "Você não será cobrado novamente." });

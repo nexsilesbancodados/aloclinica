@@ -39,6 +39,23 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // ─── ACTION: status ───
+    // Health-check leve: a função verifica se VIDAAS_CLIENT_ID/SECRET
+    // estão configurados nos secrets. Usado pelo front pra decidir entre
+    // "ICP-Brasil real" e "assinatura simplificada (hash local)".
+    if (action === "status") {
+      const hasClientId = !!Deno.env.get("VIDAAS_CLIENT_ID");
+      const hasClientSecret = !!Deno.env.get("VIDAAS_CLIENT_SECRET");
+      return new Response(
+        JSON.stringify({
+          configured: hasClientId && hasClientSecret,
+          has_client_id: hasClientId,
+          has_client_secret: hasClientSecret,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ─── ACTION: register_app ───
     // Cadastra a aplicação no VIDaaS (feito uma única vez)
     if (action === "register_app") {

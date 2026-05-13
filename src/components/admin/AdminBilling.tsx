@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { usePagination } from "@/hooks/usePagination";
+import { refundPayment, cancelSubscription } from "@/lib/edgeFunctions";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -173,18 +174,15 @@ const AdminBilling = () => {
     if (!tx) return;
     setActionLoading(tx.id);
     const reaisAmount = parseFloat(refundDialog.amountInput.replace(",", "."));
-    const { data, error } = await db.functions.invoke("mercadopago-refund", {
-      body: {
-        transaction_id: tx.id,
-        amount: reaisAmount > 0 ? reaisAmount : undefined,
-      },
-    });
-    if (error || (data as any)?.error || !(data as any)?.ok) {
-      toast.error("Erro no estorno", { description: (data as any)?.error || error?.message });
+    const result = await refundPayment(tx.id, reaisAmount > 0 ? reaisAmount : undefined);
+    if (!result.ok) {
+      toast.error("Erro no estorno", { description: result.error });
       setActionLoading(null);
       return;
     }
-    toast.success("Estornado!", { description: `${(data as any).is_partial ? "Parcial" : "Total"}: R$ ${Number((data as any).amount).toFixed(2)}` });
+    toast.success("Estornado!", {
+      description: `${result.data.is_partial ? "Parcial" : "Total"}: R$ ${result.data.amount.toFixed(2)}`,
+    });
     setActionLoading(null);
     setRefundDialog({ open: false, tx: null, amountInput: "", reason: "" });
     await fetchAll();
@@ -199,11 +197,9 @@ const AdminBilling = () => {
     });
     if (!ok) return;
     setActionLoading(sub.id);
-    const { data, error } = await db.functions.invoke("mercadopago-cancel-subscription", {
-      body: { subscription_id: sub.id },
-    });
-    if (error || (data as any)?.error || !(data as any)?.ok) {
-      toast.error("Erro", { description: (data as any)?.error || error?.message });
+    const result = await cancelSubscription(sub.id);
+    if (!result.ok) {
+      toast.error("Erro", { description: result.error });
     } else {
       toast.success("Assinatura cancelada");
       await fetchAll();

@@ -26,8 +26,11 @@ export const FEATURE_FLAGS = {
   mock_payments: false,
   /** Tour interativo da primeira consulta. */
   first_tour: true,
-  /** Assinatura ICP-Brasil real via VIDaaS (caso contrário usa hash local). */
-  icp_brasil_signature: false,
+  /** Assinatura ICP-Brasil real via VIDaaS. Quando true, o front pergunta
+   *  à edge function `vidaas-sign` (action=status) se VIDAAS_CLIENT_ID/SECRET
+   *  estão nos secrets — se não, faz fallback gracioso pra hash local.
+   *  Veja src/hooks/useIcpAvailable.ts */
+  icp_brasil_signature: true,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURE_FLAGS;

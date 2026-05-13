@@ -1,0 +1,62 @@
+name: Verify — Idempotency do webhook MP
+
+# Workflow utilitário que confirma se o UNIQUE INDEX em
+# payment_transactions.mp_payment_id existe em produção.
+# Use depois de aplicar 20260513_scale_indexes_idempotency.sql.
+
+on:
+  workflow_dispatch:
+
+env:
+  SUPABASE_PROJECT_REF: pwxvvimdtmvziynbspgx
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checar UNIQUE INDEX em mp_payment_id
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -e
+          jq -Rs '{query: .}' <<'SQL' > /tmp/payload.json
+          SELECT
+            i.indexname,
+            i.indexdef,
+            (SELECT COUNT(*) FROM public.payment_transactions WHERE mp_payment_id IS NOT NULL) AS rows_with_mp_id
+          FROM pg_indexes i
+          WHERE i.schemaname = 'public'
+            AND i.tablename = 'payment_transactions'
+            AND i.indexname = 'uniq_payment_tx_mp_payment_id';
+          SQL
+          HTTP_CODE=$(curl -sS -w "%{http_code}" -o /tmp/resp.txt \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @/tmp/payload.json)
+          BODY=$(cat /tmp/resp.txt)
+          echo "HTTP $HTTP_CODE"
+          echo "Body: $BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Query falhou"
+            exit 1
+          fi
+          if echo "$BODY" | grep -q '"indexname":"uniq_payment_tx_mp_payment_id"'; then
+            echo "## ✅ Idempotency OK" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "UNIQUE INDEX presente. Webhook MP é idempotente." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            echo "$BODY" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Idempotency AUSENTE" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "UNIQUE INDEX 'uniq_payment_tx_mp_payment_id' não foi encontrado." >> $GITHUB_STEP_SUMMARY
+            echo "Aplique a migration \`supabase/migrations/20260513_scale_indexes_idempotency.sql\`" >> $GITHUB_STEP_SUMMARY
+            echo "via o workflow 'One-shot — Aplicar migration específica'." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

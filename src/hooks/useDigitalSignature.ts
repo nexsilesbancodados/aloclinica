@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import { logError } from "@/lib/logger";
+import { vidaasUserDiscovery } from "@/lib/edgeFunctions";
 
  export interface SignatureRequest {
    fileName: string;
@@ -110,20 +111,13 @@ interface SignedDocument {
     */
    const checkVidaasCertificate = async (cpf: string): Promise<boolean> => {
      setVidaasStatus("checking");
-     try {
-       const { data, error: fnErr } = await (db as any).functions.invoke("vidaas-sign", {
-         body: { action: "user_discovery", cpf_cnpj: cpf, type: "CPF" },
-       });
-       if (fnErr || !data?.found) {
-         setVidaasStatus("unavailable");
-         return false;
-       }
-       setVidaasStatus("ready");
-       return true;
-     } catch (err) {
+     const result = await vidaasUserDiscovery(cpf);
+     if (!result.ok || !result.data.found) {
        setVidaasStatus("unavailable");
        return false;
      }
+     setVidaasStatus("ready");
+     return true;
    };
 
    /**
