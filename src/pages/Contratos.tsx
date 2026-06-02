@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/supabase/untyped";
 import SEOHead from "@/components/SEOHead";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ const Contratos = () => {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("contract_leads").insert({
+      const { error } = await db.from("contract_leads").insert({
         org_name: form.org_name.trim(),
         org_type: form.org_type,
         cnpj: form.cnpj.trim() || null,

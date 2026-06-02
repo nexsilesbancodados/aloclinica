@@ -28,3 +28,14 @@ interface Window {
   webkitSpeechRecognition?: typeof SpeechRecognition;
   webkitAudioContext?: typeof AudioContext;
 }
+
+// ─── Web Speech API event types (missing from this TS DOM lib version) ──
+// SpeechRecognitionResult/ResultList já existem na lib DOM; só faltam os eventos.
+interface SpeechRecognitionEvent extends Event {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultList;
+}
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+  readonly message: string;
+}

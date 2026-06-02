@@ -105,7 +105,7 @@ const AdminLgpdExports = () => {
     setCreating(true);
     // Busca user_id pelo email
     const { data: { users }, error: listErr } = await (db.auth as any).admin.listUsers({ filter: `email.eq.${emailToExport}` }).catch(() => ({ data: { users: [] }, error: null }));
-    let userId = (users ?? []).find((u: any) => u.email === emailToExport)?.id;
+    const userId = (users ?? []).find((u: any) => u.email === emailToExport)?.id;
 
     if (!userId) {
       // Fallback: tenta direto via tabela auth não funciona. Pede o user inputar UUID
