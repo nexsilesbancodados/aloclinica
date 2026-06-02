@@ -1618,7 +1618,7 @@ SOAP atual: S=${soap.notes.subjective}, O=${soap.notes.objective}, A=${soap.note
               {showAI && isDoctor && (
                 <AIClinicalPanel
                   appointmentId={appointmentId!}
-                  patientId={appointment?.patient_id}
+                  patientId={appointment?.patient_id ?? undefined}
                   recentMessages={messages.map((m) => ({ sender: m.sender, text: m.text }))}
                   onSendToNotes={handleAISendToNotes}
                 />
@@ -1703,7 +1703,7 @@ SOAP atual: S=${soap.notes.subjective}, O=${soap.notes.objective}, A=${soap.note
                   {showAI && isDoctor && (
                     <AIClinicalPanel
                       appointmentId={appointmentId!}
-                      patientId={appointment?.patient_id}
+                      patientId={appointment?.patient_id ?? undefined}
                       recentMessages={messages.map((m) => ({ sender: m.sender, text: m.text }))}
                       onSendToNotes={handleAISendToNotes}
                     />

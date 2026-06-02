@@ -110,13 +110,13 @@ const AccessLog = () => {
 
   const handleExport = () => {
     if (!logs.length) return;
-    exportCSV("trilha-acesso-aloclinica.csv", logs, [
-      { header: "Data", accessor: (r: LogRow) => format(new Date(r.created_at), "yyyy-MM-dd HH:mm") },
-      { header: "Quem acessou", accessor: (r: LogRow) => r.actor_name || (r.user_id === user?.id ? "Você" : r.user_id || "Sistema") },
-      { header: "Ação", accessor: (r: LogRow) => ACTION_LABEL[r.action] || r.action },
-      { header: "Tipo de dado", accessor: (r: LogRow) => r.entity_type || "—" },
-      { header: "Referência", accessor: (r: LogRow) => r.entity_id || "" },
-      { header: "Motivo do acesso", accessor: (r: LogRow) => r.consent_reference || "" },
+    exportCSV<LogRow>("trilha-acesso-aloclinica.csv", logs, [
+      { key: "created_at", header: "Data", format: (_v, r) => format(new Date(r.created_at), "yyyy-MM-dd HH:mm") },
+      { key: "actor_name", header: "Quem acessou", format: (_v, r) => r.actor_name || (r.user_id === user?.id ? "Você" : r.user_id || "Sistema") },
+      { key: "action", header: "Ação", format: (_v, r) => ACTION_LABEL[r.action] || r.action },
+      { key: "entity_type", header: "Tipo de dado", format: (_v, r) => r.entity_type || "—" },
+      { key: "entity_id", header: "Referência", format: (_v, r) => r.entity_id || "" },
+      { key: "consent_reference", header: "Motivo do acesso", format: (_v, r) => r.consent_reference || "" },
     ]);
   };
 

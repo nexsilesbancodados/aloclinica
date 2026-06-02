@@ -65,7 +65,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         children?: React.ReactNode;
       };
 
-      return React.cloneElement(child, {
+      return React.cloneElement(child as React.ReactElement<Record<string, unknown>>, {
         ...props,
         className: cn(rainbowClasses, childProps.className),
         style: {
