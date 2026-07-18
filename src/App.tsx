@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ContratoProvider } from "@/contexts/ContratoContext";
-import MaintenanceBanner from "@/components/MaintenanceBanner";
 import ThemeApplier from "@/components/ThemeApplier";
 import { ThemeProvider } from "next-themes";
 import { I18nProvider } from "@/i18n";
@@ -337,7 +336,6 @@ const App = () => {
                   <Suspense fallback={null}>
                     <KeyboardShortcutsProvider />
                     <SubdomainRedirectProvider />
-                    <MaintenanceBanner />
                     <ThemeApplier />
                   </Suspense>
                   <ScrollToTop />
