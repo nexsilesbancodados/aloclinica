@@ -10,9 +10,39 @@ env:
   VPS_HOST: 72.62.138.208
 
 jobs:
+  # Gate de qualidade — nada é publicado se typecheck/lint/testes/build falharem.
+  quality:
+    name: Quality Gate (typecheck + lint + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: "npm"
+      - name: Install dependencies (reprodutível)
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.VITE_MERCADOPAGO_PUBLIC_KEY }}
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
   deploy-frontend:
     name: Frontend — Build + Deploy VPS
     runs-on: ubuntu-latest
+    needs: quality
 
     steps:
       - name: Checkout
@@ -39,8 +69,8 @@ jobs:
           echo "::error::SSH port 22 on ${VPS_HOST} is unreachable from GitHub Actions. Check VPS firewall, provider security rules, or sshd before deploying."
           exit 1
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund --prefer-offline
+      - name: Install dependencies (reprodutível)
+        run: npm ci --no-audit --no-fund
 
       - name: Build frontend
         run: npm run build
@@ -103,7 +133,8 @@ jobs:
   deploy-supabase:
     name: Supabase — Edge Functions
     runs-on: ubuntu-latest
-    continue-on-error: true
+    needs: quality
+    # Falha do deploy de backend agora QUEBRA o pipeline (antes era silenciado).
 
     steps:
       - name: Checkout

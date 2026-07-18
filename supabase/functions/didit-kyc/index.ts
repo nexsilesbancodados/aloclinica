@@ -7,9 +7,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const COMPREFACE_URL = "http://72.62.138.208:8000";
-const COMPREFACE_VERIFY_KEY = "5f3c100e-0144-465d-87b3-86c34ba70a1e";
-const COMPREFACE_DETECT_KEY = "a2d930ec-e3ee-46b4-b770-023524e41178";
+// SECURITY: nunca hardcodar chaves nem URL de serviço no código (vazam no git).
+// Configurar via secrets: supabase secrets set COMPREFACE_URL=... COMPREFACE_VERIFY_KEY=... COMPREFACE_DETECT_KEY=...
+// As chaves antigas que estavam hardcoded aqui DEVEM ser rotacionadas (foram commitadas no histórico).
+// COMPREFACE_URL deve ser HTTPS — PII biométrica não pode trafegar em HTTP puro.
+const COMPREFACE_URL = Deno.env.get("COMPREFACE_URL") ?? "";
+const COMPREFACE_VERIFY_KEY = Deno.env.get("COMPREFACE_VERIFY_KEY") ?? "";
+const COMPREFACE_DETECT_KEY = Deno.env.get("COMPREFACE_DETECT_KEY") ?? "";
+
+if (!COMPREFACE_URL || !COMPREFACE_VERIFY_KEY || !COMPREFACE_DETECT_KEY) {
+  console.error("[didit-kyc] CompreFace secrets não configurados (COMPREFACE_URL/VERIFY_KEY/DETECT_KEY).");
+}
+if (COMPREFACE_URL && !COMPREFACE_URL.startsWith("https://")) {
+  console.warn("[didit-kyc] COMPREFACE_URL não é HTTPS — PII biométrica em trânsito inseguro.");
+}
 
 // Strict anti-fraud thresholds
 const MIN_SIMILARITY = 0.90;      // 90% face match required

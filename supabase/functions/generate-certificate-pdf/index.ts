@@ -35,7 +35,9 @@ Deno.serve(async (req) => {
     draw(`Dr(a). ${dProf?.first_name||''} ${dProf?.last_name||''}`, bold, 12)
     draw(`CRM ${doctor?.crm||''}/${doctor?.crm_state||''}`, font, 11)
     y -= 30
-    draw(`Assinatura digital: ${sigHash}`, font, 9)
+    // NÃO é assinatura digital qualificada — apenas código de integridade.
+    draw(`Código de integridade (SHA-256): ${sigHash}`, font, 9)
+    draw(`Documento emitido eletronicamente — sem assinatura digital ICP-Brasil.`, font, 8)
     draw(`Código de verificação: ${code}`, font, 9)
     draw(`Verifique em: aloclinica.com.br/verify/${code}`, font, 9)
 

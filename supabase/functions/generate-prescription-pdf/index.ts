@@ -41,7 +41,10 @@ Deno.serve(async (req) => {
     })
     if (rx.instructions) { y -= 8; draw('Instruções:', bold); draw(rx.instructions) }
     y = 100
-    draw(`Assinatura digital: ${sigHash}`, font, 9)
+    // NÃO é assinatura digital qualificada — é apenas um código de integridade.
+    // Assinatura ICP-Brasil real deve vir da Memed/VIDaaS quando integrada.
+    draw(`Código de integridade (SHA-256): ${sigHash}`, font, 9)
+    draw(`Documento emitido eletronicamente — sem assinatura digital ICP-Brasil.`, font, 8)
     draw(`Código de verificação: ${code}`, font, 9)
     draw(`Verifique em: aloclinica.com.br/verify/${code}`, font, 9)
 
@@ -50,8 +53,10 @@ Deno.serve(async (req) => {
     await supabase.storage.from('prescriptions').upload(path, bytes, { contentType: 'application/pdf', upsert: true })
     const { data: pub } = supabase.storage.from('prescriptions').getPublicUrl(path)
 
+    // is_signed permanece false: este fluxo NÃO produz assinatura qualificada.
+    // Só marcar como assinado quando houver assinatura ICP-Brasil real (Memed/VIDaaS).
     await supabase.from('prescriptions').update({
-      pdf_url: pub.publicUrl, is_signed: true, signature_hash: sigHash,
+      pdf_url: pub.publicUrl, is_signed: false, signature_hash: sigHash,
       signed_at: new Date().toISOString(), verification_code: code,
     }).eq('id', prescription_id)
 
