@@ -63,70 +63,9 @@ serve(async (req) => {
       const pdfUrl = signedDocs[0]?.url || null;
 
       // ── Match by submission metadata ──
-      // DocuSeal submissions include submitter metadata with external_id or email.
-      // The external_id field contains the laudo ID set during submission creation.
-      const submitterEmail = submitters?.[0]?.email || submissionData?.email || null;
+      // DocuSeal submissions include submitter metadata with an external_id that
+      // points at the specific document record set during submission creation.
       const externalId = submitters?.[0]?.external_id || submissionData?.external_id || null;
-
-      let matchedLaudoId: string | null = null;
-
-      // 1. Try matching via external_id (laudo ID passed during submission creation)
-      if (externalId) {
-        const { data: laudo } = await supabase
-          .from("aloc_laudos")
-          .select("id")
-          .eq("id", externalId)
-          .eq("status", "pending_signature")
-          .maybeSingle();
-        if (laudo) matchedLaudoId = laudo.id;
-      }
-
-      // 2. Fallback: match by submission_id stored in activity_logs
-      if (!matchedLaudoId && submissionId) {
-        const { data: logEntry } = await supabase
-          .from("activity_logs")
-          .select("entity_id")
-          .eq("action", "docuseal_submission_created")
-          .eq("entity_id", String(submissionId))
-          .maybeSingle();
-        if (logEntry?.entity_id) {
-          // entity_id é o submission_id; ainda precisaríamos buscar o laudo nas details
-          // Não logamos o submission_id aqui pra não vazar info no stdout
-        }
-      }
-
-      // Update matched laudo
-      if (matchedLaudoId && pdfUrl) {
-        const { error: laudoError } = await supabase
-          .from("aloc_laudos")
-          .update({
-            status: "assinado",
-            pdf_url: pdfUrl,
-            assinado_em: new Date().toISOString(),
-          })
-          .eq("id", matchedLaudoId)
-          .eq("status", "pending_signature");
-
-        if (laudoError) {
-          console.error("Error updating laudo:", laudoError.message);
-        } else {
-          console.log(`Updated laudo: ${String(matchedLaudoId).slice(0, 8)}*** with signed PDF`);
-
-          // Also update related exame status
-          const { data: laudo } = await supabase
-            .from("aloc_laudos")
-            .select("exame_id")
-            .eq("id", matchedLaudoId)
-            .single();
-
-          if (laudo?.exame_id) {
-            await supabase
-              .from("aloc_exames")
-              .update({ status: "concluido" })
-              .eq("id", laudo.exame_id);
-          }
-        }
-      }
 
       // Update the specific exam_report identified by external_id (NEVER blanket-update).
       // Without an external_id we cannot safely target a single report, so we skip.
@@ -152,7 +91,6 @@ serve(async (req) => {
         entity_id: String(submissionId),
         details: {
           event_type: eventType,
-          matched_laudo_id: matchedLaudoId,
           documents_count: signedDocs.length,
           documents: signedDocs,
         },

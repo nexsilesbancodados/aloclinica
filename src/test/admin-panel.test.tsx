@@ -257,7 +257,7 @@ describe("Cálculo de estatísticas administrativas", () => {
 // ── Admin user role management ────────────────────────────────────────────────
 
 describe("Gerenciamento de roles de usuário", () => {
-  const VALID_ROLES = ["patient", "doctor", "admin", "clinic", "support", "laudista"] as const;
+  const VALID_ROLES = ["patient", "doctor", "admin", "clinic", "support"] as const;
   type Role = (typeof VALID_ROLES)[number];
 
   it("valida roles permitidas no sistema", () => {
@@ -272,7 +272,6 @@ describe("Gerenciamento de roles de usuário", () => {
   it("identifica role de maior privilégio", () => {
     const roleHierarchy: Record<Role, number> = {
       patient: 1,
-      laudista: 2,
       support: 3,
       clinic: 4,
       doctor: 5,
@@ -283,7 +282,7 @@ describe("Gerenciamento de roles de usuário", () => {
 
     expect(getHighestRole(["patient", "doctor"])).toBe("doctor");
     expect(getHighestRole(["admin", "patient", "doctor"])).toBe("admin");
-    expect(getHighestRole(["support", "laudista"])).toBe("support");
+    expect(getHighestRole(["support", "patient"])).toBe("support");
   });
 });
 

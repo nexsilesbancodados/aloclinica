@@ -86,7 +86,7 @@ serve(async (req) => {
 - Auxiliar na redação de notas clínicas no padrão SOAP
 - Buscar informações sobre CID-10, protocolos clínicos e bulas
 - Calcular dosagens pediátricas e ajustes renais
-- Gerar rascunhos de atestados e laudos`,
+- Gerar rascunhos de atestados`,
 
       admin: `Você auxilia ADMINISTRADORES com:
 - Análise de métricas: NPS, taxa de conclusão, receita, churn

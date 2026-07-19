@@ -3,7 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { db } from "@/integrations/supabase/untyped";
 import { warn } from "@/lib/logger";
 
-type AppRole = "patient" | "doctor" | "clinic" | "admin" | "receptionist" | "support" | "partner" | "affiliate" | "optician";
+type AppRole = "patient" | "doctor" | "clinic" | "admin" | "receptionist" | "support" | "partner" | "affiliate";
 
 const AUTH_LOADING_TIMEOUT_MS = 12000;
 

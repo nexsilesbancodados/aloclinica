@@ -177,15 +177,6 @@ async function handlePreapproval(admin: any, preapprovalId: string) {
       metadata: res.data,
     } as any)
     .eq("mp_preapproval_id", preapprovalId);
-
-  // Pingo Card: mesmo preapproval pode estar em pingo_card_subscriptions
-  await admin
-    .from("pingo_card_subscriptions")
-    .update({
-      status: internalStatus,
-      canceled_at: internalStatus === "cancelled" ? new Date().toISOString() : null,
-    } as any)
-    .eq("mp_preapproval_id", preapprovalId);
 }
 
 async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
@@ -206,47 +197,7 @@ async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
     .eq("mp_preapproval_id", preapprovalId)
     .single();
 
-  // Se não é uma sub "genérica", pode ser uma assinatura do Cartão Pingo
-  if (!sub) {
-    const { data: pcSub } = await admin
-      .from("pingo_card_subscriptions")
-      .select("id, user_id, billing_cycle, plan_id")
-      .eq("mp_preapproval_id", preapprovalId)
-      .single();
-    if (!pcSub) return;
-
-    const amount = Number(res.data.transaction_amount);
-    const mpPaymentId = String(res.data.payment?.id ?? authPaymentId);
-    const now = new Date().toISOString();
-
-    // Upsert fatura idempotente por mp_payment_id
-    await admin.from("pingo_card_invoices").upsert({
-      subscription_id: pcSub.id,
-      user_id: pcSub.user_id,
-      amount,
-      status: internalStatus === "approved" ? "paid" : internalStatus,
-      mp_payment_id: mpPaymentId,
-      due_date: now,
-      paid_at: internalStatus === "approved" ? now : null,
-      description: `Cobrança recorrente - ${pcSub.billing_cycle === "yearly" ? "Anual" : "Mensal"}`,
-    } as any, { onConflict: "mp_payment_id" });
-
-    // Estende período da assinatura quando aprovado
-    if (internalStatus === "approved") {
-      const isYearly = pcSub.billing_cycle === "yearly";
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + (isYearly ? 12 : 1));
-      await admin
-        .from("pingo_card_subscriptions")
-        .update({
-          status: "active",
-          current_period_end: periodEnd.toISOString(),
-          next_charge_at: res.data.next_payment_date || periodEnd.toISOString(),
-        } as any)
-        .eq("id", pcSub.id);
-    }
-    return;
-  }
+  if (!sub) return;
 
   // UPSERT idempotente: MP reenvia mesma notificação várias vezes (retry).
   // UNIQUE em mp_payment_id garante que não duplica linha.
