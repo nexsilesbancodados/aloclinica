@@ -83,7 +83,12 @@ Deno.serve(async (req) => {
       try {
         await fetch(`${supaUrl}/functions/v1/whatsapp-notify`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${anon}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${anon}`,
+            // whatsapp-notify agora exige chamador interno — envia o segredo do cron.
+            "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
+          },
           body: JSON.stringify({
             tipo: "lembrete_1h",
             user_id: a.patient_id,

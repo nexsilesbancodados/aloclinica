@@ -81,13 +81,20 @@ export function isInternalOrService(req: Request): boolean {
 
 /**
  * Fixed-window per-identifier rate limit backed by the rate_limits table.
- * Returns true when the call is allowed. Fails open on errors (non-blocking).
+ * Returns true when the call is allowed.
+ *
+ * By default this fails OPEN on errors (returns true, non-blocking) to avoid
+ * taking user-facing flows down when the rate_limits table is unreachable.
+ * Pass `{ failClosed: true }` for expensive/abuse-prone endpoints (e.g. LLM
+ * calls) so that a backend error BLOCKS the request instead of allowing an
+ * unbounded number of costly calls through.
  */
 export async function checkRateLimit(
   identifier: string,
   endpoint: string,
   max: number,
   windowMin: number,
+  opts: { failClosed?: boolean } = {},
 ): Promise<boolean> {
   try {
     const sb = createClient(
@@ -95,16 +102,23 @@ export async function checkRateLimit(
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
     const since = new Date(Date.now() - windowMin * 60_000).toISOString();
-    const { count } = await sb
+    const { count, error: selErr } = await sb
       .from("rate_limits")
       .select("id", { count: "exact", head: true })
       .eq("identifier", identifier)
       .eq("endpoint", endpoint)
       .gte("window_start", since);
+    // supabase-js retorna erro de query como valor {error} (não lança). Para o
+    // modo failClosed valer de verdade, tratamos o erro aqui também.
+    if (selErr) return opts.failClosed ? false : true;
     if ((count ?? 0) >= max) return false;
-    await sb.from("rate_limits").insert({ identifier, endpoint, window_start: new Date().toISOString() });
+    const { error: insErr } = await sb
+      .from("rate_limits")
+      .insert({ identifier, endpoint, window_start: new Date().toISOString() });
+    if (insErr) return opts.failClosed ? false : true;
     return true;
   } catch {
-    return true;
+    // Fail open by default; fail closed (block) when the caller opts in.
+    return opts.failClosed ? false : true;
   }
 }

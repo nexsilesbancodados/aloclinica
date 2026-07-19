@@ -1,12 +1,29 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { getCaller, isInternalOrService, checkRateLimit } from "../_shared/auth.ts"
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
+    // Authorize + rate-limit to curb LLM cost abuse. Internal/service calls
+    // bypass; everyone else must be an authenticated user. Fail closed.
+    if (!isInternalOrService(req)) {
+      const caller = await getCaller(req)
+      if (!caller.user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      const allowed = await checkRateLimit(`user:${caller.user.id}`, 'faq-chat-bot', 30, 1, { failClosed: true })
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' } })
+      }
+    }
+
     const { question } = await req.json()
     if (!question || typeof question !== 'string') {
       return new Response(JSON.stringify({ error: 'question required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    if (question.length > 8000) {
+      return new Response(JSON.stringify({ error: 'input muito grande' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const { data: faqs } = await supabase.from('faq_items').select('question, answer').eq('is_active', true).limit(50)

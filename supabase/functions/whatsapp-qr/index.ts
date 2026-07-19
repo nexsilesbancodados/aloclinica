@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { getCaller, isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +45,15 @@ const fetchEvo = async (url: string, opts: RequestInit = {}): Promise<Response> 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Sensitive: can create/delete the WhatsApp session. Admin user only, or a
+  // trusted server-to-server caller (x-internal-secret / service role).
+  if (!isInternalOrService(req) && !(await getCaller(req)).isAdmin) {
+    return new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {

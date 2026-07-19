@@ -65,6 +65,37 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // === ANTI-SEQUESTRO DE CONTA DE RECEBIMENTO ===
+    // `state` chega do MP SEM autenticação — o front monta a URL de autorização
+    // com state=<user_id> em texto claro. Um atacante pode autorizar a PRÓPRIA
+    // conta MP passando o user_id de um médico legítimo; sem validação, os
+    // tokens de recebimento (collector) desse médico seriam sobrescritos e os
+    // repasses das consultas dele passariam a cair na conta do atacante.
+    // Mitigações mínimas aplicadas aqui (sem alterar o fluxo do front):
+    //   1) state precisa ser um UUID de um médico EXISTENTE (usuário legítimo);
+    //   2) se o médico JÁ tem uma conta MP conectada, só permitimos reconectar a
+    //      MESMA conta (mp_user_id igual). Trocar de conta exige desconectar
+    //      antes (a UI zera mp_user_id) — logo, sem regressão para o legítimo.
+    // Resíduo conhecido: a PRIMEIRA vinculação (mp_user_id nulo) ainda confia no
+    // state. Fechar 100% exige um state assinado/nonce por usuário gerado no
+    // início do fluxo (UserProfile.tsx), fora da área de payments. Ver resumo.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(state)) {
+      return redirect(`${FINAL_REDIRECT}?mp=err&reason=invalid_state`);
+    }
+    const { data: docRow } = await sb
+      .from("doctor_profiles")
+      .select("mp_user_id")
+      .eq("user_id", state)
+      .maybeSingle();
+    if (!docRow) {
+      return redirect(`${FINAL_REDIRECT}?mp=err&reason=invalid_state`);
+    }
+    if (docRow.mp_user_id && docRow.mp_user_id !== String(tokenJson.user_id)) {
+      console.warn("[mp-oauth-callback] bloqueado: tentativa de vincular conta MP diferente ao user", state);
+      return redirect(`${FINAL_REDIRECT}?mp=err&reason=already_connected`);
+    }
+
     const { error: upErr } = await sb.from("doctor_profiles").update({
       mp_user_id: String(tokenJson.user_id),
       mp_access_token: tokenJson.access_token,

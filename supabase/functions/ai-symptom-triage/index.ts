@@ -1,11 +1,28 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { getCaller, isInternalOrService, checkRateLimit } from "../_shared/auth.ts"
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
+    // Authorize + rate-limit to curb LLM cost abuse. Internal/service calls
+    // bypass; everyone else must be an authenticated user. Fail closed.
+    if (!isInternalOrService(req)) {
+      const caller = await getCaller(req)
+      if (!caller.user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      const allowed = await checkRateLimit(`user:${caller.user.id}`, 'ai-symptom-triage', 20, 1, { failClosed: true })
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' } })
+      }
+    }
+
     const { symptoms } = await req.json()
     if (!symptoms || typeof symptoms !== 'string') {
       return new Response(JSON.stringify({ error: 'symptoms required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    if (symptoms.length > 8000) {
+      return new Response(JSON.stringify({ error: 'input muito grande' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const apiKey = Deno.env.get('LOVABLE_API_KEY')!
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

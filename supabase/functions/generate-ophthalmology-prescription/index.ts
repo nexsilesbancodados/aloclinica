@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller, isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +43,18 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Prescription not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Authorize: allow trusted server-to-server calls, the owner doctor, or an admin.
+    // Blocks IDOR: doctor_id references auth.users(id) directly, so it is the owner's user id.
+    if (!isInternalOrService(req)) {
+      const caller = await getCaller(req);
+      if (!caller.user || (!caller.isAdmin && caller.user.id !== prescription.doctor_id)) {
+        return new Response(
+          JSON.stringify({ error: "forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Generate HTML for prescription

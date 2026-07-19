@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,15 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Require an authenticated user; participation is verified against the
+  // appointment below (patient or the appointment's doctor).
+  const caller = await getCaller(req);
+  if (!caller.user) {
+    return new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -37,7 +47,7 @@ serve(async (req) => {
 
     const { data: appt } = await supabase
       .from("appointments")
-      .select("id, status")
+      .select("id, status, patient_id, doctor_id")
       .eq("id", appointmentId)
       .in("status", ["confirmed", "in_progress", "scheduled"])
       .maybeSingle();
@@ -45,6 +55,23 @@ serve(async (req) => {
     if (!appt) {
       return new Response(JSON.stringify({ error: "Appointment not found or not active" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Authorize: caller must be the patient or the appointment's doctor.
+    // (doctor_id references doctor_profiles.id; the doctor's auth user is its user_id.)
+    let isParticipant = !!appt.patient_id && appt.patient_id === caller.user.id;
+    if (!isParticipant && appt.doctor_id) {
+      const { data: doc } = await supabase
+        .from("doctor_profiles")
+        .select("user_id")
+        .eq("id", appt.doctor_id)
+        .maybeSingle();
+      isParticipant = !!doc && doc.user_id === caller.user.id;
+    }
+    if (!isParticipant) {
+      return new Response(JSON.stringify({ error: "forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

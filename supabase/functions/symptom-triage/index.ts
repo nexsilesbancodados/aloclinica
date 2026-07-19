@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { callClaude, FAST_CLAUDE_MODEL } from "../_shared/anthropic.ts";
+import { getCaller, isInternalOrService, checkRateLimit } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +11,30 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Authorize + rate-limit to curb LLM cost abuse. Internal/service calls
+    // bypass; everyone else must be an authenticated user. Fail closed.
+    if (!isInternalOrService(req)) {
+      const caller = await getCaller(req);
+      if (!caller.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const allowed = await checkRateLimit(`user:${caller.user.id}`, "symptom-triage", 20, 1, { failClosed: true });
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
+        });
+      }
+    }
+
     const { symptoms } = await req.json();
+
+    if (typeof symptoms === "string" && symptoms.length > 8000) {
+      return new Response(JSON.stringify({ error: "input muito grande" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const systemPrompt = `Você é um assistente de triagem médica da plataforma AloClínica. Com base nos sintomas descritos pelo paciente, sugira UMA especialidade médica adequada. Responda APENAS em JSON válido com este formato:
 {"specialty": "nome da especialidade", "reason": "explicação curta de 1-2 frases", "urgency": "low|medium|high"}

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCaller, isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,15 @@ const DOCUSEAL_BASE = "http://72.62.138.208:3200";
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Internal proxy: only trusted server-to-server callers (x-internal-secret /
+  // service role) or an admin user. Blocks anonymous anon-key callers.
+  if (!isInternalOrService(req) && !(await getCaller(req)).isAdmin) {
+    return new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const apiKey = Deno.env.get("DOCUSEAL_API_KEY");

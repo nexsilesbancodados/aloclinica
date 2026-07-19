@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { callClaude, FAST_CLAUDE_MODEL } from "../_shared/anthropic.ts";
+import { getCaller, isInternalOrService, checkRateLimit } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +11,31 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Authorize + rate-limit to curb LLM cost abuse. Internal/service calls
+    // bypass; every other caller must be an authenticated user. Autocomplete
+    // fires while typing, so use a generous per-minute cap. Fail closed.
+    if (!isInternalOrService(req)) {
+      const caller = await getCaller(req);
+      if (!caller.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const allowed = await checkRateLimit(`user:${caller.user.id}`, "medical-autocomplete", 60, 1, { failClosed: true });
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
+        });
+      }
+    }
+
     const { text, field } = await req.json();
+
+    if (typeof text === "string" && text.length > 8000) {
+      return new Response(JSON.stringify({ error: "input muito grande" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!text || text.length < 5) {
       return new Response(JSON.stringify({ suggestion: "" }), {

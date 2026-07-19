@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller, isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,21 +24,46 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validar JWT do médico
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Autorização: o chamador precisa ser um médico autenticado OU uma chamada
+    // interna/service (server-to-server). A identidade do médico é derivada do
+    // PRÓPRIO usuário autenticado — os campos de identidade vindos do body são
+    // ignorados/sobrescritos para impedir spoofing de identidade médica.
+    const caller = await getCaller(req);
+    const internal = isInternalOrService(req);
+
+    let derivedDoctorName: string | null = null;
+    let derivedDoctorCrm: string | null = null;
+    let derivedDoctorCpf: string | null = null;
+    let isDoctor = false;
+
+    if (caller.user) {
+      const { data: docProfile } = await supabase
+        .from("doctor_profiles")
+        .select("crm, crm_state")
+        .eq("user_id", caller.user.id)
+        .maybeSingle();
+      const { data: selfProfile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, cpf")
+        .eq("user_id", caller.user.id)
+        .maybeSingle();
+
+      if (docProfile) {
+        isDoctor = true;
+        const composed = `${selfProfile?.first_name ?? ""} ${selfProfile?.last_name ?? ""}`.trim();
+        // Prefixo "Dr(a)." para casar com o nome já embutido no PDF assinado.
+        derivedDoctorName = composed ? `Dr(a). ${composed}` : null;
+        derivedDoctorCrm = docProfile.crm_state
+          ? `${docProfile.crm ?? ""}/${docProfile.crm_state}`
+          : `${docProfile.crm ?? ""}`;
+        derivedDoctorCpf = selfProfile?.cpf ?? null;
+      }
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData.user) {
+    if (!isDoctor && !internal) {
       return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -56,12 +82,21 @@ serve(async (req) => {
       pdf_base64,
     } = body;
 
-    // Validações obrigatórias
-    if (!document_id || !document_type || !doctor_name || !doctor_crm || !doctor_cpf || !document_hash) {
+    // Identidade efetiva do médico: para médicos autenticados prioriza SEMPRE os
+    // valores derivados do banco (anti-spoofing). O CPF pode ser legitimamente
+    // ausente no perfil (o cliente envia fallback), então faz fallback pro body
+    // para não bloquear assinaturas válidas. Chamadas internas/service usam o body.
+    const effectiveDoctorName = isDoctor ? (derivedDoctorName ?? doctor_name) : doctor_name;
+    const effectiveDoctorCrm = isDoctor ? (derivedDoctorCrm ?? doctor_crm) : doctor_crm;
+    const effectiveDoctorCpf = isDoctor ? (derivedDoctorCpf ?? doctor_cpf ?? null) : doctor_cpf;
+    const effectiveUserId = caller.user?.id ?? null;
+
+    // Validações obrigatórias (cpf NÃO é obrigatório — pode faltar no perfil).
+    if (!document_id || !document_type || !effectiveDoctorName || !effectiveDoctorCrm || !document_hash) {
       return new Response(
         JSON.stringify({
           error: "Campos obrigatórios faltando",
-          required: ["document_id", "document_type", "doctor_name", "doctor_crm", "doctor_cpf", "document_hash"],
+          required: ["document_id", "document_type", "doctor_name", "doctor_crm", "document_hash"],
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -105,10 +140,10 @@ serve(async (req) => {
         document_id,
         document_type,
         related_record_id: related_record_id || null,
-        user_id: userData.user.id,
-        doctor_name,
-        doctor_crm,
-        doctor_cpf,
+        user_id: effectiveUserId,
+        doctor_name: effectiveDoctorName,
+        doctor_crm: effectiveDoctorCrm,
+        doctor_cpf: effectiveDoctorCpf,
         patient_name: patient_name || null,
         document_hash,
         signature_data: signature_data || {},

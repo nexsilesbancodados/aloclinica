@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1'
+import { getCaller, isInternalOrService } from "../_shared/auth.ts"
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -14,6 +15,15 @@ Deno.serve(async (req) => {
     const { data: patient } = await supabase.from('profiles').select('first_name,last_name,cpf').eq('user_id', rx.patient_id).maybeSingle()
     const { data: doctor } = await supabase.from('doctor_profiles').select('crm,crm_state,user_id').eq('id', rx.doctor_id).maybeSingle()
     const { data: doctorProfile } = doctor ? await supabase.from('profiles').select('first_name,last_name').eq('user_id', doctor.user_id).maybeSingle() : { data: null }
+
+    // Authorize: allow trusted server-to-server calls, the owner doctor, or an admin.
+    // Blocks IDOR: any other authenticated user requesting someone else's prescription is denied.
+    if (!isInternalOrService(req)) {
+      const caller = await getCaller(req)
+      if (!caller.user || (!caller.isAdmin && caller.user.id !== doctor?.user_id)) {
+        return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } })
+      }
+    }
 
     const code = rx.verification_code || crypto.randomUUID().slice(0, 8).toUpperCase()
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(prescription_id + code))

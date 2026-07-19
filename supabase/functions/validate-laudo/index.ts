@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { callClaude } from "../_shared/anthropic.ts";
+import { getCaller, isInternalOrService, checkRateLimit } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,11 +28,36 @@ serve(async (req) => {
   }
 
   try {
+    // This endpoint is publicly invokable (verify_jwt=false) and drives an
+    // expensive LLM call. Require a trusted caller (internal/service or an
+    // authenticated user) and rate-limit to curb cost abuse. Fail closed.
+    if (!isInternalOrService(req)) {
+      const caller = await getCaller(req);
+      if (!caller.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const allowed = await checkRateLimit(`user:${caller.user.id}`, "validate-laudo", 20, 1, { failClosed: true });
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
+        });
+      }
+    }
+
     const { laudo_text, exam_type } = await req.json();
 
     if (!laudo_text || typeof laudo_text !== "string" || laudo_text.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: "laudo_text é obrigatório e não pode ser vazio" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (laudo_text.length > 8000) {
+      return new Response(
+        JSON.stringify({ error: "input muito grande" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

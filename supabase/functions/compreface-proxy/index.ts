@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { getCaller, isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,15 @@ const DETECT_API_KEY = Deno.env.get("COMPREFACE_DETECT_KEY") || COMPREFACE_API_K
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Internal proxy: only trusted server-to-server callers (x-internal-secret /
+  // service role) or an admin user. Blocks anonymous anon-key callers.
+  if (!isInternalOrService(req) && !(await getCaller(req)).isAdmin) {
+    return new Response(JSON.stringify({ error: "forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
