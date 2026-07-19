@@ -335,7 +335,8 @@ const BookAppointment = () => {
   };
 
   const fullPrice = doctor?.consultation_price ?? 89;
-  const basePrice = (appointmentType === "return" && returnEligible) ? Math.round(fullPrice * 0.5 * 100) / 100 : fullPrice;
+  // Produto: o único desconto é CUPOM (sem desconto de retorno). Preço sempre cheio.
+  const basePrice = fullPrice;
   const discountAmount = basePrice * (cardDiscount / 100);
   const couponAmount = basePrice * (couponDiscount / 100);
   const totalPrice = Math.max(basePrice - discountAmount - couponAmount, 0);
@@ -594,6 +595,9 @@ const BookAppointment = () => {
         payment_method: methodMap[paymentMethod],
         reference_id: `appointment_${appointmentId}`,
         description: `Consulta médica AloClínica`,
+        // O SERVIDOR recalcula o valor autoritativo (preço do médico − cupom
+        // validado no servidor). O `amount` acima é só informativo/legado.
+        coupon_code: couponCode || undefined,
       };
 
       // Card tokenization via Mercado Pago JS SDK
@@ -1072,25 +1076,6 @@ const BookAppointment = () => {
                   )}
                 </div>
 
-                {appointmentType === "return" && (
-                  <div className={`flex items-start gap-2 p-3 rounded-xl mb-4 ${returnEligible ? "bg-success/10 border border-success/20" : "bg-warning/10 border border-warning/20"}`}>
-                    {returnEligible ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-success mt-0.5 shrink-0" />
-                        <p className="text-[11px] text-foreground/80">
-                          <strong>Retorno com 50% de desconto!</strong> Você tem uma consulta anterior com esse médico dentro do prazo de 60 dias. Valor: R$ {basePrice.toFixed(2)} (50% de R$ {fullPrice.toFixed(2)}).
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
-                        <p className="text-[11px] text-foreground/80">
-                          Retornos têm 50% de desconto dentro de 60 dias da consulta original. Nenhuma consulta elegível encontrada — será cobrado o valor integral.
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
 
                 <Button
                   className="w-full h-14 rounded-xl bg-gradient-to-r from-primary via-primary to-secondary text-primary-foreground text-base font-bold shadow-xl shadow-primary/20 hover:shadow-2xl transition-shadow active:scale-[0.98]"

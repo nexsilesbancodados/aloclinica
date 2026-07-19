@@ -65,11 +65,22 @@ Deno.serve(async (req) => {
       payment_method_id,
       saved_card_id,
       payer_doc,
+      coupon_code,
     } = body;
 
-    if (!amount || amount <= 0) return jsonResponse({ error: "amount obrigatório (em reais)" }, 400);
     if (!payment_method) return jsonResponse({ error: "payment_method obrigatório" }, 400);
     if (!reference_id) return jsonResponse({ error: "reference_id obrigatório" }, 400);
+
+    // SECURITY: o VALOR é decidido pelo SERVIDOR (preço real do médico − cupom
+    // validado no servidor). O `amount` do corpo NÃO é confiável (evita pagar R$1
+    // numa consulta). Ver docs/SEGURANCA_VALOR_PAGAMENTO.md.
+    const authoritative = await computeAuthoritativeAmount(admin, reference_id, coupon_code);
+    if (authoritative.notFound) return jsonResponse({ error: "Recurso da cobrança não encontrado" }, 404);
+    if (authoritative.error) return jsonResponse({ error: authoritative.error }, 400);
+    const chargeAmount = authoritative.amount ?? Number(amount);
+    if (!chargeAmount || chargeAmount <= 0) {
+      return jsonResponse({ error: "Não foi possível determinar o valor da cobrança" }, 400);
+    }
 
     // Busca profile pra montar payer
     const { data: profile } = await admin
@@ -88,7 +99,7 @@ Deno.serve(async (req) => {
 
     // Monta payload Mercado Pago
     const mpPayload: Record<string, any> = {
-      transaction_amount: Number(amount),
+      transaction_amount: chargeAmount,
       description: description || `AloClínica — ${reference_id}`,
       external_reference: reference_id,
       notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
@@ -166,7 +177,7 @@ Deno.serve(async (req) => {
           marketplaceAccessToken = doc.mp_access_token;
           // marketplace_fee é EM REAIS, a fatia da plataforma (10% padrão)
           const platformPercent = Number(Deno.env.get("PLATFORM_FEE_PERCENT") ?? 10);
-          mpPayload.marketplace_fee = Math.round(Number(amount) * platformPercent) / 100;
+          mpPayload.marketplace_fee = Math.round(chargeAmount * platformPercent) / 100;
           mpPayload.collector_id = Number(doc.mp_user_id);
         }
       }
@@ -199,7 +210,7 @@ Deno.serve(async (req) => {
       user_id: user.id,
       gateway: "mercadopago",
       mp_payment_id: paymentId,
-      amount_cents: Math.round(Number(amount) * 100),
+      amount_cents: Math.round(chargeAmount * 100),
       currency: "BRL",
       payment_method: payment_method.toUpperCase(),
       status: internalStatus,
@@ -255,6 +266,56 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: (e as Error).message }, 500);
   }
 });
+
+const RENEWAL_PRICE_BRL = 80; // preço fixo da renovação de receita (espelha o front)
+
+/**
+ * Valor AUTORITATIVO da cobrança, calculado no SERVIDOR.
+ * - appointment: preço do médico (doctor_profiles.consultation_price) − cupom
+ *   validado no servidor. NÃO confia em price_at_booking (escrito pelo cliente).
+ * - renewal: R$80 fixo.
+ * - queue/sub/outros: sem fonte autoritativa robusta aqui → { amount:null }
+ *   (mantém o amount do cliente; ver docs/SEGURANCA_VALOR_PAGAMENTO.md p/ queue).
+ *
+ * PRODUTO: o único desconto é CUPOM (sem desconto de retorno/indicação). Por isso
+ * usamos o preço cheio do médico e ignoramos appointment_type. Se reativar
+ * "consulta de retorno", validar a elegibilidade no servidor antes de aplicar 0.5x.
+ */
+async function computeAuthoritativeAmount(
+  admin: ReturnType<typeof createClient>,
+  reference_id: string,
+  coupon_code: unknown,
+): Promise<{ amount: number | null; notFound?: boolean; error?: string }> {
+  if (reference_id.startsWith("appointment_")) {
+    const id = reference_id.replace("appointment_", "");
+    const { data: appt } = await admin.from("appointments").select("doctor_id").eq("id", id).maybeSingle();
+    if (!appt) return { amount: null, notFound: true };
+    const { data: doc } = await admin.from("doctor_profiles").select("consultation_price").eq("id", appt.doctor_id).maybeSingle();
+    const base = doc?.consultation_price != null ? Number(doc.consultation_price) : null;
+    if (base == null || base <= 0) return { amount: null, error: "Preço do médico não configurado" };
+    const pct = await resolveCouponPercent(admin, coupon_code);
+    return { amount: Math.round(base * (1 - pct / 100) * 100) / 100 };
+  }
+  if (reference_id.startsWith("renewal_")) return { amount: RENEWAL_PRICE_BRL };
+  return { amount: null };
+}
+
+/** Valida o cupom NO SERVIDOR e devolve o % de desconto (0 se inválido). */
+async function resolveCouponPercent(
+  admin: ReturnType<typeof createClient>,
+  code: unknown,
+): Promise<number> {
+  if (!code || typeof code !== "string") return 0;
+  const { data } = await admin.from("coupons")
+    .select("discount_percentage, max_uses, times_used, expires_at, is_active")
+    .eq("code", code.trim().toUpperCase())
+    .maybeSingle();
+  if (!data || data.is_active !== true) return 0;
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return 0;
+  if (data.max_uses != null && Number(data.times_used ?? 0) >= Number(data.max_uses)) return 0;
+  const pct = Number(data.discount_percentage) || 0;
+  return pct > 0 && pct <= 100 ? pct : 0;
+}
 
 async function tokenizeSavedCard(cardId: string): Promise<string> {
   // Tokeniza cartão salvo pra reuso (sem CVV)

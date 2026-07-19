@@ -53,15 +53,23 @@ Deno.serve(async (req) => {
       security_code,
       installments = 1,
       user_id: bodyUserId,  // opcional, usado quando chamado por cron
+      coupon_code,
     } = body;
 
     if (!saved_card_id) return json({ error: "saved_card_id obrigatório" }, 400);
-    if (!amount || amount <= 0) return json({ error: "amount inválido" }, 400);
     if (!reference_id) return json({ error: "reference_id obrigatório" }, 400);
 
     // Resolve user_id (do auth ou do body se for service-role)
     const userId = resolvedUserId || bodyUserId;
     if (!userId) return json({ error: "user_id não resolvido" }, 401);
+
+    // SECURITY: valor autoritativo calculado no servidor (preço do médico − cupom).
+    // sub_ (recorrência via cron) retorna null → mantém o amount informado.
+    const authoritative = await computeAuthoritativeAmount(admin, reference_id, coupon_code);
+    if (authoritative.notFound) return json({ error: "Recurso da cobrança não encontrado" }, 404);
+    if (authoritative.error) return json({ error: authoritative.error }, 400);
+    const chargeAmount = authoritative.amount ?? Number(amount);
+    if (!chargeAmount || chargeAmount <= 0) return json({ error: "Não foi possível determinar o valor da cobrança" }, 400);
 
     // Busca cartão
     const { data: card } = await admin
@@ -101,7 +109,7 @@ Deno.serve(async (req) => {
       "POST",
       "/v1/payments",
       {
-        transaction_amount: Number(amount),
+        transaction_amount: chargeAmount,
         token: tk.data.id,
         installments,
         description: description || `AloClínica — ${reference_id}`,
@@ -131,7 +139,7 @@ Deno.serve(async (req) => {
       user_id: userId,
       gateway: "mercadopago",
       mp_payment_id: String(payment.data.id),
-      amount_cents: Math.round(Number(amount) * 100),
+      amount_cents: Math.round(chargeAmount * 100),
       currency: "BRL",
       payment_method: "SAVED_CARD",
       status,
@@ -153,6 +161,44 @@ Deno.serve(async (req) => {
     return json({ error: (e as Error).message }, 500);
   }
 });
+
+const RENEWAL_PRICE_BRL = 80; // preço fixo da renovação de receita (espelha o front)
+
+/** Valor autoritativo (preço do médico − cupom validado no servidor). Ver create-payment. */
+async function computeAuthoritativeAmount(
+  admin: ReturnType<typeof createClient>,
+  reference_id: string,
+  coupon_code: unknown,
+): Promise<{ amount: number | null; notFound?: boolean; error?: string }> {
+  if (reference_id.startsWith("appointment_")) {
+    const id = reference_id.replace("appointment_", "");
+    const { data: appt } = await admin.from("appointments").select("doctor_id").eq("id", id).maybeSingle();
+    if (!appt) return { amount: null, notFound: true };
+    const { data: doc } = await admin.from("doctor_profiles").select("consultation_price").eq("id", appt.doctor_id).maybeSingle();
+    const base = doc?.consultation_price != null ? Number(doc.consultation_price) : null;
+    if (base == null || base <= 0) return { amount: null, error: "Preço do médico não configurado" };
+    const pct = await resolveCouponPercent(admin, coupon_code);
+    return { amount: Math.round(base * (1 - pct / 100) * 100) / 100 };
+  }
+  if (reference_id.startsWith("renewal_")) return { amount: RENEWAL_PRICE_BRL };
+  return { amount: null };
+}
+
+async function resolveCouponPercent(
+  admin: ReturnType<typeof createClient>,
+  code: unknown,
+): Promise<number> {
+  if (!code || typeof code !== "string") return 0;
+  const { data } = await admin.from("coupons")
+    .select("discount_percentage, max_uses, times_used, expires_at, is_active")
+    .eq("code", code.trim().toUpperCase())
+    .maybeSingle();
+  if (!data || data.is_active !== true) return 0;
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return 0;
+  if (data.max_uses != null && Number(data.times_used ?? 0) >= Number(data.max_uses)) return 0;
+  const pct = Number(data.discount_percentage) || 0;
+  return pct > 0 && pct <= 100 ? pct : 0;
+}
 
 function extractResourceId(reference: string): string {
   const idx = reference.indexOf("_");
