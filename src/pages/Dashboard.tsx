@@ -37,6 +37,7 @@ const PanelCenter = lazy(() => import("@/components/admin/PanelCenter"));
 // ── LAZY imports: less-used pages (prefetched on idle) ──
 const BookAppointment = lazy(() => import("@/components/patient/BookAppointment"));
 const AppointmentDetail = lazy(() => import("@/components/patient/AppointmentDetail"));
+const HealthCardPage = lazy(() => import("@/components/patient/HealthCardPage"));
 const AppointmentConfirmed = lazy(() => import("@/components/patient/AppointmentConfirmed"));
 const AppointmentReceipt = lazy(() => import("@/components/patient/AppointmentReceipt"));
 const MedicalHistory = lazy(() => import("@/components/patient/MedicalHistory"));
@@ -286,6 +287,7 @@ const Dashboard = () => {
       <Route path="patient/family" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><FamilyMembers /></ContextGuard></RoleGuard>} />
       <Route path="patient/access-log" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><AccessLog /></ContextGuard></RoleGuard>} />
       <Route path="patient/exams" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><ExamMarketplace /></ContextGuard></RoleGuard>} />
+      <Route path="patient/health-card" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><HealthCardPage /></ContextGuard></RoleGuard>} />
       <Route path="patient/referral" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><ReferralPage /></ContextGuard></RoleGuard>} />
       <Route path="patient/care-plans" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><CarePlansPage /></ContextGuard></RoleGuard>} />
       <Route path="patient/vaccinations" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><VaccinationsPage /></ContextGuard></RoleGuard>} />
