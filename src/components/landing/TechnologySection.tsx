@@ -20,7 +20,7 @@ const TechnologySection = ({ config }: { config?: any }) => {
     {
       icon: <Cpu className="w-6 h-6" />,
       title: "Inteligência Artificial",
-      description: "IA para auxiliar médicos em diagnósticos, otimizar laudos e melhorar a experiência do paciente.",
+      description: "IA para auxiliar médicos em diagnósticos, otimizar o atendimento e melhorar a experiência do paciente.",
     },
     {
       icon: <Lock className="w-6 h-6" />,

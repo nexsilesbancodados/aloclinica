@@ -81,11 +81,6 @@ export const toastDocumentUploaded = () =>
     description: "O paciente receberá notificação.",
   });
 
-export const toastReportSigned = () =>
-  toast.success("Laudo assinado! ✅", {
-    description: "Paciente e clínica foram notificados.",
-  });
-
 // ─── Sharing ────────────────────────────────────────────────────────────────
 
 export const toastShareLinkCopied = () =>

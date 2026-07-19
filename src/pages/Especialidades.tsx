@@ -22,7 +22,6 @@ const slugify = (s: string) =>
 const specialties = [
   { name: "Cardiologia", image: PINGO_SPECIALTIES["Cardiologia"], desc: "Coração, circulação e saúde cardiovascular", doctors: 45 },
   { name: "Dermatologia", image: PINGO_SPECIALTIES["Dermatologia"], desc: "Pele, acne, envelhecimento e estética", doctors: 38 },
-  { name: "Oftalmologia", image: PINGO_SPECIALTIES["Oftalmologia"], desc: "Visão, exames e prescrição de óculos", doctors: 52 },
   { name: "Pediatria", image: PINGO_SPECIALTIES["Pediatria"], desc: "Saúde infantil e desenvolvimento", doctors: 41 },
   { name: "Psiquiatria", image: PINGO_SPECIALTIES["Psiquiatria"], desc: "Transtornos mentais e equilíbrio emocional", doctors: 33 },
   { name: "Neurologia", image: PINGO_SPECIALTIES["Neurologia"], desc: "Sistema nervoso, dores e distúrbios", doctors: 34 },

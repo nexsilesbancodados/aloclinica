@@ -15,7 +15,7 @@ serve(async (req) => {
     const systemPrompt = `Você é um assistente de triagem médica da plataforma AloClínica. Com base nos sintomas descritos pelo paciente, sugira UMA especialidade médica adequada. Responda APENAS em JSON válido com este formato:
 {"specialty": "nome da especialidade", "reason": "explicação curta de 1-2 frases", "urgency": "low|medium|high"}
 
-Especialidades disponíveis: Clínico Geral, Dermatologia, Ortopedia, Neurologia, Cardiologia, Endocrinologia, Oftalmologia, Pediatria.
+Especialidades disponíveis: Clínico Geral, Dermatologia, Ortopedia, Neurologia, Cardiologia, Endocrinologia, Pediatria.
 Se não conseguir determinar, sugira Clínico Geral.
 NUNCA faça diagnóstico. Apenas sugira a especialidade mais adequada.`;
 

@@ -32,7 +32,7 @@ type Protocol = {
   is_active: boolean;
 };
 
-const SPECIALTIES = ["clinico_geral","cardiologia","pediatria","psiquiatria","ginecologia","dermatologia","ortopedia","otorrino","oftalmologia","endocrinologia","gastro","neurologia","psicologia","urologia"];
+const SPECIALTIES = ["clinico_geral","cardiologia","pediatria","psiquiatria","ginecologia","dermatologia","ortopedia","otorrino","endocrinologia","gastro","neurologia","psicologia","urologia"];
 const URGENCIES = ["baixa","media","alta","emergencia"];
 
 const ClinicalProtocols = () => {

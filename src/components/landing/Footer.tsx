@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { PINGO_LOGO_URL } from "@/lib/constants";
-import { isFeatureEnabled } from "@/lib/featureFlags";
 const logo = PINGO_LOGO_URL;
 
 const Footer = memo(forwardRef<HTMLElement, { config?: any }>(({ config }, ref) => {
@@ -169,9 +168,6 @@ const Footer = memo(forwardRef<HTMLElement, { config?: any }>(({ config }, ref) 
           <div className="lg:col-span-3">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/75 mb-4">Serviços</h4>
             <ul className="space-y-3 text-sm text-white/60">
-              {isFeatureEnabled("cartao_pingo") && (
-                <li><Link to="/pingo-card" className="hover:text-primary transition-colors flex items-center gap-2"><CreditCard className="w-3.5 h-3.5 text-amber-400" weight="fill" /> Pingo Card</Link></li>
-              )}
               <li><Link to="/para-empresas" className="hover:text-primary transition-colors flex items-center gap-2"><Buildings className="w-3.5 h-3.5 text-indigo-400" weight="fill" /> Saúde Corporativa</Link></li>
               <li><Link to="/para-profissionais" className="hover:text-primary transition-colors flex items-center gap-2"><Stethoscope className="w-3.5 h-3.5 text-rose-400" weight="fill" /> Para Médicos</Link></li>
               <li><Link to="/especialidades" className="hover:text-primary transition-colors flex items-center gap-2"><FirstAidKit className="w-3.5 h-3.5 text-emerald-400" weight="fill" /> Especialidades</Link></li>

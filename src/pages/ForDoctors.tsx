@@ -207,7 +207,7 @@ const ForDoctors = forwardRef<HTMLDivElement>((_, ref) => {
                 Tudo num <span className="text-primary">só lugar</span>
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-8">
-                Prontuário eletrônico, receita digital, atestados e laudos — todas as ferramentas 
+                Prontuário eletrônico, receita digital e atestados — todas as ferramentas
                 que você precisa integradas na plataforma.
               </p>
 
@@ -215,7 +215,7 @@ const ForDoctors = forwardRef<HTMLDivElement>((_, ref) => {
                 {[
                   { icon: FileText, title: "Prontuário SOAP", desc: "Registro clínico completo com anamnese estruturada, CID-10 e exportação." },
                   { icon: Certificate, title: "Receita Digital ICP-Brasil", desc: "Prescrições com assinatura digital certificada, válidas em todo o país." },
-                  { icon: Heartbeat, title: "Atestados e Laudos", desc: "Gere documentos médicos com verificação por QR Code e hash de segurança." },
+                  { icon: Heartbeat, title: "Atestados", desc: "Gere documentos médicos com verificação por QR Code e hash de segurança." },
                   { icon: Video, title: "Videochamada HD", desc: "Consultas por vídeo com criptografia E2E, gravação (com consentimento) e chat." },
                   { icon: ChatsCircle, title: "Chat com Paciente", desc: "Comunicação segura antes e depois da consulta para acompanhamento." },
                 ].map((item, i) => (

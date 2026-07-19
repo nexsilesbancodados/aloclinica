@@ -148,39 +148,10 @@ const AdminReports = () => {
       ? activeSubs.reduce((acc, s) => acc + (planPriceMap.get(s.plan_id) ?? 0), 0) / activeSubs.length
       : 0;
 
-    // ─── Métricas SaaS — MRR + Churn + Cartões ativos ───
-    // MRR de Pingo Card: soma price_monthly dos planos ativos × assinaturas ativas
-    const [pingoSubsRes, pingoPlansRes] = await Promise.all([
-      db.from("pingo_card_subscriptions").select("plan_id, status, billing_cycle, started_at, canceled_at"),
-      db.from("pingo_card_plans").select("id, price_monthly, price_yearly"),
-    ]);
-    const pingoPlanMap = new Map<string, { monthly: number; yearly: number }>(
-      (pingoPlansRes.data ?? []).map(p => [p.id, { monthly: Number(p.price_monthly), yearly: Number(p.price_yearly) }])
-    );
-    const activeCards = (pingoSubsRes.data ?? []).filter(s => s.status === "active").length;
-    const mrrFromCards = (pingoSubsRes.data ?? [])
-      .filter(s => s.status === "active")
-      .reduce((sum, s) => {
-        const p = pingoPlanMap.get(s.plan_id);
-        if (!p) return sum;
-        // Anual normalizado pra mês (yearly / 12)
-        return sum + (s.billing_cycle === "yearly" ? p.yearly / 12 : p.monthly);
-      }, 0);
-    const mrrFromGenericSubs = activeSubs.reduce((acc, s) => acc + (planPriceMap.get(s.plan_id) ?? 0), 0);
-    const mrr = mrrFromCards + mrrFromGenericSubs;
-
-    // Churn rate: cancelados nos últimos 30d / total ativos há 30d
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const cancelledLast30d = (pingoSubsRes.data ?? []).filter(
-      s => s.canceled_at && new Date(s.canceled_at) >= thirtyDaysAgo
-    ).length;
-    const activeAt30dAgo = (pingoSubsRes.data ?? []).filter(s => {
-      if (!s.started_at) return false;
-      if (new Date(s.started_at) > thirtyDaysAgo) return false; // ainda não existia
-      if (s.canceled_at && new Date(s.canceled_at) <= thirtyDaysAgo) return false; // já tinha cancelado
-      return true;
-    }).length;
-    const churnRate = activeAt30dAgo > 0 ? (cancelledLast30d / activeAt30dAgo) * 100 : 0;
+    // ─── Métricas SaaS — MRR de assinaturas genéricas ───
+    const mrr = activeSubs.reduce((acc, s) => acc + (planPriceMap.get(s.plan_id) ?? 0), 0);
+    const activeCards = 0;
+    const churnRate = 0;
 
     setSummaryStats({
       totalRevenue: totalRevAll,
@@ -324,16 +295,6 @@ const AdminReports = () => {
                 </div>
                 <p className="text-2xl font-extrabold text-foreground">R$ {summaryStats.mrr.toFixed(0)}</p>
                 <p className="text-[11px] text-muted-foreground">Receita recorrente mensal</p>
-              </div>
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/[0.02] border border-amber-500/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                    <Users className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Cartões ativos</p>
-                </div>
-                <p className="text-2xl font-extrabold text-foreground">{summaryStats.activeCards}</p>
-                <p className="text-[11px] text-muted-foreground">Pingo Card pagantes</p>
               </div>
               <div className={`p-4 rounded-2xl border ${
                 summaryStats.churnRate > 10

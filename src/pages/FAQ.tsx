@@ -84,7 +84,7 @@ const faqCategories = {
       },
       {
         q: "Quais ferramentas médicas estão disponíveis?",
-        a: "Prontuário SOAP, prescrição digital, atestados, laudos, compartilhamento de tela e histórico do paciente.",
+        a: "Prontuário SOAP, prescrição digital, atestados, compartilhamento de tela e histórico do paciente.",
       },
       {
         q: "Preciso aprovar pacientes antes de atender?",

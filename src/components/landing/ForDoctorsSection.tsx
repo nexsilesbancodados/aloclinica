@@ -41,7 +41,7 @@ const perks = [
   {
     icon: ChartLineUp,
     title: "Ferramentas completas",
-    desc: "Prontuário SOAP, receita digital, laudo e atestado — tudo em um só lugar.",
+    desc: "Prontuário SOAP, receita digital e atestado — tudo em um só lugar.",
   },
   {
     icon: Stethoscope,

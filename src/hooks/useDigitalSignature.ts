@@ -9,7 +9,7 @@ import { logError } from "@/lib/logger";
    doctorCRM: string;
    doctorCPF: string;
    prescriptionId: string; // ID do registro no banco (prescriptions.id ou exam_reports.id)
-   documentType: "prescription" | "exam" | "report" | "laudo" | "certificate"; // tipo de documento
+   documentType: "prescription" | "exam" | "report" | "certificate"; // tipo de documento
    patientName?: string;
    relatedRecordId?: string; // UUID interno (opcional, para vincular ao registro original)
  }
@@ -29,7 +29,7 @@ interface SignedDocument {
  *
  * Funciona com:
  * - Receitas (prescriptions)
- * - Laudos (reports)
+ * - Relatórios (reports)
  * - Exames
  * - Qualquer documento PDF
  *
@@ -197,7 +197,7 @@ interface SignedDocument {
    };
  
    /**
-    * Assina documento (receita, laudo, exame, etc)
+    * Assina documento (receita, exame, etc)
     * Agora inclui a validação obrigatória de CPF do e-CPF
     */
    const signPrescription = async (req: SignatureRequest): Promise<SignedDocument | null> => {

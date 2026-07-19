@@ -109,7 +109,7 @@ const PREDEFINED_SPECIALTIES = [
   "Homeopatia", "Infectologia", "Mastologia", "Medicina de Família e Comunidade",
   "Medicina do Esporte", "Medicina do Trabalho", "Medicina Intensiva",
   "Medicina Legal", "Medicina Nuclear", "Nefrologia", "Neurocirurgia",
-  "Neurologia", "Nutrologia", "Oftalmologia", "Oncologia Clínica", "Ortopedia e Traumatologia",
+  "Neurologia", "Nutrologia", "Oncologia Clínica", "Ortopedia e Traumatologia",
   "Otorrinolaringologia", "Patologia", "Pediatria", "Pneumologia", "Psiquiatria",
   "Radiologia", "Radioterapia", "Reumatologia", "Urologia",
 ];

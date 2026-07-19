@@ -20,7 +20,7 @@ type Testimonial = {
   city: string;
   text: string;
   stars: number;
-  category: "Telemedicina" | "Pingo Card" | "Especialidade" | "Suporte";
+  category: "Telemedicina" | "Especialidade" | "Suporte";
 };
 
 const testimonials: Testimonial[] = [
@@ -30,12 +30,11 @@ const testimonials: Testimonial[] = [
   { name: "Roberto Lima", city: "Curitiba, PR", text: "Agendei em poucos minutos e fui atendido na hora marcada. Profissionalismo do começo ao fim.", stars: 5, category: "Telemedicina" },
   { name: "Fernanda Souza", city: "Salvador, BA", text: "Adoro a praticidade. Tenho meu prontuário sempre à mão e o suporte é muito atencioso.", stars: 5, category: "Suporte" },
   { name: "Lucas Almeida", city: "Porto Alegre, RS", text: "Receita digital aceita na farmácia sem nenhum problema. Recomendo demais.", stars: 5, category: "Telemedicina" },
-  { name: "Patrícia Rocha", city: "Manaus, AM", text: "Com o Pingo Card economizei mais de R$ 1.200 em consultas e exames no primeiro mês.", stars: 5, category: "Pingo Card" },
   { name: "Eduardo Tavares", city: "Florianópolis, SC", text: "Consulta com cardiologista que demoraria 3 meses pelo SUS. Aqui foi no mesmo dia.", stars: 4, category: "Especialidade" },
   { name: "Julia Martins", city: "Goiânia, GO", text: "O suporte resolveu meu problema em 5 minutos pelo chat. Surpreendente.", stars: 5, category: "Suporte" },
 ];
 
-const categories = ["Todas", "Telemedicina", "Pingo Card", "Especialidade", "Suporte"] as const;
+const categories = ["Todas", "Telemedicina", "Especialidade", "Suporte"] as const;
 
 const Depoimentos = () => {
   const navigate = useNavigate();

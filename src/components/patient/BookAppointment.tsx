@@ -473,11 +473,11 @@ const BookAppointment = () => {
     let errorOccurred = false;
 
     for (const dt of datesToBook) {
-      // Use doctor_type as appointment_type if available (telemedicina/oftalmologia),
+      // Use doctor_type as appointment_type if available (telemedicina),
       // otherwise use appointmentType (first_visit/return)
       const apptType = firstApptId
         ? "return"
-        : (doctor.doctor_type && ["telemedicina", "oftalmologia"].includes(doctor.doctor_type))
+        : (doctor.doctor_type && ["telemedicina"].includes(doctor.doctor_type))
           ? doctor.doctor_type
           : appointmentType;
 

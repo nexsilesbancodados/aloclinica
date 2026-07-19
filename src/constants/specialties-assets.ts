@@ -14,7 +14,6 @@ import pingoInfectologia from "@/assets/pingo-infectologista.jpg";
 import pingoNefrologia from "@/assets/pingo-nefrologia.jpg";
 import pingoNeurologia from "@/assets/pingo-neurologista.jpg";
 import pingoNutricionista from "@/assets/pingo-nutricionista.jpg";
-import pingoOftalmologia from "@/assets/pingo-oftalmologista.jpg";
 import pingoOncologia from "@/assets/pingo-cirurgiao-onco.jpg";
 import pingoOrtopedia from "@/assets/pingo-ortopedista.jpg";
 import pingoOtorrino from "@/assets/pingo-otorrino.jpg";
@@ -51,7 +50,6 @@ export const PINGO_SPECIALTIES: Record<string, string> = {
   "Neurologia": pingoNeurologia,
   "Pediatria": pingoPediatria,
   "Ortopedia": pingoOrtopedia,
-  "Oftalmologia": pingoOftalmologia,
   "Dermatologia": pingoDermatologia,
   "Clínico Geral": pingoClinicoGeral,
   "Clínico geral": pingoClinicoGeral,

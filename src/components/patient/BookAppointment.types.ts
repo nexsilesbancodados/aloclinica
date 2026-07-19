@@ -15,7 +15,7 @@ export interface DoctorInfo {
   consultation_price: number;
   rating: number;
   experience_years: number | null;
-  doctor_type?: "telemedicina" | "oftalmologia" | "laudista";
+  doctor_type?: "telemedicina";
   first_name: string;
   last_name: string;
   specialties: string[];

@@ -41,7 +41,6 @@ const SPECIALTY_LABELS: Record<string, string> = {
   dermatologia: "Dermatologia",
   ortopedia: "Ortopedia",
   otorrino: "Otorrinolaringologia",
-  oftalmologia: "Oftalmologia",
   endocrinologia: "Endocrinologia",
   gastro: "Gastroenterologia",
   neurologia: "Neurologia",
