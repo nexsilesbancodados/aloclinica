@@ -43,8 +43,7 @@ describe("Header", () => {
     // Logo presente (img com alt="Logo")
     expect(screen.getByAltText("Logo")).toBeInTheDocument();
     // O Header agora tem menu items diretos (não mais dropdown "Serviços").
-    // Pingo Card é injetado mesmo quando o config do banco não vem com ele.
-    expect(screen.getAllByText("Pingo Card").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Saúde Corporativa").length).toBeGreaterThan(0);
   });
 });
 

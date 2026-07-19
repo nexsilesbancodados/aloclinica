@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
       return json({ error: "subscription_id ou mp_preapproval_id obrigatório" }, 400);
     }
 
-    const ALLOWED_TABLES = new Set(["subscriptions", "pingo_card_subscriptions"]);
+    const ALLOWED_TABLES = new Set(["subscriptions"]);
     if (!ALLOWED_TABLES.has(table)) return json({ error: `table inválida: ${table}` }, 400);
 
     let preapprovalId = directPreapprovalId;

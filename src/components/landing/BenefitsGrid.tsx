@@ -44,7 +44,7 @@ const bottomCards = [
     image: familyPlanImg,
     title: "Plano família",
     description: "Adicione dependentes e cuide de toda a família em uma conta única.",
-    cta: { label: "Conhecer planos", href: "/cartao-pingo" },
+    cta: { label: "Agendar consulta", href: "/agendar" },
   },
   {
     image: medicalRecordsImg,

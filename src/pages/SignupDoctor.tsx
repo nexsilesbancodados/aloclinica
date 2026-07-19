@@ -275,10 +275,9 @@ export default function SignupDoctor() {
         throw new Error("Sessão não confirmada. Confirme seu email e faça login para completar o cadastro.");
       }
 
-      // doctor_type tem CHECK constraint (telemedicina|oftalmologia|laudista).
+      // doctor_type tem CHECK constraint (telemedicina).
       // A especialidade clínica vai para doctor_specialties (linkada à tabela specialties).
-      const isOphthalmology = /oftalmologia/i.test(formData.specialty);
-      const docType = isOphthalmology ? "oftalmologia" : "telemedicina";
+      const docType = "telemedicina";
 
       const { data: dpRow, error: dpErr } = await (db as any)
         .from("doctor_profiles")

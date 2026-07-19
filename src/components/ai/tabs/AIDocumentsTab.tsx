@@ -16,7 +16,6 @@ import { SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabase-config";
 
 const DOC_TYPES = [
   { value: "atestado", label: "📋 Atestado Médico", prompt: "Gere um rascunho de atestado médico", description: "Afastamento, comparecimento" },
-  { value: "laudo", label: "📊 Laudo Médico", prompt: "Gere um rascunho de laudo médico", description: "Avaliação clínica detalhada" },
   { value: "encaminhamento", label: "🔄 Encaminhamento", prompt: "Gere um rascunho de encaminhamento médico", description: "Referência para especialista" },
   { value: "declaracao", label: "✅ Declaração de Comparecimento", prompt: "Gere um rascunho de declaração de comparecimento", description: "Para apresentar ao empregador" },
   { value: "relatorio", label: "📝 Relatório Clínico", prompt: "Gere um rascunho de relatório clínico", description: "Evolução e prognóstico" },

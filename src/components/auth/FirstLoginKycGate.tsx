@@ -22,7 +22,7 @@ export function FirstLoginKycGate({ children }: { children: React.ReactNode }) {
     if (loading || !user) return;
 
     // Papéis operacionais não precisam de KYC para acessar o painel
-    const exemptRoles = ["admin", "support", "clinic", "partner", "receptionist", "cartao_beneficios"];
+    const exemptRoles = ["admin", "support", "clinic", "partner", "receptionist"];
     if (roles.some((r) => exemptRoles.includes(r))) {
       setChecked(true);
       return;
@@ -35,7 +35,7 @@ export function FirstLoginKycGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const isDoctor = roles.includes("doctor") || roles.includes("ophthalmologist");
+    const isDoctor = roles.includes("doctor");
 
     const verify = async () => {
       try {

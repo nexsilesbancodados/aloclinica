@@ -18,7 +18,6 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
-import { isFeatureEnabled } from "@/lib/featureFlags";
 
 const ListItem = forwardRef<HTMLLIElement, React.ComponentPropsWithoutRef<"a"> & { icon?: React.ElementType; badge?: string }>(({ 
   className, title, children, href, icon: Icon, badge, ...props
@@ -72,21 +71,10 @@ const Header = memo(forwardRef<HTMLElement, { config?: any }>(({ config }, ref) 
     { label: "Saúde Corporativa", href: "/para-empresas" },
     { label: "Ajuda", href: "/ajuda" },
   ];
-  // Pingo Card só aparece no menu quando o feature flag está habilitado
-  const cartaoEnabled = isFeatureEnabled("cartao_pingo");
-  const filteredBase = cartaoEnabled
-    ? baseMenuItems
-    : baseMenuItems.filter((i: any) => !((i.href || i.url || "").includes("pingo-card") || (i.label || "").toLowerCase().includes("pingo")));
-  const hasPingoCard = filteredBase.some((i: any) =>
-    (i.href || i.url || "").includes("pingo-card") || (i.label || "").toLowerCase().includes("pingo")
+  // Pingo Card foi removido — filtra qualquer menção residual vinda da config
+  const menuItems = (baseMenuItems as any[]).filter((i: any) =>
+    !((i.href || i.url || "").includes("pingo-card") || (i.label || "").toLowerCase().includes("pingo"))
   );
-  const menuItems = !cartaoEnabled
-    ? filteredBase
-    : hasPingoCard
-      ? filteredBase.map((i: any) =>
-          ((i.href || i.url || "").includes("pingo-card") ? { ...i, label: "Pingo Card" } : i)
-        )
-      : [{ label: "Pingo Card", href: "/pingo-card" }, ...filteredBase];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -105,7 +93,6 @@ const Header = memo(forwardRef<HTMLElement, { config?: any }>(({ config }, ref) 
   const itemColorMap: Record<string, { cls: string; icon: React.ElementType }> = {
     "Início":            { cls: "bg-gradient-to-r from-sky-400 to-sky-500 text-white hover:from-sky-300 hover:to-sky-400 shadow-md shadow-sky-500/30 border-sky-500/40",                        icon: House },
     "Sobre Nós":         { cls: "bg-gradient-to-r from-violet-400 to-violet-500 text-white hover:from-violet-300 hover:to-violet-400 shadow-md shadow-violet-500/30 border-violet-500/40",     icon: Info },
-    "Pingo Card":        { cls: "bg-gradient-to-r from-amber-400 via-amber-400 to-orange-400 text-amber-950 hover:from-amber-300 hover:to-orange-300 shadow-md shadow-amber-500/30 border-amber-500/40", icon: CreditCard },
     "Especialidades":    { cls: "bg-gradient-to-r from-emerald-400 to-emerald-500 text-white hover:from-emerald-300 hover:to-emerald-400 shadow-md shadow-emerald-500/30 border-emerald-500/40", icon: FirstAidKit },
     "Para Médicos":      { cls: "bg-gradient-to-r from-rose-400 to-rose-500 text-white hover:from-rose-300 hover:to-rose-400 shadow-md shadow-rose-500/30 border-rose-500/40",                  icon: Stethoscope },
     "Saúde Corporativa": { cls: "bg-gradient-to-r from-indigo-400 to-indigo-500 text-white hover:from-indigo-300 hover:to-indigo-400 shadow-md shadow-indigo-500/30 border-indigo-500/40",     icon: Buildings },

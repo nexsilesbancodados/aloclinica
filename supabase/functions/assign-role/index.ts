@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const validRoles = ["patient", "doctor", "clinic", "receptionist", "support", "partner", "affiliate", "laudista", "ophthalmologist", "optician"];
+    const validRoles = ["patient", "doctor", "clinic", "receptionist", "support", "partner", "affiliate"];
     if (!validRoles.includes(role)) {
       // "admin" is intentionally excluded — it can never be granted here.
       return new Response(JSON.stringify({ error: "Invalid role" }), {
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     // Doctor-type roles grant access to patient medical data — a non-admin must
     // present a valid, unused invite code (validated here, not trusted from client).
-    const doctorTypeRoles = ["doctor", "laudista", "ophthalmologist"];
+    const doctorTypeRoles = ["doctor"];
     if (!caller.isAdmin && doctorTypeRoles.includes(role)) {
       const inviteId = profile_data?.invite_code_id;
       let validInvite = false;
@@ -91,23 +91,14 @@ Deno.serve(async (req) => {
     }
 
     // Create profile-specific records if needed
-    // Doctor-like roles all get a doctor_profiles row tagged with doctor_type
-    const doctorRoles = ["doctor", "laudista", "ophthalmologist"];
-    if (doctorRoles.includes(role) && profile_data) {
-      const doctorType =
-        role === "laudista" ? "laudista"
-        : role === "ophthalmologist" ? "oftalmologia"
-        : "telemedicina";
+    // The doctor role gets a doctor_profiles row tagged with doctor_type
+    if (role === "doctor" && profile_data) {
       await supabase.from("doctor_profiles").insert({
         user_id,
         crm: profile_data.crm,
         crm_state: profile_data.crm_state || "SP",
-        doctor_type: doctorType,
+        doctor_type: "telemedicina",
       });
-      // Laudistas and ophthalmologists also get the base "doctor" role for shared features
-      if (role !== "doctor") {
-        await supabase.from("user_roles").insert({ user_id, role: "doctor" });
-      }
     }
 
     if (role === "partner" && profile_data) {
@@ -157,8 +148,6 @@ Deno.serve(async (req) => {
           patient: "welcome",
           doctor: "welcome_doctor",
           clinic: "welcome_clinic",
-          laudista: "welcome_laudista",
-          ophthalmologist: "welcome_ophthalmologist",
         };
         const emailType = typeMap[role];
         if (emailType) {

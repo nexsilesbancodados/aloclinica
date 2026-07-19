@@ -36,7 +36,6 @@ const TEST_USERS = [
   { email: "suporte@teste.com", password: "Teste123!", role: "support", first_name: "Paula", last_name: "Suporte" },
   { email: "parceiro@teste.com", password: "Teste123!", role: "partner", first_name: "Pedro", last_name: "Parceiro" },
   { email: "afiliado@teste.com", password: "Teste123!", role: "affiliate", first_name: "Lucas", last_name: "Afiliado" },
-  { email: "laudista@teste.com", password: "Teste123!", role: "laudista", first_name: "Fernanda", last_name: "Laudista" },
 ];
 
 serve(async (req) => {
@@ -82,13 +81,6 @@ serve(async (req) => {
           user_id: userId,
           role: mainRole,
         }, { onConflict: "user_id,role" });
-        // Laudista also gets doctor role
-        if (u.role === "laudista") {
-          await supabase.from("user_roles").upsert({
-            user_id: userId,
-            role: "doctor",
-          }, { onConflict: "user_id,role" });
-        }
 
         // Ensure patient role also exists (default)
         await supabase.from("user_roles").upsert({
@@ -97,14 +89,14 @@ serve(async (req) => {
         }, { onConflict: "user_id,role" });
 
         // Ensure role-specific profiles exist
-        if (u.role === "doctor" || u.role === "laudista") {
+        if (u.role === "doctor") {
           const { data: dp } = await supabase.from("doctor_profiles").select("id").eq("user_id", userId).maybeSingle();
           if (!dp) {
             await supabase.from("doctor_profiles").insert({
               user_id: userId,
-              crm: u.role === "laudista" ? "654321" : "123456",
+              crm: "123456",
               crm_state: "SP",
-              bio: u.role === "laudista" ? "Médica laudista para validação do sistema." : "Médico de teste para validação do sistema.",
+              bio: "Médico de teste para validação do sistema.",
               consultation_price: 89,
               is_approved: true,
               crm_verified: true,
@@ -115,7 +107,7 @@ serve(async (req) => {
               is_approved: true,
               crm_verified: true,
               consultation_price: 89,
-              bio: u.role === "laudista" ? "Médica laudista para validação do sistema." : "Médico de teste para validação do sistema.",
+              bio: "Médico de teste para validação do sistema.",
             }).eq("user_id", userId);
           }
         }
@@ -160,17 +152,14 @@ serve(async (req) => {
       if (u.role !== "patient") {
         const mainRole = u.role === "affiliate" ? "partner" : u.role;
         await supabase.from("user_roles").insert({ user_id: userId, role: mainRole });
-        if (u.role === "laudista") {
-          await supabase.from("user_roles").insert({ user_id: userId, role: "doctor" });
-        }
       }
 
-      if (u.role === "doctor" || u.role === "laudista") {
+      if (u.role === "doctor") {
         await supabase.from("doctor_profiles").insert({
           user_id: userId,
-          crm: u.role === "laudista" ? "654321" : "123456",
+          crm: "123456",
           crm_state: "SP",
-          bio: u.role === "laudista" ? "Médica laudista para validação do sistema." : "Médico de teste para validação do sistema.",
+          bio: "Médico de teste para validação do sistema.",
           consultation_price: 89,
           is_approved: true,
           crm_verified: true,

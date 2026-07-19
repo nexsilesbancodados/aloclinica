@@ -44,7 +44,7 @@ const faqItems = [
   {
     icon: <Stethoscope className="w-5 h-5" />,
     question: "Funciona por vídeo? E se precisar de exame físico?",
-    answer: "Funciona! 80%+ dos diagnósticos vêm de conversa + histórico. Se precisar exame físico, o médico encaminha para presencial. Receitas, atestados e laudos saem na hora, válidos em farmácias e hospitais.",
+    answer: "Funciona! 80%+ dos diagnósticos vêm de conversa + histórico. Se precisar exame físico, o médico encaminha para presencial. Receitas e atestados saem na hora, válidos em farmácias e hospitais.",
   },
   {
     icon: <Shield className="w-5 h-5" />,

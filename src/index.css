@@ -83,18 +83,6 @@
     --shadow-card: 0 2px 16px -4px hsl(215 40% 20% / 0.06);
     --shadow-elevated: 0 8px 32px -8px hsl(215 40% 20% / 0.10);
 
-    /* Laudos Workstation tokens */
-    --laudo-bg: 220 20% 10%;
-    --laudo-surface: 220 18% 13%;
-    --laudo-border: 220 15% 20%;
-    --laudo-text: 220 10% 85%;
-    --laudo-text-muted: 220 8% 50%;
-    --laudo-accent: 195 80% 55%;
-    --laudo-accent-dim: 195 70% 20%;
-    --laudo-urgent: 0 90% 60%;
-    --laudo-warning: 38 95% 55%;
-    --laudo-success: 152 60% 44%;
-
     /* Patient panel tokens */
     --p-primary: 215 80% 28%;
     --p-primary-mid: 215 65% 40%;
@@ -223,27 +211,6 @@
         hsl(220 22% 7%) 60%,
         hsl(220 20% 7.5%) 100%
       );
-  }
-
-  /* Laudo Workstation — forced dark theme override */
-  .laudo-workspace {
-    --background: 220 20% 8%;
-    --foreground: 220 10% 88%;
-    --card: 220 18% 12%;
-    --card-foreground: 220 10% 88%;
-    --popover: 220 18% 12%;
-    --popover-foreground: 220 10% 88%;
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --muted: 220 15% 16%;
-    --muted-foreground: 220 8% 55%;
-    --primary: 195 80% 55%;
-    --primary-foreground: 220 20% 8%;
-    --accent: 195 70% 20%;
-    --accent-foreground: 195 80% 75%;
-    --ring: 195 80% 55%;
-    --destructive: 0 90% 60%;
-    --destructive-foreground: 0 0% 100%;
   }
 
   * {

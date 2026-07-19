@@ -20,18 +20,7 @@ const AdminDashboard = lazy(() => import("@/components/dashboards/AdminDashboard
 const ReceptionDashboard = lazy(() => import("@/components/dashboards/ReceptionDashboard")); // kept for admin view-as
 const SupportDashboard = lazy(() => import("@/components/dashboards/SupportDashboard"));
 const PartnerDashboard = lazy(() => import("@/components/dashboards/PartnerDashboard")); // kept for admin view-as
-const CartaoDashboard = lazy(() => import("@/components/dashboards/CartaoDashboard"));
 const OrgaoDashboard = lazy(() => import("@/components/dashboards/OrgaoDashboard"));
-
-// ── Cartão Benefícios sub-pages ──
-const CarteirinhaDigital = lazy(() => import("@/components/cartao/CarteirinhaDigital"));
-const PingoTicket = lazy(() => import("@/components/cartao/PingoTicket"));
-const RedeCredenciada = lazy(() => import("@/components/cartao/RedeCredenciada"));
-const MeuPlano = lazy(() => import("@/components/cartao/MeuPlano"));
-const FaturasCartao = lazy(() => import("@/components/cartao/FaturasCartao"));
-const DependentesCartao = lazy(() => import("@/components/cartao/DependentesCartao"));
-const SuporteCartao = lazy(() => import("@/components/cartao/SuporteCartao"));
-const LgpdCartao = lazy(() => import("@/components/cartao/LgpdCartao"));
 
 // ── LAZY imports: sub-pages ──
 const UserProfile = lazy(() => import("@/components/profile/UserProfile"));
@@ -72,13 +61,6 @@ const DoctorWallet = lazy(() => import("@/components/doctor/DoctorWallet"));
 const RenewalQueue = lazy(() => import("@/components/doctor/RenewalQueue"));
 const VideoRoom = lazy(() => import("@/components/consultation/VideoRoom"));
 
-// ── Ophthalmology ──
-const OphthalmologyExamQueue = lazy(() => import("@/components/ophthalmology/OphthalmologyExamQueue"));
-const OphthalmologyExamForm = lazy(() => import("@/components/ophthalmology/OphthalmologyExamForm"));
-const OphthalmologyExamDetail = lazy(() => import("@/components/ophthalmology/OphthalmologyExamDetail"));
-const OphthalmologyPrescriptionForm = lazy(() => import("@/components/ophthalmology/OphthalmologyPrescriptionForm"));
-const OphthalmologyMyExams = lazy(() => import("@/components/ophthalmology/OphthalmologyMyExams"));
-const OphthalmologyEditExam = lazy(() => import("@/components/ophthalmology/OphthalmologyEditExam"));
 const PrescriptionForm = lazy(() => import("@/components/consultation/PrescriptionForm"));
 const ExamRequestForm = lazy(() => import("@/components/doctor/ExamRequestForm"));
 const RateConsultationPage = lazy(() => import("@/components/patient/RateConsultationPage"));
@@ -131,20 +113,15 @@ const AdminDoctorApplications = lazy(() => import("@/components/admin/AdminDocto
 const AdminSiteConfig = lazy(() => import("@/components/admin/AdminSiteConfig"));
 const AdminFullSiteEditor = lazy(() => import("@/components/admin/AdminFullSiteEditor"));
 const AdminMediaLibrary = lazy(() => import("@/components/admin/AdminMediaLibrary"));
-const AdminPingoCard = lazy(() => import("@/components/admin/AdminPingoCard"));
 const AdminPageBuilder = lazy(() => import("@/components/admin/AdminPageBuilder"));
 
 const AdminPayouts = lazy(() => import("@/components/admin/AdminPayouts"));
 const AdminContratos = lazy(() => import("@/components/admin/AdminContratos"));
-const PingoCardPanel = lazy(() => import("@/components/patient/PingoCardPanel"));
 const SupportInbox = lazy(() => import("@/components/support/SupportInbox"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
-const HealthCardPage = lazy(() => import("@/components/patient/HealthCardPage"));
 const CarePlansPage = lazy(() => import("@/components/patient/CarePlansPage"));
 const VaccinationsPage = lazy(() => import("@/components/patient/VaccinationsPage"));
 const LGPDCenter = lazy(() => import("@/components/patient/LGPDCenter"));
-const VisualAcuityTestPage = lazy(() => import("@/components/ophthalmology/VisualAcuityPage"));
-const PatientOphthalmologyHub = lazy(() => import("@/pages/PatientOphthalmologyHub"));
 
 // EMR wrapper with route params
 const PatientEMRPage = () => {
@@ -227,7 +204,7 @@ const Dashboard = () => {
   if (!user) return <Navigate to="/paciente" replace />;
 
   const isAdmin = roles.includes("admin");
-  const validForceRoles = ["patient", "doctor", "support", "admin", "ophthalmologist", "cartao_beneficios", "contract_manager"];
+  const validForceRoles = ["patient", "doctor", "support", "admin", "contract_manager"];
 
   // Allow any user to use ?role= IF they actually have that role (not just admins)
   const primaryRole = (() => {
@@ -239,13 +216,11 @@ const Dashboard = () => {
     }
     // Default role resolution
     if (isAdmin) return "admin";
-    if (roles.includes("ophthalmologist")) return "ophthalmologist";
     if (roles.includes("doctor")) return "doctor";
     if (roles.includes("receptionist")) return "receptionist";
     if (roles.includes("support")) return "support";
     if (roles.includes("clinic")) return "clinic";
     if (roles.includes("partner")) return "partner";
-    if (roles.includes("cartao_beneficios")) return "cartao_beneficios";
     if (roles.includes("contract_manager" as any)) return "contract_manager";
     return "patient";
   })();
@@ -255,12 +230,10 @@ const Dashboard = () => {
     switch (primaryRole) {
       case "admin": return <AdminDashboard />;
       case "doctor": return <DoctorDashboard />;
-      case "ophthalmologist": return <DoctorDashboard />;
       case "receptionist": return <ReceptionDashboard />;
       case "support": return <SupportDashboard />;
       case "clinic": return <ClinicDashboard />;
       case "partner": return <PartnerDashboard />;
-      case "cartao_beneficios": return <CartaoDashboard />;
       case "contract_manager": return <OrgaoDashboard />;
       default: return <PatientDashboard />;
     }
@@ -314,12 +287,10 @@ const Dashboard = () => {
       <Route path="patient/access-log" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><AccessLog /></ContextGuard></RoleGuard>} />
       <Route path="patient/exams" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><ExamMarketplace /></ContextGuard></RoleGuard>} />
       <Route path="patient/referral" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><ReferralPage /></ContextGuard></RoleGuard>} />
-      <Route path="patient/health-card" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><HealthCardPage /></ContextGuard></RoleGuard>} />
       <Route path="patient/care-plans" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><CarePlansPage /></ContextGuard></RoleGuard>} />
       <Route path="patient/vaccinations" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><VaccinationsPage /></ContextGuard></RoleGuard>} />
       <Route path="patient/lgpd" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><LGPDCenter /></ContextGuard></RoleGuard>} />
-      <Route path="patient/visual-acuity" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><VisualAcuityTestPage /></ContextGuard></RoleGuard>} />
-      <Route path="patient/ophthalmology" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><PatientOphthalmologyHub /></ContextGuard></RoleGuard>} />
+      {/* patient/health-card removed with Pingo Card feature */}
       <Route path="notifications" element={<Notifications />} />
       
       <Route path="book" element={<RoleGuard allowed={["patient"]} roles={roles}><ContextGuard panel="patient" forceRole={forceRole} roles={roles}><DoctorSearch /></ContextGuard></RoleGuard>} />
@@ -340,14 +311,6 @@ const Dashboard = () => {
       <Route path="doctor/renewal-queue" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><RenewalQueue /></ContextGuard></RoleGuard>} />
       <Route path="doctor/simple-prescription" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><SimplePrescription /></ContextGuard></RoleGuard>} />
       <Route path="doctor/wallet" element={<RoleGuard allowed={["doctor"]} roles={roles}><ContextGuard panel="doctor" forceRole={forceRole} roles={roles}><DoctorWallet /></ContextGuard></RoleGuard>} />
-
-      {/* Ophthalmology */}
-      <Route path="ophthalmology/queue" element={<RoleGuard allowed={["doctor", "ophthalmologist"]} roles={roles}><OphthalmologyExamQueue /></RoleGuard>} />
-      <Route path="ophthalmology/new-exam" element={<RoleGuard allowed={["doctor", "ophthalmologist"]} roles={roles}><OphthalmologyExamForm /></RoleGuard>} />
-      <Route path="ophthalmology/exam/:examId" element={<RoleGuard allowed={["doctor", "ophthalmologist"]} roles={roles}><OphthalmologyExamDetail /></RoleGuard>} />
-      <Route path="ophthalmology/edit/:examId" element={<RoleGuard allowed={["doctor", "ophthalmologist"]} roles={roles}><OphthalmologyEditExam /></RoleGuard>} />
-      <Route path="ophthalmology/prescription/:examId" element={<RoleGuard allowed={["doctor", "ophthalmologist"]} roles={roles}><OphthalmologyPrescriptionForm /></RoleGuard>} />
-      <Route path="ophthalmology/my-exams" element={<RoleGuard allowed={["doctor", "ophthalmologist"]} roles={roles}><OphthalmologyMyExams /></RoleGuard>} />
 
       {/* Consultation */}
       <Route path="consultation/:appointmentId" element={<RoleGuard allowed={["doctor", "patient"]} roles={roles}><KycRequiredGate reason="Para entrar em uma consulta por vídeo, sua identidade precisa estar verificada. É exigência do CFM (Resolução 2.314/2022)."><VideoRoom /></KycRequiredGate></RoleGuard>} />
@@ -411,23 +374,10 @@ const Dashboard = () => {
       <Route path="admin/site-config" element={<RoleGuard allowed={[]} roles={roles}><AdminSiteConfig /></RoleGuard>} />
       <Route path="admin/site-editor" element={<RoleGuard allowed={[]} roles={roles}><AdminFullSiteEditor /></RoleGuard>} />
       <Route path="admin/media" element={<RoleGuard allowed={[]} roles={roles}><AdminMediaLibrary /></RoleGuard>} />
-      <Route path="admin/pingo-card" element={<RoleGuard allowed={[]} roles={roles}><AdminPingoCard /></RoleGuard>} />
       <Route path="admin/pages" element={<RoleGuard allowed={[]} roles={roles}><AdminPageBuilder /></RoleGuard>} />
       
       <Route path="admin/payouts" element={<RoleGuard allowed={[]} roles={roles}><AdminPayouts /></RoleGuard>} />
       <Route path="admin/contratos" element={<RoleGuard allowed={[]} roles={roles}><AdminContratos /></RoleGuard>} />
-
-
-      {/* ─── Cartão Benefícios ─── */}
-      <Route path="cartao" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><CartaoDashboard /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/carteirinha" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><CarteirinhaDigital /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/ticket" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><PingoTicket /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/rede" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><RedeCredenciada /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/plano" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><MeuPlano /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/faturas" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><FaturasCartao /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/dependentes" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><DependentesCartao /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/suporte" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><SuporteCartao /></ContextGuard></RoleGuard>} />
-      <Route path="cartao/lgpd" element={<RoleGuard allowed={["cartao_beneficios"]} roles={roles}><ContextGuard panel="cartao_beneficios" forceRole={forceRole} roles={roles}><LgpdCartao /></ContextGuard></RoleGuard>} />
 
       {/* Fallback */}
       <Route

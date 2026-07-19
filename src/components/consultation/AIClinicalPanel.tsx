@@ -42,7 +42,7 @@ type TaskKey =
   | "anamnese" | "dosage" | "patient_summary" | "soap" | "ask";
 
 const ACTIONS: { key: TaskKey; label: string; icon: any; hint: string }[] = [
-  { key: "exam_summary", label: "Resumir exames", icon: FlaskConical, hint: "Cole o laudo ou anexe a imagem do exame" },
+  { key: "exam_summary", label: "Resumir exames", icon: FlaskConical, hint: "Cole o resultado ou anexe a imagem do exame" },
   { key: "differential", label: "Diagnóstico diferencial", icon: Brain, hint: "Hipóteses ranqueadas + CID-10" },
   { key: "conduct", label: "Sugerir conduta", icon: Stethoscope, hint: "Plano, exames e encaminhamento" },
   { key: "drug_interactions", label: "Interações", icon: Pill, hint: "Liste os medicamentos" },
@@ -255,7 +255,7 @@ export default function AIClinicalPanel({ appointmentId, patientId, recentMessag
             <Textarea
               value={examText}
               onChange={(e) => setExamText(e.target.value)}
-              placeholder="Cole aqui o texto/laudo do exame…"
+              placeholder="Cole aqui o texto/resultado do exame…"
               className="min-h-[70px] bg-[hsl(220,20%,8%)] border-[hsl(220,15%,16%)] text-white text-xs rounded-xl resize-none"
             />
             <div className="flex items-center gap-2">

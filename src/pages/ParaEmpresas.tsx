@@ -35,7 +35,6 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/integrations/supabase/untyped";
 import pingoEmpresa from "@/assets/pingo-medico-ferramentas.jpg";
-import pingoCardHero from "@/assets/pingo-card-hero.png";
 
 const Footer = lazy(() => import("@/components/landing/Footer"));
 
@@ -142,7 +141,6 @@ const ParaEmpresas = () => {
       ringColor: "ring-emerald-200",
       features: [
         "Teleconsulta 24h ilimitada",
-        "Pingo Card incluso",
         "App mobile + painel RH",
         "Suporte por chat",
       ],
@@ -308,79 +306,6 @@ const ParaEmpresas = () => {
               alt="Pingo, mascote da AloClínica, com ferramentas médicas"
               className="relative w-full max-w-md object-contain drop-shadow-2xl"
               loading="eager"
-              decoding="async"
-            />
-          </motion.div>
-        </div>
-      </section>
-
-      {/* PINGO CARD CORPORATIVO */}
-      <section className="py-16 md:py-24 px-4 bg-gradient-to-br from-[#0a2540] via-[#1a4fcf] to-[#0a2540] text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 items-center relative">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-amber-400 text-amber-950 px-4 py-1.5 rounded-full mb-5">
-              <CreditCard className="w-3.5 h-3.5" weight="fill" />
-              Benefício Corporativo
-            </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight leading-tight">
-              Ofereça o <span className="text-amber-300">Pingo Card</span> aos seus colaboradores
-            </h2>
-            <p className="text-lg text-white/85 mb-8 leading-relaxed max-w-xl">
-              Um cartão de benefícios de saúde que cabe no bolso de cada funcionário.
-              Consultas, exames e descontos exclusivos — tudo digital, sem mensalidade do plano tradicional.
-            </p>
-
-            <div className="grid sm:grid-cols-2 gap-4 mb-8">
-              {[
-                { icon: Users, title: "Para todo o time", desc: "Inclui colaboradores e dependentes." },
-                { icon: QrCode, title: "100% digital", desc: "Cartão virtual com QR Code no celular." },
-                { icon: Gift, title: "Descontos exclusivos", desc: "Em consultas, exames e farmácia." },
-                { icon: ChartBar, title: "Painel de gestão", desc: "RH acompanha uso e ROI em tempo real." },
-              ].map((item) => (
-                <div key={item.title} className="flex gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center shrink-0">
-                    <item.icon className="w-5 h-5 text-amber-300" weight="fill" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm mb-1">{item.title}</h3>
-                    <p className="text-xs text-white/70 leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button asChild size="lg" className="bg-amber-400 text-amber-950 hover:bg-amber-300 font-bold">
-                <a href="#solicitar-proposta">
-                  Solicitar proposta corporativa
-                  <ArrowRight className="w-5 h-5 ml-2" weight="bold" />
-                </a>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20 font-bold">
-                <Link to="/pingo-card">Ver detalhes do cartão</Link>
-              </Button>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="relative flex justify-center"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-400/30 to-transparent blur-3xl" />
-            <img
-              src={pingoCardHero}
-              alt="Pingo Card — cartão de benefícios para empresas"
-              className="relative w-full max-w-md rounded-3xl shadow-2xl"
-              loading="lazy"
               decoding="async"
             />
           </motion.div>

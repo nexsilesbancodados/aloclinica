@@ -7,7 +7,7 @@
  * Body:
  *   {
  *     plan_id: string,                                  // UUID
- *     plan_table?: "plans" | "pingo_card_plans",        // default: "plans"
+ *     plan_table?: "plans",                             // default: "plans"
  *     billing_cycle?: "monthly" | "yearly",             // default: "monthly"
  *     card_token: string,                               // tokenizado client-side
  *     payer_email: string,                              // pode ser do user.email
@@ -49,17 +49,14 @@ Deno.serve(async (req) => {
       payer_email,
       external_reference,
       metadata,
-      skip_db_insert = false,  // pra plan_table != "plans", frontend insere na tabela específica
-      holder_name,
-      card_last4,
-      card_brand,
+      skip_db_insert = false,  // frontend insere na tabela específica
     } = await req.json();
 
     if (!plan_id) return json({ error: "plan_id obrigatório" }, 400);
     if (!card_token) return json({ error: "card_token obrigatório" }, 400);
 
     // Whitelist de tabelas pra evitar SQL injection no nome
-    const ALLOWED_TABLES = new Set(["plans", "pingo_card_plans"]);
+    const ALLOWED_TABLES = new Set(["plans"]);
     if (!ALLOWED_TABLES.has(plan_table)) {
       return json({ error: `plan_table inválido: ${plan_table}` }, 400);
     }
@@ -109,60 +106,6 @@ Deno.serve(async (req) => {
         error: res.data?.message || res.data?.error || "Falha ao criar assinatura MP",
         gateway: res.data,
       }, 400);
-    }
-
-    // Pingo Card → inserir na tabela específica (a não ser que o cliente peça pra pular)
-    if (plan_table === "pingo_card_plans" && !skip_db_insert) {
-      const cardNumber = (card_last4 || "0000").padStart(4, "0");
-      const displayCard = `•••• •••• •••• ${cardNumber}`;
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + (isYearly ? 12 : 1));
-
-      const { data: pcSub, error: pcErr } = await (admin as any)
-        .from("pingo_card_subscriptions")
-        .insert({
-          user_id: user.id,
-          plan_id,
-          card_number: displayCard,
-          card_holder_name: holder_name ?? user.email,
-          status: res.data.status === "authorized" ? "active" : "pending",
-          billing_cycle,
-          gateway: "mercadopago",
-          mp_preapproval_id: res.data.id,
-          mp_subscription_id: res.data.id,
-          mp_payer_id: res.data.payer_id ?? null,
-          started_at: new Date().toISOString(),
-          current_period_end: periodEnd.toISOString(),
-          next_charge_at: res.data.next_payment_date || periodEnd.toISOString(),
-        })
-        .select("id")
-        .single();
-
-      if (pcErr) {
-        await mpRequest("PUT", `/preapproval/${res.data.id}`, { status: "cancelled" });
-        return json({ error: pcErr.message }, 500);
-      }
-
-      // Cria primeira fatura "pending" — webhook marca como paid quando MP confirmar
-      await (admin as any).from("pingo_card_invoices").insert({
-        subscription_id: pcSub.id,
-        user_id: user.id,
-        amount,
-        status: res.data.status === "authorized" ? "paid" : "pending",
-        due_date: new Date().toISOString(),
-        paid_at: res.data.status === "authorized" ? new Date().toISOString() : null,
-        description: `${plan.name} - ${isYearly ? "Anual" : "Mensal"}`,
-      });
-
-      return json({
-        subscription_id: pcSub.id,
-        mp_preapproval_id: res.data.id,
-        status: res.data.status,
-        init_point: res.data.init_point,
-        next_payment_date: res.data.next_payment_date,
-        amount,
-        table: "pingo_card_subscriptions",
-      });
     }
 
     if (skip_db_insert) {

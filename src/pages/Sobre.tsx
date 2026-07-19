@@ -177,7 +177,7 @@ const Sobre = forwardRef<HTMLDivElement>((_, ref) => {
                 {[
                   { icon: Video, title: "Videochamada em HD", desc: "Conexão estável com criptografia ponta a ponta para consultas seguras e sem interrupção." },
                   { icon: ShieldCheck, title: "Receita Digital Válida", desc: "Prescrições com assinatura digital certificada (ICP-Brasil), aceitas em qualquer farmácia do país." },
-                  { icon: Cpu, title: "Inteligência Artificial", desc: "IA para auxiliar médicos em diagnósticos, otimizar laudos e melhorar a experiência do paciente." },
+                  { icon: Cpu, title: "Inteligência Artificial", desc: "IA para auxiliar médicos em diagnósticos, otimizar o atendimento e melhorar a experiência do paciente." },
                   { icon: Lock, title: "Proteção de Dados (LGPD)", desc: "Seus dados são protegidos com os mais altos padrões de segurança e em total conformidade com a LGPD." },
                 ].map((item, i) => (
                   <motion.div

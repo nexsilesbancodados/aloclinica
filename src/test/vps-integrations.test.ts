@@ -177,13 +177,13 @@ describe("DocuSeal — src/lib/docuseal.ts", () => {
       error: null,
     });
     const { criarDocumentoParaAssinar } = await import("@/lib/docuseal");
-    const id = await criarDocumentoParaAssinar("base64pdf", "Laudo Raio-X");
+    const id = await criarDocumentoParaAssinar("base64pdf", "Atestado Médico");
     expect(id).toBe(42);
     expect(mockInvoke).toHaveBeenCalledWith("docuseal-proxy", {
       body: {
         action: "create_template",
         pdf_base64: "base64pdf",
-        nome_doc: "Laudo Raio-X",
+        nome_doc: "Atestado Médico",
       },
     });
   });
@@ -192,7 +192,7 @@ describe("DocuSeal — src/lib/docuseal.ts", () => {
     mockInvoke.mockResolvedValue({ data: {}, error: null });
     const { criarDocumentoParaAssinar } = await import("@/lib/docuseal");
     await expect(
-      criarDocumentoParaAssinar("pdf", "Laudo")
+      criarDocumentoParaAssinar("pdf", "Atestado")
     ).rejects.toThrow("Template ID não retornado");
   });
 
@@ -203,7 +203,7 @@ describe("DocuSeal — src/lib/docuseal.ts", () => {
     });
     const { criarDocumentoParaAssinar } = await import("@/lib/docuseal");
     await expect(
-      criarDocumentoParaAssinar("pdf", "Laudo")
+      criarDocumentoParaAssinar("pdf", "Atestado")
     ).rejects.toThrow("Edge function error");
   });
 
@@ -235,7 +235,7 @@ describe("DocuSeal — src/lib/docuseal.ts", () => {
         status: "completed",
         completed: true,
         documents: [
-          { url: "https://example.com/doc.pdf", filename: "laudo.pdf" },
+          { url: "https://example.com/doc.pdf", filename: "atestado.pdf" },
         ],
       },
       error: null,

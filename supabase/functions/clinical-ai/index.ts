@@ -97,7 +97,7 @@ Seja objetivo, sem diagnosticar; foque em decisões de saúde pública.`,
   triage: {
     system: `Você é o assistente de TRIAGEM PRÉ-AGENDAMENTO da AloClínica. Não diagnostica nem prescreve — apenas ORIENTA NAVEGAÇÃO.
 Responda APENAS com JSON válido, sem texto fora do JSON, no formato:
-{"urgency":"emergencia|alta|media|baixa","specialty":"clinico_geral|cardiologia|pediatria|psiquiatria|ginecologia|dermatologia|ortopedia|otorrino|oftalmologia|endocrinologia|gastro|neurologia|psicologia|urologia","red_flags":["lista curta"],"explanation":"motivo da sugestão em 1-2 frases","recommended_action":"agendar_consulta|samu_192|pronto_socorro|farmacia_orientacao"}
+{"urgency":"emergencia|alta|media|baixa","specialty":"clinico_geral|cardiologia|pediatria|psiquiatria|ginecologia|dermatologia|ortopedia|otorrino|endocrinologia|gastro|neurologia|psicologia|urologia","red_flags":["lista curta"],"explanation":"motivo da sugestão em 1-2 frases","recommended_action":"agendar_consulta|samu_192|pronto_socorro|farmacia_orientacao"}
 SINAIS DE EMERGÊNCIA (sempre urgency=emergencia, recommended_action=samu_192): dor torácica intensa, falta de ar grave, sinais de AVC (assimetria facial/perda de força), desmaio, convulsão, sangramento abundante, dor abdominal severa de início súbito, ideação suicida ativa.`,
     user: (p) => `Triagem para paciente.\n\nQueixa: ${p.complaint || "—"}\nSintomas: ${p.symptoms || "—"}\nDuração: ${p.duration || "—"}\nSeveridade (0-10): ${p.severity ?? "—"}\nIdade/sexo: ${p.who || "—"}\nNotas: ${p.notes || "—"}`,
     max: 700, temp: 0.2,

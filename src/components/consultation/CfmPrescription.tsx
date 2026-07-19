@@ -28,7 +28,6 @@ type DocumentType =
   | "atestado"
   | "relatorio"
   | "solicitacao_exames"
-  | "laudo"
   | "parecer";
 
 const DOC_TYPE_LABELS: Record<DocumentType, string> = {
@@ -38,7 +37,6 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   atestado: "Atestado Médico",
   relatorio: "Relatório Médico",
   solicitacao_exames: "Solicitação de Exames",
-  laudo: "Laudo Médico",
   parecer: "Parecer Técnico",
 };
 
@@ -49,7 +47,6 @@ const DOC_TYPE_ICONS: Record<DocumentType, string> = {
   atestado: "📋",
   relatorio: "📄",
   solicitacao_exames: "🔬",
-  laudo: "📝",
   parecer: "📑",
 };
 

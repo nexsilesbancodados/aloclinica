@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type NotificationType = "consulta_agendada" | "lembrete_1h" | "laudo_disponivel" | "nova_consulta";
+type NotificationType = "consulta_agendada" | "lembrete_1h" | "nova_consulta";
 
 interface NotifyRequest {
   tipo: NotificationType;
@@ -17,7 +17,6 @@ interface NotifyRequest {
     nome_medico?: string;
     data?: string;
     hora?: string;
-    laudo_url?: string;
     appointment_id?: string;
     app_base_url?: string;
   };
@@ -33,8 +32,6 @@ const TEMPLATES: Record<NotificationType, (d: NotifyRequest["dados"]) => string>
     `✅ Olá ${d.nome_paciente || ""}! Sua consulta com Dr(a). ${d.nome_medico || ""} foi confirmada para ${d.data} às ${d.hora}.\n\n📹 Entrar na sala: ${buildRoomLink(d)}\n_Login obrigatório._`,
   lembrete_1h: (d) =>
     `⏰ Lembrete: Sua teleconsulta começa em 1 hora! Dr(a). ${d.nome_medico || ""} às ${d.hora}.\n\n📹 Entrar na sala: ${buildRoomLink(d)}\n_Login obrigatório._`,
-  laudo_disponivel: (d) =>
-    `📋 Seu laudo está disponível! Médico: Dr(a). ${d.nome_medico || ""}. Acesse e baixe: ${d.laudo_url || "https://aloclinica.com.br/dashboard"}`,
   nova_consulta: (d) =>
     `🩺 Nova consulta agendada! Paciente: ${d.nome_paciente || ""}. Data: ${d.data} às ${d.hora}.\n\n📹 Entrar na sala: ${buildRoomLink(d)}`,
 };

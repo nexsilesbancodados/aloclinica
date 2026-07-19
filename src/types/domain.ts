@@ -124,12 +124,11 @@ export interface AdminStats {
   total_patients: number;
   total_doctors: number;
   monthly_appts: number;
-  total_laudos: number;
   avg_nps: number;
   period?: string;
 }
 
-// ─── Exam / Laudo Types ───────────────────────────────────────────────────────
+// ─── Exam Types ───────────────────────────────────────────────────────────────
 
 export interface ExamRequest {
   id: string;
@@ -154,31 +153,6 @@ export interface ExamRequest {
   patient_birth_date?: string | null;
   patient_sex?: string | null;
   exam_date?: string | null;
-}
-
-export interface ExamReport {
-  id: string;
-  exam_request_id: string;
-  reporter_id: string;
-  content_text: string;
-  signed_at?: string | null;
-  verification_code?: string | null;
-  created_at: string;
-  updated_at?: string;
-  pdf_url?: string | null;
-  document_hash?: string | null;
-  template_id?: string | null;
-}
-
-export interface ReportTemplate {
-  id: string;
-  title: string;
-  body_text: string;
-  content?: string;
-  exam_type: string;
-  is_active: boolean;
-  created_at: string;
-  created_by?: string;
 }
 
 // ─── AI Conversation Types ────────────────────────────────────────────────────

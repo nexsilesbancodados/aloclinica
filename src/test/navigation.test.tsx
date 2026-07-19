@@ -70,7 +70,6 @@ vi.mock("@/assets/spec-dermatology.jpg", () => ({ default: "sp.png" }));
 vi.mock("@/assets/spec-endocrinology.png", () => ({ default: "sp.png" }));
 vi.mock("@/assets/spec-general.png", () => ({ default: "sp.png" }));
 vi.mock("@/assets/spec-neurology.png", () => ({ default: "sp.png" }));
-vi.mock("@/assets/spec-ophthalmology.png", () => ({ default: "sp.png" }));
 vi.mock("@/assets/spec-orthopedics.png", () => ({ default: "sp.png" }));
 vi.mock("@/assets/spec-pediatrics.png", () => ({ default: "sp.png" }));
 vi.mock("@/assets/spec-acupuntura.png", () => ({ default: "sp.png" }));

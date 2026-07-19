@@ -73,12 +73,11 @@ const getContextualSubtitle = (upcoming: any[], stats: any) => {
 
 const getServiceTypeFromParam = (searchParams: URLSearchParams): ServiceType | null => {
   const service = searchParams.get("service")?.toLowerCase();
-  return (service === "telemedicina" || service === "oftalmologia") ? service as ServiceType : null;
+  return service === "telemedicina" ? service as ServiceType : null;
 };
 
 const SERVICE_SECTIONS = {
   telemedicina: { kpis: true, nextAppt: true, quickActions: true, healthTip: true, returnAppts: true, pendingAppt: true },
-  oftalmologia: { kpis: true, nextAppt: true, quickActions: true, healthTip: false, returnAppts: true, pendingAppt: true },
   all: { kpis: true, nextAppt: true, quickActions: true, healthTip: true, returnAppts: true, pendingAppt: true },
 };
 

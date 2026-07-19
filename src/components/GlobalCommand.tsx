@@ -85,14 +85,6 @@ const getNavItems = (role: string): NavItem[] => {
     ...base,
   ];
 
-  if (role === "ophthalmologist") return [
-    { label: "Início", href: "/dashboard", icon: <Eye className="w-4 h-4" />, group: "Oftalmologia", shortcut: "G D" },
-    { label: "Pacientes", href: "/dashboard/patients", icon: <Users className="w-4 h-4" />, group: "Oftalmologia" },
-    { label: "Receitas", href: "/dashboard/prescriptions", icon: <FileText className="w-4 h-4" />, group: "Oftalmologia" },
-    { label: "Disponibilidade", href: "/dashboard/availability", icon: <Calendar className="w-4 h-4" />, group: "Oftalmologia" },
-    ...base,
-  ];
-
   return base;
 };
 

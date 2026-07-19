@@ -41,14 +41,10 @@ const URLS = {
   partnerAuth:         sub("parceiro"),
   // Admin (admin.aloclinica.com)
   adminDashboard:      sub("admin", "/dashboard"),
-  // Laudista (laudista.aloclinica.com)
-  laudistaDashboard:   sub("laudista", "/dashboard"),
   // Auth (root)
   authLogin:           `${PROTOCOL}${ROOT_DOMAIN}/auth`,
   // Validation
   validateDoc: (code: string) => `${PROTOCOL}${ROOT_DOMAIN}/validar/${code}`,
-  // Discount card
-  discountCard:        `${PROTOCOL}${ROOT_DOMAIN}/cartao-beneficios`,
 };
 
 // ─── Email wrapper ─────────────────────────────────────────────────────────────
@@ -81,8 +77,6 @@ const BANNERS: Record<string, { emoji: string; title: string; gradient: [string,
   payment:        { emoji: "💳", title: "Financeiro",        gradient: [BRAND.green, "#059669"],         accent: BRAND.green },
   consultation:   { emoji: "📹", title: "Teleconsulta",      gradient: [BRAND.color, "#6366f1"],         accent: BRAND.color },
   alert:          { emoji: "⚠️", title: "Atenção",          gradient: [BRAND.amber, BRAND.amberDark],   accent: BRAND.amber },
-  card:           { emoji: "💳", title: "Cartão Benefícios", gradient: [BRAND.green, "#10b981"],         accent: BRAND.green },
-  exam:           { emoji: "🔬", title: "Resultados",        gradient: [BRAND.color, "#0ea5e9"],         accent: BRAND.color },
   invite:         { emoji: "🔑", title: "Convite",           gradient: [BRAND.green, BRAND.color],       accent: BRAND.color },
   survey:         { emoji: "⭐", title: "Avaliação",          gradient: [BRAND.amber, "#f97316"],         accent: BRAND.amber },
   default:        { emoji: "💙", title: "AloClínica",        gradient: [BRAND.color, BRAND.colorDark],   accent: BRAND.color },
@@ -125,9 +119,6 @@ const TEMPLATE_BANNER: Record<string, string> = {
   subscription_activated: "payment",
   subscription_expiring: "alert",
   payment_confirmed: "payment",
-  exam_report_ready: "exam",
-  card_activated: "card",
-  card_expiring: "alert",
   refund_processed: "payment",
   renewal_approved: "approved",
   renewal_rejected: "rejected",
@@ -140,11 +131,6 @@ const TEMPLATE_BANNER: Record<string, string> = {
   kyc_rejected: "rejected",
   payment_failed: "alert",
   security_alert: "alert",
-  welcome_laudista: "welcome_doctor",
-  welcome_ophthalmologist: "welcome_doctor",
-  prescription_expiring: "alert",
-  exam_assigned: "exam",
-  clinic_exam_report_ready: "exam",
   doctor_payout_completed: "payment",
   newsletter_welcome: "welcome",
 };
@@ -152,12 +138,9 @@ const TEMPLATE_BANNER: Record<string, string> = {
 // Lista de templates promocionais que precisam de unsubscribe explícito (LGPD/CAN-SPAM)
 const MARKETING_TEMPLATES = new Set([
   "newsletter_welcome",
-  "card_activated",
   "subscription_expiring",
-  "card_expiring",
   "nps_survey",
   "waitlist_slot_available",
-  "prescription_expiring",
 ]);
 
 const COMPANY_ADDRESS = Deno.env.get("EMAIL_COMPANY_ADDRESS")
@@ -541,59 +524,6 @@ const templates: Record<string, (d: Record<string, string>) => { subject: string
     `, "payment_confirmed"),
   }),
 
-  exam_report_ready: (d) => ({
-    subject: "📋 Resultado de Exame Disponível — AloClínica",
-    html: wrap(`
-      <h2 style="color:${BRAND.color};margin:0 0 16px;">Seu Laudo Está Pronto! 📋</h2>
-      <p>Olá <strong>${d.patient_name || "Paciente"}</strong>,</p>
-      <p>O laudo do exame <strong>${d.exam_type || "exame"}</strong> foi finalizado por <strong>${d.doctor_name || "médico"}</strong>.</p>
-      ${card(`
-        <p><strong>🔬 Tipo:</strong> ${d.exam_type || "—"}</p>
-        <p><strong>🩺 Laudista:</strong> ${d.doctor_name || "—"}</p>
-        ${d.verification_code ? `<p><strong>🔐 Código:</strong> ${d.verification_code}</p>` : ""}
-      `)}
-      ${btn(d.download_link || URLS.patientHealth, "Acessar Meu Laudo")}
-      ${d.validate_link ? `<p style="font-size:12px;color:${BRAND.muted};text-align:center;">Verifique em: <a href="${d.validate_link}" style="color:${BRAND.color};">${d.validate_link}</a></p>` : ""}
-    `, "exam_report_ready"),
-  }),
-
-  card_activated: (d) => ({
-    subject: "🎉 Cartão de Benefícios Ativado — AloClínica",
-    html: wrap(`
-      <h2 style="color:${BRAND.green};margin:0 0 16px;">🎉 Cartão Ativado!</h2>
-      <p>Olá <strong>${d.patient_name || "Paciente"}</strong>,</p>
-      <p>Seu <strong>Cartão de Benefícios ${d.plan_name || ""}</strong> foi ativado!</p>
-      ${card(`
-        <p><strong>💳 Plano:</strong> ${d.plan_name || "—"}</p>
-        <p><strong>📅 Válido até:</strong> ${d.valid_until || "—"}</p>
-        <p><strong>💰 Desconto:</strong> ${d.discount_percent || "30"}% em consultas</p>
-      `, BRAND.green)}
-      <div style="background:#f0fdf4;padding:16px;border-radius:10px;margin:16px 0;">
-        <p style="font-weight:bold;color:#166534;margin:0 0 8px;">Seus benefícios:</p>
-        <ul style="color:#166534;font-size:14px;padding-left:20px;margin:0;">
-          <li>Telemedicina 24h/7</li>
-          <li>Clube de Vantagens (até 80% off)</li>
-          <li>Reagendamentos gratuitos</li>
-        </ul>
-      </div>
-      ${btn(URLS.patientSchedule, "Agendar Consulta com Desconto", BRAND.green)}
-    `, "card_activated"),
-  }),
-
-  card_expiring: (d) => ({
-    subject: "⚠️ Cartão de Benefícios Expirando — AloClínica",
-    html: wrap(`
-      <h2 style="color:${BRAND.amber};margin:0 0 16px;">⚠️ Cartão Expirando!</h2>
-      <p>Olá <strong>${d.patient_name || "Paciente"}</strong>,</p>
-      <p>Seu <strong>Cartão ${d.plan_name || ""}</strong> expira em <strong>${d.days_left || "poucos"} dias</strong>.</p>
-      ${card(`
-        <p><strong>📅 Expira em:</strong> ${d.valid_until || "—"}</p>
-        <p>Renove para manter seus descontos e benefícios!</p>
-      `, BRAND.amber)}
-      ${btn(URLS.patientPlans, "Renovar Meu Cartão", BRAND.amber)}
-    `, "card_expiring"),
-  }),
-
   refund_processed: (d) => ({
     subject: "💸 Reembolso Processado — AloClínica",
     html: wrap(`
@@ -751,89 +681,6 @@ const templates: Record<string, (d: Record<string, string>) => { subject: string
       ${btn(d.confirm_url || URLS.authLogin, "Foi você? Confirmar", BRAND.green)}
       ${btn(d.reset_url || `${URLS.authLogin}?reset=1`, "Não fui eu — Redefinir senha", BRAND.red)}
     `, "security_alert"),
-  }),
-
-  welcome_laudista: (d) => ({
-    subject: "🔬 Bem-vindo(a), Laudista! — AloClínica",
-    html: wrap(`
-      <h2 style="color:${BRAND.color};margin:0 0 16px;">Bem-vindo(a) ao Portal do Laudista!</h2>
-      <p>Olá <strong>Dr(a). ${d.name || "Laudista"}</strong>,</p>
-      <p>Sua conta de laudista foi criada com sucesso na AloClínica.</p>
-      ${card(`
-        <p>🔬 Aqui você pode:</p>
-        <ul>
-          <li>Visualizar a fila de exames disponíveis</li>
-          <li>Assumir exames e emitir laudos digitais</li>
-          <li>Assinar digitalmente seus laudos</li>
-          <li>Acompanhar seus ganhos</li>
-        </ul>
-      `)}
-      ${btn(URLS.laudistaDashboard, "Acessar Fila de Exames")}
-    `, "welcome_laudista"),
-  }),
-
-  welcome_ophthalmologist: (d) => ({
-    subject: "👁️ Bem-vindo(a), Oftalmologista! — AloClínica",
-    html: wrap(`
-      <h2 style="color:${BRAND.color};margin:0 0 16px;">Bem-vindo(a) ao Portal do Oftalmologista!</h2>
-      <p>Olá <strong>Dr(a). ${d.name || "Oftalmologista"}</strong>,</p>
-      <p>Sua conta de oftalmologista foi criada na AloClínica.</p>
-      ${card(`
-        <p>👁️ Agora você pode:</p>
-        <ul>
-          <li>Atender teleconsultas oftalmológicas</li>
-          <li>Emitir laudos especializados</li>
-          <li>Prescrever lentes e medicações</li>
-        </ul>
-      `)}
-      ${btn(URLS.doctorDashboard, "Acessar Painel")}
-    `, "welcome_ophthalmologist"),
-  }),
-
-  prescription_expiring: (d) => ({
-    subject: "⚠️ Sua Prescrição Oftalmológica está vencendo",
-    html: wrap(`
-      <h2 style="color:${BRAND.amber};margin:0 0 16px;">Prescrição em Vencimento</h2>
-      <p>Olá <strong>${d.patient_name || "Paciente"}</strong>,</p>
-      <p>Sua prescrição oftalmológica está chegando ao vencimento. Renove sua prescrição agora mesmo!</p>
-      ${card(`
-        <p><strong>👁️ Oftalmologista:</strong> ${d.doctor_name || "—"}</p>
-        <p><strong>📅 Data de Vencimento:</strong> ${d.expiry_date || "—"}</p>
-        <p style="margin-top:12px;padding-top:12px;border-top:1px solid ${BRAND.border};"><strong>⚠️ Ação Necessária:</strong> Agende uma nova consulta para renovar sua prescrição.</p>
-      `)}
-      ${btn(URLS.patientAppointments || sub("paciente", "/agendar/oftalmologia"), "Agendar Consulta")}
-      <p style="color:${BRAND.muted};font-size:13px;margin-top:16px;">Você pode visualizar e baixar sua prescrição atual na área "Meus Exames Oftalmológicos" do seu painel.</p>
-    `, "prescription_expiring"),
-  }),
-
-  exam_assigned: (d) => ({
-    subject: "🔬 Novo Exame Atribuído — AloClínica",
-    html: wrap(`
-      <h2 style="color:${BRAND.color};margin:0 0 16px;">Você Tem um Novo Exame!</h2>
-      <p>Olá <strong>Dr(a). ${d.name || "Laudista"}</strong>,</p>
-      <p>Um novo exame foi atribuído a você para laudo.</p>
-      ${card(`
-        <p><strong>🔬 Tipo de exame:</strong> ${d.exam_type || "—"}</p>
-        <p><strong>⚠️ Prioridade:</strong> ${d.priority || "Normal"}</p>
-        ${d.clinical_info ? `<p><strong>📋 Info clínica:</strong> ${d.clinical_info}</p>` : ""}
-      `)}
-      ${btn(URLS.laudistaDashboard, "Ver Exame")}
-    `, "exam_assigned"),
-  }),
-
-  clinic_exam_report_ready: (d) => ({
-    subject: "📄 Laudo Disponível — AloClínica",
-    html: wrap(`
-      <h2 style="color:${BRAND.color};margin:0 0 16px;">Laudo de Exame Pronto!</h2>
-      <p>Olá <strong>${d.name || "Equipe da Clínica"}</strong>,</p>
-      <p>O laudo do exame solicitado por sua clínica está disponível.</p>
-      ${card(`
-        <p><strong>🔬 Exame:</strong> ${d.exam_type || "—"}</p>
-        <p><strong>🩺 Laudista:</strong> ${d.reporter_name || "—"}</p>
-        ${d.patient_name ? `<p><strong>👤 Paciente:</strong> ${d.patient_name}</p>` : ""}
-      `)}
-      ${btn(URLS.clinicDashboard, "Ver Laudo")}
-    `, "clinic_exam_report_ready"),
   }),
 
   doctor_payout_completed: (d) => ({

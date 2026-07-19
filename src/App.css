@@ -17,9 +17,6 @@
 
   /* success: dark fg instead of white — 4.54:1 */
   --success-foreground: 142 70% 17%;
-
-  /* laudo-text-muted: lighten 50→55% — 4.70:1 on surface */
-  --laudo-text-muted: 220 8% 55%;
 }
 
 .dark {
@@ -34,11 +31,6 @@
 
   /* success: dark fg — 4.84:1 */
   --success-foreground: 142 70% 17%;
-}
-
-/* laudo workspace muted text override */
-.laudo-workspace {
-  --muted-foreground: 220 8% 55%;
 }
 
 /* ── Dashboard mobile scroll fix ──

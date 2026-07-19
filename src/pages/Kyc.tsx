@@ -33,7 +33,7 @@ export default function Kyc() {
   const allConsents = termsAccepted && privacyAccepted && biometricAccepted;
 
   // Decide tipo (paciente vs medico) com base nos roles
-  const isDoctor = roles.includes("doctor") || roles.includes("ophthalmologist");
+  const isDoctor = roles.includes("doctor");
   const tipo = isDoctor ? "medico" : "paciente";
 
   // Label contextual do botão "Voltar" baseado no fluxo de origem

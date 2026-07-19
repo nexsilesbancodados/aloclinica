@@ -3,25 +3,17 @@
  *
  * Uso:
  *   import { isFeatureEnabled } from "@/lib/featureFlags";
- *   if (isFeatureEnabled("sweepstakes")) { ... }
+ *   if (isFeatureEnabled("first_tour")) { ... }
  *
  * Resolução (em ordem de prioridade):
  *   1. localStorage `feature:<key>` ("true" / "false") — override pra QA/admin
  *   2. env Vite `VITE_FEATURE_<KEY>` ("true" / "false") — override de build
  *   3. DEFAULT_FLAGS — valor padrão
  *
- * Por que: a plataforma carrega código legado (sorteios, assistência funeral, cartão de
- * benefícios) que não está em produção mas está pronto para reativar. Usar feature flag
- * permite esconder do usuário sem deletar o código.
+ * Por que: permite esconder features experimentais do usuário sem deletar o código.
  */
 
 export const FEATURE_FLAGS = {
-  /** Sorteios mensais — funcionalidade do cartão de benefícios, não está no escopo atual. */
-  sweepstakes: false,
-  /** Assistência funeral via cartão — não está no escopo atual. */
-  funeral: false,
-  /** Cartão de benefícios PingoCard — assinatura via Mercado Pago Pre-Approval. */
-  cartao_pingo: true,
   /** Mock de pagamentos (apenas dev/QA). */
   mock_payments: false,
   /** Tour interativo da primeira consulta. */

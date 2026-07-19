@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Bug, Terminal, User, Stethoscope, CreditCard } from "lucide-react";
+import { Bug, Terminal, User, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/integrations/supabase/untyped";
@@ -24,7 +24,7 @@ export const DevModeToggle = () => {
     setTimeout(() => window.location.reload(), 800);
   };
 
-  const ensureRoleAndGo = async (role: "patient" | "doctor" | "cartao_beneficios", path: string) => {
+  const ensureRoleAndGo = async (role: "patient" | "doctor", path: string) => {
     if (!user) {
       toast.error("Faça login primeiro");
       return;
@@ -82,14 +82,6 @@ export const DevModeToggle = () => {
             className="h-8 rounded-lg text-[10px] gap-1.5 font-semibold justify-start"
           >
             <Stethoscope className="w-3 h-3 text-emerald-600" /> Sou Médico
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => ensureRoleAndGo("cartao_beneficios", "/dashboard?role=cartao_beneficios")}
-            className="h-8 rounded-lg text-[10px] gap-1.5 font-semibold justify-start"
-          >
-            <CreditCard className="w-3 h-3 text-rose-600" /> Sou Cartão
           </Button>
         </div>
       )}

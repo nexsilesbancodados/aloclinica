@@ -338,7 +338,6 @@ export const VALID_SPECIALTIES = [
   "endocrinologia",
   "gastroenterologia",
   "ginecologia",
-  "oftalmologia",
   "ortopedia",
   "pneumologia",
   "psiquiatria",

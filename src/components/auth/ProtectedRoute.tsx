@@ -2,7 +2,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
-type AppRole = "patient" | "doctor" | "admin" | "support" | "laudista" | "clinic" | "receptionist" | "ophthalmologist";
+type AppRole = "patient" | "doctor" | "admin" | "support" | "clinic" | "receptionist";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

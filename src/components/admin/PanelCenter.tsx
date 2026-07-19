@@ -43,7 +43,6 @@ const PANELS: Omit<PanelInfo, "onlineCount" | "totalUsers" | "recentUsers">[] = 
   { id: "admin",        label: "Administração", description: "Controle total do sistema, permissões e auditoria", icon: ShieldCheck,  gradient: "from-primary to-blue-700",       glow: "shadow-primary/25",       route: "/dashboard?role=admin",        roleKey: "admin" },
   { id: "doctor",       label: "Médico",        description: "Consultas, prontuários, receitas e telemedicina", icon: Stethoscope,  gradient: "from-emerald-500 to-teal-600",   glow: "shadow-emerald-500/25",   route: "/dashboard?role=doctor",       roleKey: "doctor" },
   { id: "patient",      label: "Paciente",      description: "Agendamentos, histórico e jornada de saúde",   icon: Users,        gradient: "from-blue-500 to-blue-600",      glow: "shadow-blue-500/25",      route: "/dashboard?role=patient",      roleKey: "patient" },
-  { id: "cartao_beneficios", label: "Benefícios", description: "Carteirinha digital e descontos", icon: Heart, gradient: "from-rose-500 to-pink-600", glow: "shadow-rose-500/25", route: "/dashboard?role=cartao_beneficios", roleKey: "cartao_beneficios" },
   { id: "support",      label: "Suporte",       description: "Tickets e monitoramento", icon: Headphones,   gradient: "from-amber-500 to-orange-600",      glow: "shadow-amber-500/25",      route: "/dashboard?role=support",      roleKey: "support" },
   { id: "clinic",       label: "Clínicas",      description: "Unidades de saúde parceiras", icon: Building2,  gradient: "from-cyan-500 to-blue-600",      glow: "shadow-cyan-500/25",      route: "/dashboard/admin/clinics?role=admin",  roleKey: "clinic" },
   { id: "ai-assistant", label: "Assistente IA", description: "Chat e triagem inteligente",        icon: Bot,          gradient: "from-purple-500 to-fuchsia-600", glow: "shadow-purple-500/25",    route: "/dashboard/ai-assistant",      roleKey: "ai-assistant" },
@@ -112,7 +111,6 @@ const PanelCenter = () => {
         else if (page.includes("role=support")) panelId = "support";
         else if (page.includes("role=clinic") || page.includes("/clinic/")) panelId = "clinic";
         else if (page.includes("role=partner")) panelId = "partner";
-        else if (page.includes("role=cartao_beneficios") || page.includes("/cartao/")) panelId = "cartao_beneficios";
         else if (roles.includes("doctor")) panelId = "doctor";
         else if (roles.includes("admin")) panelId = "admin";
 
@@ -667,7 +665,6 @@ const PanelCenter = () => {
                               clinic: "hsl(265 75% 56%)",
                               doctor: "hsl(160 70% 42%)",
                               patient: "hsl(220 90% 56%)",
-                              cartao_beneficios: "hsl(340 80% 56%)",
                               receptionist: "hsl(35 90% 52%)",
                               support: "hsl(345 80% 60%)",
                               partner: "hsl(175 70% 42%)",
