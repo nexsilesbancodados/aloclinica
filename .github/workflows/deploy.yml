@@ -75,6 +75,10 @@ jobs:
           script: |
             set -e
             cd /opt/aloclinica
+            # The VPS may contain a legacy container created outside this
+            # Compose project. Remove only the named web container so Compose
+            # can recreate the image with the uploaded build.
+            docker rm -f aloclinica-web >/dev/null 2>&1 || true
             docker compose build --no-cache aloclinica-web
             docker compose up -d --force-recreate aloclinica-web
             docker image prune -f
