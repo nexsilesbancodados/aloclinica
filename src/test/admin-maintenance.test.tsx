@@ -46,7 +46,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 describe("AdminMaintenanceCenter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockInvoke.mockImplementation((name: string) => name === "admin-secret-status"
+    mockInvoke.mockImplementation((name: string, options?: { body?: { action?: string } }) => name === "admin-secret-manager" && options?.body?.action === "status"
       ? Promise.resolve({
           data: {
             secrets: [
@@ -73,7 +73,7 @@ describe("AdminMaintenanceCenter", () => {
 
     render(<BrowserRouter><AdminMaintenanceCenter /></BrowserRouter>);
 
-    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("admin-secret-status"));
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("admin-secret-manager", { body: { action: "status" } }));
     expect(screen.getByRole("heading", { name: "Centro de manutenção" })).toBeInTheDocument();
     expect(screen.getByText("Saúde dos serviços")).toBeInTheDocument();
     expect(screen.getAllByText("Administração e jobs").length).toBeGreaterThan(0);

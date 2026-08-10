@@ -67,7 +67,7 @@ interface RuntimeFlag {
 }
 
 // O catálogo vive em supabase/functions/_shared/secret-catalog.ts e é a FONTE
-// ÚNICA, compartilhada com a Edge Function admin-secret-status. Antes havia uma
+// ÚNICA, compartilhada com a Edge Function admin-secret-manager. Antes havia uma
 // cópia aqui: chave adicionada só no servidor não aparecia na tela, e chave
 // adicionada só aqui ficava presa em "N/D". O módulo é de dados puros (sem APIs
 // do Deno), então entra no bundle do navegador sem problema.
@@ -132,7 +132,7 @@ const AdminMaintenanceCenter = () => {
     setSecretLoading(true);
     setSecretError(null);
     try {
-      const { data, error } = await db.functions.invoke("admin-secret-status");
+      const { data, error } = await db.functions.invoke("admin-secret-manager", { body: { action: "status" } });
       if (error || !Array.isArray(data?.secrets)) {
         setSecrets(SECRET_CATALOG.map((secret) => ({ ...secret, configured: null })));
         setFlags(RUNTIME_FLAG_CATALOG.map((flag) => ({ ...flag, enabled: null })));
@@ -274,7 +274,7 @@ const AdminMaintenanceCenter = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base"><Server className="h-4 w-4 text-primary" aria-hidden="true" /> Saúde dos serviços</CardTitle>
-              <CardDescription>Verificação server-side quando a Edge Function <code>service-health</code> está publicada; caso contrário, fallback básico no navegador.</CardDescription>
+              <CardDescription>Verificação básica dos serviços acessíveis pelo navegador. O inventário de secrets continua protegido no servidor.</CardDescription>
             </CardHeader>
             <CardContent>
               {health.loading && services.length === 0 ? <AdminLoading variant="list" count={5} /> : services.length === 0 ? <AdminEmpty title="Nenhum diagnóstico disponível" description="Execute uma verificação ou publique as funções operacionais." /> : (

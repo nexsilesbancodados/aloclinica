@@ -17,14 +17,13 @@ supabase secrets set BREVO_API_KEY="valor-real"
 supabase secrets set MERCADOPAGO_ACCESS_TOKEN="valor-real" MERCADOPAGO_WEBHOOK_SECRET="valor-real"
 ```
 
-Após publicar o frontend e configurar manualmente o token de gerenciamento, publique as duas funções administrativas:
+Após publicar o frontend e configurar manualmente o token de gerenciamento, publique a função administrativa:
 
 ```bash
-supabase functions deploy admin-secret-status --project-ref <project-ref>
 supabase functions deploy admin-secret-manager --project-ref <project-ref>
 ```
 
-O painel chama duas funções protegidas: `admin-secret-status` retorna `configured: true/false` e flags de runtime; `admin-secret-manager` recebe somente os valores digitados, valida uma lista permitida e grava os secrets nativos do projeto pela Management API do Supabase. Nenhuma função retorna os valores ao frontend. O manager registra em `activity_logs` o administrador, os nomes alterados e a quantidade — nunca os valores.
+O painel chama uma função protegida: `admin-secret-manager` retorna `configured: true/false` e flags de runtime quando recebe `action: status`, ou recebe somente os valores digitados, valida uma lista permitida e grava os secrets nativos do projeto pela Management API do Supabase. Nenhum valor de secret retorna ao frontend. O manager registra em `activity_logs` o administrador, os nomes alterados e a quantidade — nunca os valores.
 
 A autorização real é feita no código com JWT válido e `getCaller` + `isAdmin`; `verify_jwt` sozinho não substitui autorização. Antes do primeiro uso, crie um token fine-grained no Supabase com apenas `edge_functions_secrets_write` e configure manualmente o secret `PROJECT_SECRETS_MANAGEMENT_TOKEN`. Esse token é propositalmente bloqueado no formulário. Depois de salvar chaves, publique as funções que dependem delas e use **Atualizar diagnóstico**.
 
@@ -61,12 +60,11 @@ São booleanos de configuração, não segredos — por isso o painel pode exibi
 
 Antes de usar a tela em produção:
 
-1. publicar `admin-secret-status` com verificação JWT habilitada;
-2. publicar `admin-secret-manager` mantendo a verificação JWT habilitada (não adicionar `verify_jwt = false`);
-3. confirmar que o usuário possui o papel administrativo no banco;
-4. criar o token fine-grained e configurar manualmente `PROJECT_SECRETS_MANAGEMENT_TOKEN`;
-5. configurar os secrets necessários ao fluxo contratado;
-6. corrigir certificados TLS do Evolution e MiroTalk quando o diagnóstico apontar falha;
-7. aplicar migrations somente após backup e revisão do estado real do banco.
+1. publicar `admin-secret-manager` mantendo a verificação JWT habilitada (não adicionar `verify_jwt = false`);
+2. confirmar que o usuário possui o papel administrativo no banco;
+3. criar o token fine-grained e configurar manualmente `PROJECT_SECRETS_MANAGEMENT_TOKEN`;
+4. configurar os secrets necessários ao fluxo contratado;
+5. corrigir certificados TLS do Evolution e MiroTalk quando o diagnóstico apontar falha;
+6. aplicar migrations somente após backup e revisão do estado real do banco.
 
 Sem a Edge Function publicada, a tela permanece funcional para saúde básica, mas marca o inventário de secrets como `N/D` por segurança.

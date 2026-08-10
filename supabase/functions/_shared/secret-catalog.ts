@@ -2,7 +2,7 @@
  * Catálogo de secrets e flags de runtime da plataforma — FONTE ÚNICA.
  *
  * Consumido por dois lados:
- *   - `admin-secret-status` (Deno): resolve presença/estado e devolve ao painel;
+ *   - `admin-secret-manager` (Deno): resolve presença/estado e grava secrets;
  *   - `AdminMaintenanceCenter` (browser): usa como fallback de exibição enquanto
  *     a Edge Function não estiver publicada.
  *

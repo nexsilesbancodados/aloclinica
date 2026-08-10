@@ -1,12 +1,10 @@
 /**
  * useServiceHealth — saúde dos serviços para o alerta e a página do admin.
  *
- * Estratégia em 2 camadas (resiliente):
- *  1. Tenta a edge function `service-health` — verificação REAL no servidor
- *     (WhatsApp, e-mail, vídeo, KYC, pagamentos, NFS-e) usando os secrets.
- *  2. Se a função ainda não estiver publicada, cai para uma VERIFICAÇÃO BÁSICA
- *     no navegador dos serviços críticos que dá para checar do cliente
- *     (Banco, Autenticação, Storage e CompreFace/KYC — o que mais costuma cair).
+ * Executa uma verificação básica no navegador dos serviços críticos que podem
+ * ser checados com segurança pelo cliente (Banco, Autenticação, Storage e
+ * CompreFace/KYC). Secrets e integrações server-side são verificados pelo
+ * `admin-secret-manager`, sem expor valores ao navegador.
  *
  * Só roda para administradores. Com `poll: true`, revalida periodicamente.
  */
@@ -16,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SERVICES_PENDING_SETUP } from "@/config/service-status";
 
 export type ServiceStatus = "ok" | "down" | "unconfigured";
-export type HealthMode = "server" | "browser";
+export type HealthMode = "browser";
 
 export interface ServiceCheck {
   key: string;
@@ -87,19 +85,11 @@ export function useServiceHealth(options?: { enabled?: boolean; poll?: boolean }
     setLoading(true);
     setError(null);
     try {
-      const { data: res, error: fnErr } = await db.functions.invoke("service-health");
-      if (fnErr) throw fnErr;
-      setData(res as HealthResult);
-      setMode("server");
-    } catch {
-      // Função ainda não publicada → verificação básica no navegador.
-      try {
-        const services = await runBrowserChecks();
-        setData({ checkedAt: new Date().toISOString(), services });
-        setMode("browser");
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Falha ao verificar serviços");
-      }
+      const services = await runBrowserChecks();
+      setData({ checkedAt: new Date().toISOString(), services });
+      setMode("browser");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha ao verificar serviços");
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { getCaller, checkRateLimit } from "../_shared/auth.ts";
-import { SECRET_DEFINITIONS } from "../_shared/secret-catalog.ts";
+import { RUNTIME_FLAGS, SECRET_DEFINITIONS } from "../_shared/secret-catalog.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +23,24 @@ const editableKeys = new Set(
     .filter((secret) => secret.editable === true && !manualOnly.has(secret.key) && !secret.key.startsWith("SUPABASE_"))
     .map((secret) => secret.key),
 );
+
+const isConfigured = (key: string) => {
+  const value = Deno.env.get(key)?.trim();
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return ![
+    "placeholder",
+    "change_me",
+    "change-me",
+    "your_",
+    "your-",
+    "sua_",
+    "sua-",
+    "seu_",
+    "seu-",
+    "value_to_be_replaced",
+  ].some((token) => normalized.includes(token));
+};
 
 const projectRefFromUrl = () => {
   const configured = Deno.env.get("SUPABASE_PROJECT_REF")?.trim();
@@ -49,6 +67,29 @@ serve(async (req) => {
     return json({ error: "Muitas alterações. Aguarde alguns minutos." }, 429);
   }
 
+  let body: { action?: unknown; updates?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "JSON inválido" }, 400);
+  }
+
+  // Keep inventory and writes in this single protected function so the panel
+  // does not need another Edge Function slot in the project quota.
+  if (body.action === "status") {
+    return json({
+      checkedAt: new Date().toISOString(),
+      secrets: SECRET_DEFINITIONS.map((secret) => ({
+        ...secret,
+        configured: isConfigured(secret.key),
+      })),
+      flags: RUNTIME_FLAGS.map((flag) => ({
+        ...flag,
+        enabled: Deno.env.get(flag.key)?.trim().toLowerCase() === "true",
+      })),
+    });
+  }
+
   const managementToken = Deno.env.get("PROJECT_SECRETS_MANAGEMENT_TOKEN")?.trim();
   if (!managementToken) {
     return json({ error: "Configure manualmente PROJECT_SECRETS_MANAGEMENT_TOKEN antes de usar o painel." }, 503);
@@ -56,13 +97,6 @@ serve(async (req) => {
 
   const projectRef = projectRefFromUrl();
   if (!projectRef) return json({ error: "Projeto Supabase não identificado" }, 500);
-
-  let body: { updates?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: "JSON inválido" }, 400);
-  }
 
   if (!Array.isArray(body.updates) || body.updates.length === 0 || body.updates.length > 60) {
     return json({ error: "Envie entre 1 e 60 secrets" }, 400);
