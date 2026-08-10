@@ -9,6 +9,10 @@ env:
   SUPABASE_PROJECT_REF: pwxvvimdtmvziynbspgx
   VPS_HOST: 72.62.138.208
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy-frontend:
     name: Frontend — Build + Deploy VPS
@@ -107,7 +111,6 @@ jobs:
   deploy-supabase:
     name: Supabase — Edge Functions
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - name: Checkout
