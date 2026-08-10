@@ -57,6 +57,7 @@ const getNavItems = (role: string): NavItem[] => {
 
   if (role === "admin") return [
     { label: "Painel Admin", href: "/dashboard", icon: <BarChart3 className="w-4 h-4" />, group: "Admin", shortcut: "G D" },
+    { label: "Centro de Manutenção", href: "/dashboard/admin/maintenance?role=admin", icon: <Settings className="w-4 h-4" />, group: "Admin" },
     { label: "Aprovações", href: "/dashboard/admin/approvals", icon: <ShieldCheck className="w-4 h-4" />, group: "Admin" },
     { label: "Usuários", href: "/dashboard/admin/users", icon: <Users className="w-4 h-4" />, group: "Admin" },
     { label: "Pacientes", href: "/dashboard/admin/patients", icon: <User className="w-4 h-4" />, group: "Admin" },

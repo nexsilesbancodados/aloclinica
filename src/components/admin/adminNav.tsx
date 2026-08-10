@@ -45,5 +45,6 @@ export const getAdminNav = (active: string) => [
    { label: "Logs & Audit",  href: "/dashboard/admin/logs?role=admin",     icon: <NavIcon icon={<ClockCounterClockwise size={16} weight="fill" />} color="slate" />, active: active === "logs",     group: "Sistema" },
    { label: "Segurança",     href: "/dashboard/admin/security?role=admin", icon: <NavIcon icon={<Shield size={16} weight="fill" />}            color="rose"  />, active: active === "security", group: "Sistema" },
    { label: "Saúde Sistema", href: "/dashboard/admin/health?role=admin",   icon: <NavIcon icon={<Pulse size={16} weight="fill" />}             color="emerald" />, active: active === "health",   group: "Sistema" },
+   { label: "Centro de Manutenção", href: "/dashboard/admin/maintenance?role=admin", icon: <NavIcon icon={<Key size={16} weight="fill" />} color="cyan" />, active: active === "maintenance", group: "Sistema" },
    { label: "Configuração",  href: "/dashboard/settings?role=admin",       icon: <NavIcon icon={<Sliders size={16} weight="fill" />}               color="slate" />, active: active === "settings", group: "Sistema" },
 ];

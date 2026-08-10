@@ -26,6 +26,7 @@ function walk(dir, files = []) {
 
 const expectedPublicFunctions = new Set([
   "mercadopago-webhook",
+  "pagbank-webhook",
   "docuseal-webhook",
   "vidaas-callback",
   "robots-txt",
