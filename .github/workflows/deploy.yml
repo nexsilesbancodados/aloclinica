@@ -112,7 +112,9 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pin the CLI so deploys do not depend on GitHub's release API
+          # resolving `latest` at runtime (which can hit unauthenticated rate limits).
+          version: 2.113.0
 
       - name: Deploy Edge Functions
         # No global --no-verify-jwt: the CLI honors per-function verify_jwt from
