@@ -124,8 +124,36 @@ jobs:
         # No global --no-verify-jwt: the CLI honors per-function verify_jwt from
         # supabase/config.toml (JWT required by default; disabled only for webhooks).
         run: |
-          supabase functions deploy \
-            --project-ref ${{ env.SUPABASE_PROJECT_REF }}
+          set -euo pipefail
+          base_ref="${{ github.event.before }}"
+          if [[ -z "$base_ref" || "$base_ref" =~ ^0+$ ]]; then
+            base_ref="HEAD^"
+          fi
+
+          mapfile -t changed_functions < <(
+            git diff --name-only "$base_ref" "$GITHUB_SHA" -- 'supabase/functions/*/index.ts' \
+              | awk -F/ 'NF >= 4 { print $3 }' \
+              | sort -u
+          )
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && ${#changed_functions[@]} -eq 0 ]]; then
+            changed_functions=(admin-secret-manager)
+          fi
+
+          if [[ ${#changed_functions[@]} -eq 0 ]]; then
+            echo "No Edge Functions changed in this commit."
+            exit 0
+          fi
+
+          for function_name in "${changed_functions[@]}"; do
+            if [[ ! -f "supabase/functions/${function_name}/index.ts" ]]; then
+              echo "Skipping removed function: ${function_name}"
+              continue
+            fi
+            echo "Deploying changed function: ${function_name}"
+            supabase functions deploy "$function_name" \
+              --project-ref ${{ env.SUPABASE_PROJECT_REF }}
+          done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
