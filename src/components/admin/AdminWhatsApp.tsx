@@ -259,7 +259,7 @@ const AdminWhatsApp = () => {
     }
   };
 
-  const callApi = async (action: string, instanceName?: string) => {
+  const callApi = useCallback(async (action: string, instanceName?: string) => {
     const { data, error } = await db.functions.invoke("whatsapp-qr", {
       body: { action, instanceName },
     });
@@ -271,7 +271,7 @@ const AdminWhatsApp = () => {
     }
     setIntegrationError(null);
     return data;
-  };
+  }, []);
 
   const fetchInstances = useCallback(async () => {
     try {
@@ -288,7 +288,7 @@ const AdminWhatsApp = () => {
       logError("AdminWhatsApp fetch instances error", err);
       setInstances([]);
     }
-  }, []);
+  }, [callApi]);
 
   useEffect(() => { fetchInstances(); }, [fetchInstances]);
 
@@ -333,7 +333,7 @@ const AdminWhatsApp = () => {
     } finally { setLoading(false); }
   };
 
-  const checkStatus = async (name: string) => {
+  const checkStatus = useCallback(async (name: string) => {
     try {
       const res = await callApi("status", name);
       if (res?.success) {
@@ -344,7 +344,7 @@ const AdminWhatsApp = () => {
       }
     } catch (err) { logError("AdminWhatsApp status check error", err); }
     return null;
-  };
+  }, [callApi]);
 
   useEffect(() => {
     if (!polling || !selectedInstance) return;
@@ -353,7 +353,7 @@ const AdminWhatsApp = () => {
       if (state === "open") { clearInterval(interval); fetchInstances(); }
     }, 5000);
     return () => clearInterval(interval);
-  }, [polling, selectedInstance]);
+  }, [checkStatus, fetchInstances, polling, selectedInstance]);
 
   const deleteInstance = async (name: string) => {
     const ok = await confirm({

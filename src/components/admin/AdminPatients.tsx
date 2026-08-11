@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -49,16 +49,13 @@ const AdminPatients = () => {
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
   const pg = usePagination({ pageSize: 25 });
+  const { from, setPage, setTotal, to } = pg;
 
-  useEffect(() => { fetchPatients(); }, [debouncedSearch, dateFilter, sortBy, pg.page, pg.pageSize]);
-  // Reset page quando filtro/busca muda
-  useEffect(() => { pg.setPage(0); }, [debouncedSearch, dateFilter, sortBy]);
-
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     setLoading(true);
     // Resolve userIds dos pacientes (1 query agregada com count)
     const { data: roles } = await db.from("user_roles").select("user_id").eq("role", "patient");
-    if (!roles || roles.length === 0) { setPatients([]); pg.setTotal(0); setLoading(false); return; }
+    if (!roles || roles.length === 0) { setPatients([]); setTotal(0); setLoading(false); return; }
     const userIds = roles.map(r => r.user_id);
 
     let q = db.from("profiles")
@@ -90,11 +87,15 @@ const AdminPatients = () => {
       q = q.order("created_at", { ascending: false });
     }
 
-    const { data: profiles, count } = await q.range(pg.from, pg.to);
+    const { data: profiles, count } = await q.range(from, to);
     setPatients(profiles ?? []);
-    pg.setTotal(count ?? 0);
+    setTotal(count ?? 0);
     setLoading(false);
-  };
+  }, [dateFilter, debouncedSearch, from, setTotal, sortBy, to]);
+
+  useEffect(() => { void fetchPatients(); }, [fetchPatients]);
+  // Reset page quando filtro/busca muda
+  useEffect(() => { setPage(0); }, [debouncedSearch, dateFilter, setPage, sortBy]);
 
   // Search/filter/sort/paginação agora server-side. `filtered` = página atual.
   const filtered = patients;

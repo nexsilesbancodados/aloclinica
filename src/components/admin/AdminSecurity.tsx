@@ -10,7 +10,7 @@
  *
  * Lê de failed_login_attempts (preenchida por Auth hooks ou edge function de login).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { getAdminNav } from "./adminNav";
@@ -56,7 +56,7 @@ const AdminSecurity = () => {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     const since = new Date(Date.now() - (PERIODS.find(p => p.value === period)?.h ?? 24) * 3600000).toISOString();
 
@@ -68,9 +68,9 @@ const AdminSecurity = () => {
     setAttempts((attRes.data ?? []) as FailedAttempt[]);
     setMetrics((metRes.data ?? []) as Metric[]);
     setLoading(false);
-  };
+  }, [period]);
 
-  useEffect(() => { fetchAll(); }, [period]);
+  useEffect(() => { void fetchAll(); }, [fetchAll]);
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -34,29 +34,17 @@ const AdminAppointments = () => {
   const [liveCount, setLiveCount] = useState(0);
   const [waitingCount, setWaitingCount] = useState(0);
   const pg = usePagination({ pageSize: 25 });
+  const { from, setTotal, to } = pg;
 
-  useEffect(() => { fetchAppointments(); }, [pg.page, pg.pageSize, filterStatus, debouncedSearch]);
-
-  // Realtime updates
-  useEffect(() => {
-    const channel = db
-      .channel("admin-appts-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => {
-        fetchAppointments();
-      })
-      .subscribe();
-    return () => { db.removeChannel(channel); };
-  }, []);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     setLoading(true);
     let query = db.from("appointments")
       .select("id, scheduled_at, status, patient_id, doctor_id, duration_minutes, notes, appointment_type", { count: "exact" })
       .order("scheduled_at", { ascending: false });
     if (filterStatus !== "all") query = query.eq("status", filterStatus);
-    const { data, count } = await query.range(pg.from, pg.to);
+    const { data, count } = await query.range(from, to);
     if (!data) { setLoading(false); return; }
-    pg.setTotal(count ?? 0);
+    setTotal(count ?? 0);
 
     // Realtime counts (rápidos, separados da paginação)
     const { count: liveC } = await db.from("appointments").select("id", { count: "exact", head: true }).eq("status", "in_progress");
@@ -83,7 +71,20 @@ const AdminAppointments = () => {
 
     setAppointments(data.map(a => ({ ...a, patient_name: pMap.get(a.patient_id!) ?? "—", doctor_name: docMap.get(a.doctor_id) ?? "—" })));
     setLoading(false);
-  };
+  }, [filterStatus, from, setTotal, to]);
+
+  useEffect(() => { void fetchAppointments(); }, [fetchAppointments]);
+
+  // Realtime updates
+  useEffect(() => {
+    const channel = db
+      .channel("admin-appts-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => {
+        void fetchAppointments();
+      })
+      .subscribe();
+    return () => { db.removeChannel(channel); };
+  }, [fetchAppointments]);
 
   const typeLabel: Record<string, string> = {
     first_visit: "1ª Consulta", return: "Retorno", urgency: "Urgência",

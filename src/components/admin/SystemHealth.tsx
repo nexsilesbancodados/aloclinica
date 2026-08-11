@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { getAdminNav } from "@/components/admin/adminNav";
@@ -38,9 +38,7 @@ const SystemHealth = () => {
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
   const [running, setRunning] = useState(false);
 
-  useEffect(() => { runChecks(); }, []);
-
-  const fetchDbStats = async () => {
+  const fetchDbStats = useCallback(async () => {
     const [patients, doctors, appts, prescriptions, subs, queue] = await Promise.all([
       db.from("user_roles").select("id", { count: "exact", head: true }).eq("role", "patient"),
       db.from("doctor_profiles").select("id", { count: "exact", head: true }),
@@ -58,9 +56,9 @@ const SystemHealth = () => {
       queueWaiting: queue.count ?? 0,
       storageBuckets: 7,
     });
-  };
+  }, []);
 
-  const runChecks = async () => {
+  const runChecks = useCallback(async () => {
     setRunning(true);
     const results: HealthCheck[] = [];
 
@@ -240,8 +238,10 @@ const SystemHealth = () => {
     setChecks(results);
     setLastCheck(new Date());
     setRunning(false);
-    fetchDbStats();
-  };
+    void fetchDbStats();
+  }, [fetchDbStats]);
+
+  useEffect(() => { void runChecks(); }, [runChecks]);
 
   const allOk = checks.length > 0 && checks.every(c => c.status === "ok");
   const hasErrors = checks.some(c => c.status === "error");

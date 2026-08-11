@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { getAdminNav } from "@/components/admin/adminNav";
@@ -37,11 +37,9 @@ const AdminReports = () => {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("6");
 
-  useEffect(() => { fetchReports(); }, [period]);
-
   const monthsBack = parseInt(period);
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     setLoading(true);
     const now = new Date();
 
@@ -166,7 +164,9 @@ const AdminReports = () => {
     });
 
     setLoading(false);
-  };
+  }, [monthsBack]);
+
+  useEffect(() => { void fetchReports(); }, [fetchReports]);
 
   const exportCSV = (data: Record<string, unknown>[], filename: string) => {
     if (data.length === 0) return;

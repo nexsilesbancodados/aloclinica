@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { getAdminNav } from "./adminNav";
@@ -405,11 +405,11 @@ function BeneficiariosDialog({ open, onOpenChange, contrato }: { open: boolean; 
   const [list, setList] = useState<any[]>([]);
   const [bulk, setBulk] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const { data } = await db.from("contrato_beneficiarios").select("*").eq("contrato_id", contrato.id).order("created_at", { ascending: false });
     setList(data ?? []);
-  };
-  useEffect(() => { if (open) load(); }, [open, contrato.id]);
+  }, [contrato.id]);
+  useEffect(() => { if (open) void load(); }, [load, open]);
 
   const importar = async () => {
     const linhas = bulk.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -489,11 +489,11 @@ function VouchersDialog({ open, onOpenChange, contrato }: { open: boolean; onOpe
   const [usos, setUsos] = useState("1");
   const [validade, setValidade] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const { data } = await db.from("vouchers").select("*").eq("contrato_id", contrato.id).order("created_at", { ascending: false });
     setList(data ?? []);
-  };
-  useEffect(() => { if (open) load(); }, [open, contrato.id]);
+  }, [contrato.id]);
+  useEffect(() => { if (open) void load(); }, [load, open]);
 
   const criar = async () => {
     if (!codigo.trim()) return;
@@ -555,11 +555,11 @@ function DocumentosDialog({ open, onOpenChange, contrato }: { open: boolean; onO
   const [tipo, setTipo] = useState("edital");
   const [uploading, setUploading] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const { data } = await db.from("contrato_documentos").select("*").eq("contrato_id", contrato.id).order("created_at", { ascending: false });
     setDocs(data ?? []);
-  };
-  useEffect(() => { if (open) load(); }, [open, contrato.id]);
+  }, [contrato.id]);
+  useEffect(() => { if (open) void load(); }, [load, open]);
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

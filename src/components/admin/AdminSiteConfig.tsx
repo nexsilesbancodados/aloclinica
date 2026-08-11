@@ -145,7 +145,7 @@ const AdminSiteConfig = () => {
 
   const handleChange = (key: string, val: string) => setValues((p) => ({ ...p, [key]: val }));
 
-  const rows = (cat: string) => configRows.filter((r) => r.category === cat);
+  const rows = useCallback((cat: string) => configRows.filter((r) => r.category === cat), [configRows]);
 
   // ── Confirmação de exclusão (planos/depoimentos/FAQ) ──────────────────────
 
@@ -181,7 +181,7 @@ const AdminSiteConfig = () => {
     { id: "aparencia", label: "Aparência", icon: Palette },
     { id: "seo", label: "SEO", icon: Search },
     { id: "integracoes", label: "Integrações", icon: Plug },
-  ], [configRows, plans.length, testimonials.length, faqItems.length]);
+  ], [faqItems.length, plans.length, rows, testimonials.length]);
 
   // ── Barra inline de salvar/descartar para cada categoria ──────────────────
 

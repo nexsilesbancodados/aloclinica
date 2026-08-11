@@ -73,14 +73,7 @@ const AdminApprovals = () => {
     }
   };
 
-  useEffect(() => { fetchAll(); }, []);
-
-  const fetchAll = async () => {
-    await Promise.all([fetchDoctors(), fetchClinics(), fetchPartners()]);
-    setLoading(false);
-  };
-
-  const fetchDoctors = async () => {
+  const fetchDoctors = useCallback(async () => {
     const { data } = await db.from("doctor_profiles")
       .select("id, user_id, crm, crm_state, is_approved, crm_verified, crm_verified_at, bio, consultation_price, experience_years, education, created_at")
       .order("created_at", { ascending: false });
@@ -106,9 +99,9 @@ const AdminApprovals = () => {
     });
     setPendingDoctors(enriched.filter(d => !d.is_approved));
     setApprovedDoctors(enriched.filter(d => d.is_approved));
-  };
+  }, []);
 
-  const fetchClinics = async () => {
+  const fetchClinics = useCallback(async () => {
     const { data } = await db.from("clinic_profiles").select("*").order("created_at", { ascending: false });
     if (!data) return;
     const userIds = data.map(c => c.user_id);
@@ -117,9 +110,9 @@ const AdminApprovals = () => {
     const enriched = data.map((c: any) => ({ ...c, owner_name: pMap.has(c.user_id) ? `${(pMap.get(c.user_id) as any)!.first_name} ${(pMap.get(c.user_id) as any)!.last_name}` : "—" }));
     setPendingClinics(enriched.filter(c => !c.is_approved));
     setApprovedClinics(enriched.filter(c => c.is_approved));
-  };
+  }, []);
 
-  const fetchPartners = async () => {
+  const fetchPartners = useCallback(async () => {
     const { data } = await db.from("partner_profiles").select("*").order("created_at", { ascending: false });
     if (!data) return;
     const userIds = data.map(p => p.user_id);
@@ -128,7 +121,14 @@ const AdminApprovals = () => {
     const enriched = data.map((p: any) => ({ ...p, owner_name: pMap.has(p.user_id) ? `${(pMap.get(p.user_id) as any)!.first_name} ${(pMap.get(p.user_id) as any)!.last_name}` : "—" }));
     setPendingPartners(enriched.filter(p => !p.is_approved));
     setApprovedPartners(enriched.filter(p => p.is_approved));
-  };
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    await Promise.all([fetchDoctors(), fetchClinics(), fetchPartners()]);
+    setLoading(false);
+  }, [fetchClinics, fetchDoctors, fetchPartners]);
+
+  useEffect(() => { void fetchAll(); }, [fetchAll]);
 
 
   const approve = async (id: string, type: "doctor" | "clinic" | "partner") => {
@@ -188,7 +188,7 @@ const AdminApprovals = () => {
     } finally {
       setVerifyingCrmId(null);
     }
-  }, []);
+  }, [fetchAll]);
 
   const reject = async () => {
     if (!rejectTarget) return;

@@ -1,6 +1,6 @@
 import { logError } from "@/lib/logger";
 import pingoAdmin from "@/assets/pingo-admin.png";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,7 +45,7 @@ const AdminDoctorApplications = () => {
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   
 
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     setLoading(true);
     let query = db.from("doctor_applications" as never).select("*").order("created_at", { ascending: false });
     if (filter !== "all") query = query.eq("status", filter);
@@ -54,9 +54,9 @@ const AdminDoctorApplications = () => {
     if (error) logError("AdminDoctorApplications fetch error", error);
     setApplications((data as unknown as DoctorApplication[]) ?? []);
     setLoading(false);
-  };
+  }, [filter, search]);
 
-  useEffect(() => { fetchApplications(); }, [filter, search]);
+  useEffect(() => { void fetchApplications(); }, [fetchApplications]);
 
   const handleApprove = async () => {
     if (!selectedApp) return;
