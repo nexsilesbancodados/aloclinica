@@ -154,7 +154,7 @@ const ContextGuard = ({ panel, forceRole, roles, children }: { panel: string; fo
   if (isAdmin) return <>{children}</>;
   // If ?role= is set and doesn't match this panel's expected context, redirect
   if (forceRole && forceRole !== panel) {
-    return <Navigate to={`/dashboard?role=${forceRole}`} replace />;
+    return <Navigate to={`/dashboard?role=${encodeURIComponent(forceRole)}`} replace />;
   }
   return <>{children}</>;
 };
@@ -382,7 +382,7 @@ const Dashboard = () => {
       {/* Fallback */}
       <Route
         path="*"
-        element={<Navigate to={`/dashboard${forceRole ? `?role=${forceRole}` : ''}`} replace />}
+        element={<Navigate to={`/dashboard${forceRole ? `?role=${encodeURIComponent(forceRole)}` : ''}`} replace />}
       />
     </Routes>
     </Suspense>
