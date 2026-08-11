@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,13 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  const caller = await getCaller(req);
+  if (!caller.user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -37,7 +45,7 @@ serve(async (req) => {
 
     const { data: appt } = await supabase
       .from("appointments")
-      .select("id, status")
+      .select("id, status, patient_id, doctor_id")
       .eq("id", appointmentId)
       .in("status", ["confirmed", "in_progress", "scheduled"])
       .maybeSingle();
@@ -46,6 +54,19 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Appointment not found or not active" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (!caller.isAdmin && caller.user.id !== appt.patient_id) {
+      const { data: doctorProfile } = await supabase
+        .from("doctor_profiles")
+        .select("user_id")
+        .eq("id", appt.doctor_id)
+        .maybeSingle();
+      if (doctorProfile?.user_id !== caller.user.id) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const appName = Deno.env.get("METERED_APP_NAME");

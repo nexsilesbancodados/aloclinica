@@ -14,6 +14,19 @@ interface State {
   error?: Error;
 }
 
+const CHUNK_ERROR_RE = /Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/i;
+const CHUNK_RECOVERY_KEY = "aloclinica:chunk-recovery-at";
+
+function recoverFromStaleChunk(error: Error): boolean {
+  if (!CHUNK_ERROR_RE.test(error.message)) return false;
+  let lastRecovery = 0;
+  try { lastRecovery = Number(sessionStorage.getItem(CHUNK_RECOVERY_KEY) ?? 0); } catch { /* storage blocked */ }
+  if (lastRecovery && Date.now() - lastRecovery <= 60_000) return false;
+  try { sessionStorage.setItem(CHUNK_RECOVERY_KEY, String(Date.now())); } catch { /* reload still helps */ }
+  window.setTimeout(() => window.location.reload(), 0);
+  return true;
+}
+
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -28,6 +41,7 @@ class ErrorBoundary extends Component<Props, State> {
     logError("ErrorBoundary — unhandled render error", error, {
       componentStack: errorInfo.componentStack,
     });
+    recoverFromStaleChunk(error);
   }
 
   render() {
@@ -52,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
               <p className="text-[13px] text-muted-foreground mb-4 leading-relaxed">
                 A Pingo encontrou um erro inesperado. Tente recarregar a página ou voltar ao início.
               </p>
-              {this.state.error && (
+              {this.state.error && import.meta.env.DEV && (
                 <pre className="text-left text-[10px] bg-red-50 rounded-xl p-3 mb-4 overflow-auto max-h-28 text-red-600 border border-red-100">
                   {this.state.error.message}
                   {"\n"}

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,12 +19,11 @@ interface NotifyRequest {
     data?: string;
     hora?: string;
     appointment_id?: string;
-    app_base_url?: string;
   };
 }
 
 const buildRoomLink = (d: NotifyRequest["dados"]) => {
-  const base = d.app_base_url || Deno.env.get("APP_BASE_URL") || "https://aloclinica.com.br";
+  const base = Deno.env.get("APP_BASE_URL") || "https://aloclinica.com.br";
   return d.appointment_id ? `${base}/dashboard/consultation/${d.appointment_id}` : `${base}/dashboard`;
 };
 
@@ -39,6 +39,16 @@ const TEMPLATES: Record<NotificationType, (d: NotifyRequest["dados"]) => string>
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // This function sends through the verified platform number and is only an
+  // internal notification worker. Do not expose it as an arbitrary recipient
+  // or phishing primitive to browser clients.
+  if (!isInternalOrService(req)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {

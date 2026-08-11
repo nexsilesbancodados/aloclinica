@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { db } from "@/integrations/supabase/untyped";
 import { warn } from "@/lib/logger";
@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const userIdRef = useRef<string | null>(null);
 
   const withAuthTimeout = useCallback(<T,>(promise: Promise<T>, label: string): Promise<T> => {
     return Promise.race<T>([
@@ -94,6 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setSession(nextSession);
         setUser(nextSession?.user ?? null);
+        userIdRef.current = nextSession?.user?.id ?? null;
 
         if (nextSession?.user) {
           await fetchUserData(nextSession.user.id);
@@ -122,8 +124,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 2. Listen for subsequent auth changes (sign in/out/token refresh)
     const { data: { subscription } } = db.auth.onAuthStateChange(
-      (_event, s) => {
+      (event, s) => {
         if (!mounted) return;
+
+        // Refreshing a token does not change the authenticated identity. Keep
+        // the dashboard mounted so active video calls and unsaved clinical
+        // forms are not destroyed during Supabase's automatic refresh.
+        if (event === "TOKEN_REFRESHED") {
+          setSession(s);
+          setUser(s?.user ?? null);
+          userIdRef.current = s?.user?.id ?? null;
+          return;
+        }
+
+        // The initial session is already hydrated by getSession() above. A
+        // user metadata update also keeps the current tree alive.
+        if (event === "INITIAL_SESSION") return;
+        if (event === "USER_UPDATED" && s?.user?.id === userIdRef.current) {
+          setSession(s);
+          setUser(s.user);
+          return;
+        }
+
+        // Re-emitting SIGNED_IN for the same user should not blank the app.
+        if (event === "SIGNED_IN" && s?.user?.id === userIdRef.current) {
+          setSession(s);
+          setUser(s.user);
+          return;
+        }
 
         setLoading(true);
         window.setTimeout(() => {

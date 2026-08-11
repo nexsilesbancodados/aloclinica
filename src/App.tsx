@@ -308,7 +308,25 @@ const App = () => {
             ? reason
             : JSON.stringify(reason ?? "unknown");
 
-      if (NON_FATAL_REJECTION_RE.test(reasonText) || CHUNK_REJECTION_RE.test(reasonText)) {
+      if (NON_FATAL_REJECTION_RE.test(reasonText)) {
+        return;
+      }
+
+      if (CHUNK_REJECTION_RE.test(reasonText)) {
+        // A deploy can invalidate a lazy chunk while an old tab is open. One
+        // guarded reload lets the browser obtain the new index/chunk pair;
+        // the session flag prevents an infinite reload loop if the CDN is
+        // still inconsistent.
+        const recoveryKey = "aloclinica:chunk-recovery-at";
+        let lastRecovery = 0;
+        try { lastRecovery = Number(sessionStorage.getItem(recoveryKey) ?? 0); } catch { /* storage blocked */ }
+        if (!lastRecovery || Date.now() - lastRecovery > 60_000) {
+          try { sessionStorage.setItem(recoveryKey, String(Date.now())); } catch { /* reload still helps */ }
+          window.location.reload();
+        } else if (Date.now() - lastUnhandledToastRef.current > 4000) {
+          toast.error("Uma nova versão está sendo carregada. Recarregue a página em instantes.");
+          lastUnhandledToastRef.current = Date.now();
+        }
         return;
       }
 

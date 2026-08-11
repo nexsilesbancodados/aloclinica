@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller, isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,15 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const trustedInternal = isInternalOrService(req);
+  const caller = trustedInternal ? null : await getCaller(req);
+  if (!trustedInternal && !caller?.user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -47,6 +57,17 @@ serve(async (req) => {
     // Get doctor profile
     const { data: doctorProfile } = await supabase
       .from("doctor_profiles").select("user_id, crm, crm_state").eq("id", appt.doctor_id).single();
+
+    if (!trustedInternal && !caller?.isAdmin) {
+      const isPatient = caller?.user?.id === appt.patient_id;
+      const isDoctor = caller?.user?.id === doctorProfile?.user_id;
+      if (!isPatient && !isDoctor) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const { data: doctorName } = doctorProfile
       ? await supabase.from("profiles").select("first_name, last_name, phone").eq("user_id", doctorProfile.user_id).single()

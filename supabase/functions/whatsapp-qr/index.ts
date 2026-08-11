@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { fetchEvolution, normalizeEvolutionUrl } from "../_shared/evolution.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,32 +15,6 @@ const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
 
 const isPlaceholder = (value?: string | null) =>
   !value || value.includes("PLACEHOLDER_VALUE_TO_BE_REPLACED") || value.trim() === "";
-
-const normalizeEvolutionUrl = (value?: string | null) => {
-  if (isPlaceholder(value)) return null;
-  const trimmed = value!.trim().replace(/\/+$/, "");
-  try {
-    const url = new URL(trimmed);
-    if (!/^https?:$/.test(url.protocol)) return null;
-    return url.toString().replace(/\/+$/, "");
-  } catch {
-    return null;
-  }
-};
-
-const fetchEvo = async (url: string, opts: RequestInit = {}): Promise<Response> => {
-  try {
-    return await fetch(url, opts);
-  } catch (error: any) {
-    const errStr = String(error);
-    if (errStr.includes("certificate") || errStr.includes("tls") || errStr.includes("CaUsedAsEndEntity")) {
-      console.warn("TLS error, retrying with HTTP:", error);
-      const httpUrl = url.replace(/^https:\/\//, "http://");
-      return await fetch(httpUrl, opts);
-    }
-    throw error;
-  }
-};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -74,7 +49,7 @@ serve(async (req) => {
     // Create instance
     if (action === "create") {
       const name = instanceName || `allo-medico-${Date.now()}`;
-      const res = await fetchEvo(`${baseUrl}/instance/create`, {
+      const res = await fetchEvolution(`${baseUrl}/instance/create`, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -96,7 +71,7 @@ serve(async (req) => {
       if (!instanceName) {
         return jsonResponse({ success: false, error: "instanceName is required" }, 400);
       }
-      const res = await fetchEvo(`${baseUrl}/instance/connect/${instanceName}`, {
+      const res = await fetchEvolution(`${baseUrl}/instance/connect/${instanceName}`, {
         method: "GET",
         headers,
       });
@@ -113,7 +88,7 @@ serve(async (req) => {
       if (!instanceName) {
         return jsonResponse({ success: false, error: "instanceName is required" }, 400);
       }
-      const res = await fetchEvo(`${baseUrl}/instance/connectionState/${instanceName}`, {
+      const res = await fetchEvolution(`${baseUrl}/instance/connectionState/${instanceName}`, {
         method: "GET",
         headers,
       });
@@ -123,7 +98,7 @@ serve(async (req) => {
 
     // List instances
     if (action === "list") {
-      const res = await fetchEvo(`${baseUrl}/instance/fetchInstances`, {
+      const res = await fetchEvolution(`${baseUrl}/instance/fetchInstances`, {
         method: "GET",
         headers,
       });
@@ -136,7 +111,7 @@ serve(async (req) => {
       if (!instanceName) {
         return jsonResponse({ success: false, error: "instanceName is required" }, 400);
       }
-      const res = await fetchEvo(`${baseUrl}/instance/delete/${instanceName}`, {
+      const res = await fetchEvolution(`${baseUrl}/instance/delete/${instanceName}`, {
         method: "DELETE",
         headers,
       });

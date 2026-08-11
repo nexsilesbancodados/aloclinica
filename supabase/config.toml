@@ -66,8 +66,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.cart-abandonment]
 verify_jwt = false
-[functions.notify-expired-prescriptions]
-verify_jwt = false
 [functions.weekly-admin-report]
 verify_jwt = false
 

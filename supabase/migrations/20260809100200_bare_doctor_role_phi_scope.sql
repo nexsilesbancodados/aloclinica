@@ -2,8 +2,8 @@
 -- P0 (PHI): o papel `doctor` PURO — obtido no auto-cadastro, sem convite e sem
 -- aprovação — já dava leitura de dados clínicos de TODOS os pacientes.
 -- ----------------------------------------------------------------------------
--- Contexto: `handle_new_user` aceita role='doctor' vindo do metadata do signUp
--- (whitelist da migration 20260724190000). Isso é INTENCIONAL e correto: existe
+-- Contexto: `handle_new_user` aceita role='doctor' vindo do metadata do signUp.
+-- Isso é INTENCIONAL e correto: existe
 -- uma jornada legítima de CANDIDATURA aberta (SignupDoctor → /aguardando-aprovacao),
 -- em que o médico se cadastra sem código de convite e um admin aprova depois.
 -- Portanto o papel NÃO deve ser removido da whitelist — quebraria esse fluxo.

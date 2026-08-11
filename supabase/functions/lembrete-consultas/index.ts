@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,13 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!isInternalOrService(req)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -79,6 +87,7 @@ serve(async (req) => {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${anonKey}`,
+              "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
             },
             body: JSON.stringify({
               tipo: "lembrete_1h",
