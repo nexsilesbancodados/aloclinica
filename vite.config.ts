@@ -25,7 +25,10 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/\/functions\//, /supabase\.co/, /\.(?:png|jpg|jpeg|svg|webp|webm|mp4|pdf)$/],
-        globPatterns: ["**/*.{ico,png,svg,woff2}"],
+        // The navigation fallback must be precached together with the shell
+        // and its hashed bundles. Without index.html here, Workbox throws
+        // `non-precached-url` and a stale PWA can render a blank page.
+        globPatterns: ["**/*.{html,js,css,ico,png,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         skipWaiting: true,
         clientsClaim: true,
