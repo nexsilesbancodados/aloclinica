@@ -55,7 +55,7 @@ jobs:
             "SELECT COUNT(*) AS total FROM profiles;"
 
           run_query "5. Status migration MP (gateway das tabelas)" \
-            "SELECT * FROM payment_gateway_status;"
+            "SELECT CASE WHEN to_regclass('public.payment_gateway_status') IS NULL THEN json_build_object('status','not_created','reason','view ausente; revisar migration 20260512_mercadopago_migration.sql antes de aplicar') ELSE json_build_object('status','ok','rows',(SELECT json_agg(payment_gateway_status) FROM public.payment_gateway_status)) END AS payment_gateway_status;"
 
           run_query "6. Coluna mp_preapproval_id existe em pingo_card_subscriptions?" \
             "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='pingo_card_subscriptions' AND column_name LIKE 'mp_%';"

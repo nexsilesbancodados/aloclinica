@@ -107,6 +107,20 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
 3. Container nginx rodando? `ssh root@72.62.138.208 'docker ps | grep aloclinica-web'`
 4. Traefik forwarding? Logs: `docker logs easypanel-traefik.* --tail 20`
 
+### "Domínio mostra uma versão antiga"
+Compare a origem da VPS com o domínio passando pelo Cloudflare:
+
+```bash
+curl -skL --resolve aloclinica.com.br:443:72.62.138.208 https://aloclinica.com.br/ | grep -o 'index-[A-Za-z0-9_-]*.js' | head -1
+curl -skL https://aloclinica.com.br/ | grep -o 'index-[A-Za-z0-9_-]*.js' | head -1
+```
+
+Se os hashes forem diferentes, o deploy da VPS está correto, mas o origin do
+Cloudflare ainda aponta para outro servidor (ou a zona está usando uma regra de
+origem antiga). No Cloudflare, confirme `aloclinica.com.br` e `www` apontando
+para `72.62.138.208`, remova regras de origem/Workers antigos e faça purge do
+cache. Não altere DNS sem validar também os subdomínios de vídeo e WhatsApp.
+
 ---
 
 ## Manutenção rotineira
