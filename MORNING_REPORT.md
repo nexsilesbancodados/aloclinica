@@ -106,7 +106,7 @@ idêntico — flake de carga, não regressão. Na rodada final os dois passaram.
 ```
 394a1dd7  fix(admin): importar Handshake e travar a regressao no PanelCenter
 8e0fb88e  fix(navegacao): corrigir links mortos e travar regressao
-<docs>     docs: registrar trabalho autonomo e bloqueios
+739cbeba  docs: registrar trabalho autonomo, bloqueios e auditoria de esquema
 ```
 
 (`6bf633e0`, de ocultar widgets de usuário comum no console admin, é de antes
