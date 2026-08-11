@@ -811,7 +811,7 @@ const PanelCenter = () => {
               { label: "Site Config", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10", route: "/dashboard/admin/site-config?role=admin" },
               { label: "Relatórios", icon: PieChart, color: "text-amber-500", bg: "bg-amber-500/10", route: "/dashboard/admin/reports?role=admin" },
               { label: "Banco Dados", icon: Database, color: "text-emerald-500", bg: "bg-emerald-500/10", route: "/dashboard/admin/health?role=admin" },
-              { label: "Auditoria", icon: ShieldCheck, color: "text-indigo-500", bg: "bg-indigo-500/10", route: "/dashboard/admin/audit?role=admin" },
+              { label: "Auditoria", icon: ShieldCheck, color: "text-indigo-500", bg: "bg-indigo-500/10", route: "/dashboard/admin/logs?role=admin" },
               { label: "Usuários", icon: UserPlus, color: "text-orange-500", bg: "bg-orange-500/10", route: "/dashboard/admin/users?role=admin" },
             ].map((action) => (
               <Button

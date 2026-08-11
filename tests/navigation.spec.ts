@@ -58,15 +58,19 @@ test.describe("Navigation & responsiveness", () => {
     await expect(page.locator("body")).toBeVisible();
   });
 
+  // Estes dois testes iam para /termos e /privacidade — rotas que não existem —
+  // e passavam mesmo assim, porque só exigiam que o <body> estivesse visível, o
+  // que a página de 404 também satisfaz. Agora usam a URL canônica (a mesma do
+  // sitemap) e conferem o título, então um 404 reprova.
   test("terms page loads correctly", async ({ page }) => {
-    await page.goto("/termos");
+    await page.goto("/terms");
     await page.waitForLoadState("domcontentloaded");
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Termos de Uso" })).toBeVisible();
   });
 
   test("privacy page loads correctly", async ({ page }) => {
-    await page.goto("/privacidade");
+    await page.goto("/privacy");
     await page.waitForLoadState("domcontentloaded");
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Política de Privacidade" })).toBeVisible();
   });
 });

@@ -149,7 +149,7 @@ const GlobalCommand = ({ role = "patient" }: GlobalCommandProps) => {
 
         // 2) Receitas — pelo diagnóstico
         const { data: rxs } = await db.from("prescriptions")
-          .select("id, diagnosis, created_at, patient_id, doctor_id")
+          .select("id, appointment_id, diagnosis, created_at, patient_id, doctor_id")
           .eq(isDoctor ? "doctor_id" : "patient_id", userId)
           .ilike("diagnosis", `%${q}%`)
           .order("created_at", { ascending: false })
@@ -159,7 +159,13 @@ const GlobalCommand = ({ role = "patient" }: GlobalCommandProps) => {
             type: "rx", id: r.id,
             title: `Receita: ${r.diagnosis?.slice(0, 60) || "(sem diagnóstico)"}`,
             subtitle: new Date(r.created_at).toLocaleDateString("pt-BR"),
-            href: isDoctor ? `/dashboard/prescriptions/${r.id}` : `/dashboard/patient/prescriptions?appt=${r.id}`,
+            // O médico vai para a lista de receitas (não há rota de detalhe) e o
+            // paciente para o histórico, destacando a consulta da receita —
+            // antes ia `appt=<id da receita>`, que nunca casaria com consulta
+            // nenhuma mesmo se a rota existisse.
+            href: isDoctor
+              ? "/dashboard/prescriptions?role=doctor"
+              : `/dashboard/history?role=patient&appt=${r.appointment_id}`,
           });
         }
 

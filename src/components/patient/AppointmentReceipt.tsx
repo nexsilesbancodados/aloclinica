@@ -121,7 +121,7 @@ const AppointmentReceipt = () => {
           <p className="text-sm text-muted-foreground mb-5">
             Você não tem permissão para visualizar este recibo. Ele pertence a outro paciente.
           </p>
-          <Button variant="outline" onClick={() => navigate("/dashboard/patient/appointments")} className="rounded-xl">
+          <Button variant="outline" onClick={() => navigate("/dashboard/appointments?role=patient")} className="rounded-xl">
             <ArrowLeft className="w-4 h-4 mr-2" /> Voltar às minhas consultas
           </Button>
         </div>

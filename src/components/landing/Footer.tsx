@@ -179,8 +179,8 @@ const Footer = memo(forwardRef<HTMLElement, { config?: any }>(({ config }, ref) 
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/75 mb-4">Suporte & Legal</h4>
             <ul className="space-y-3 text-sm text-white/60">
               <li><Link to="/ajuda" className="hover:text-primary transition-colors flex items-center gap-2"><Question className="w-3.5 h-3.5 text-teal-400" weight="fill" /> Central de Ajuda</Link></li>
-              <li><Link to="/termos" className="hover:text-primary transition-colors">Termos de Uso</Link></li>
-              <li><Link to="/privacidade" className="hover:text-primary transition-colors">Política de Privacidade</Link></li>
+              <li><Link to="/terms" className="hover:text-primary transition-colors">Termos de Uso</Link></li>
+              <li><Link to="/privacy" className="hover:text-primary transition-colors">Política de Privacidade</Link></li>
               <li><Link to="/lgpd" className="hover:text-primary transition-colors">LGPD</Link></li>
             </ul>
           </div>

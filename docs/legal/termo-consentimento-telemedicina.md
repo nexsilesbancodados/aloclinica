@@ -77,7 +77,7 @@ Autorizo o tratamento dos meus dados pessoais e de saúde para as finalidades:
 - Informação sobre compartilhamentos
 - Revogação do consentimento
 
-Para exercer qualquer direito, contatar o **DPO** em `dpo@aloclinica.com.br` ou pelo painel `/dashboard/privacidade`.
+Para exercer qualquer direito, contatar o **DPO** em `dpo@aloclinica.com.br` ou pelo painel `/dashboard/patient/lgpd`.
 
 ## 5. Gravação e compartilhamento
 
@@ -136,7 +136,7 @@ Ao clicar em **"Concordo com o Termo"**:
 - Versão do termo: 1.0
 - Hash criptográfico da minha aceitação: gerado automaticamente
 
-Esse aceite é armazenado pela AloClínica em forma imutável (`patient_consents` table com auditoria) por **20 anos** e está disponível para consulta no meu painel `/dashboard/privacidade`.
+Esse aceite é armazenado pela AloClínica em forma imutável (`patient_consents` table com auditoria) por **20 anos** e está disponível para consulta no meu painel `/dashboard/patient/lgpd`.
 
 ---
 

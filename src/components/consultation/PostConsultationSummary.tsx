@@ -497,7 +497,7 @@ const PostConsultationSummary = ({
           {!isDoctor && hasPrescription && (
             <Button
               variant="ghost"
-              onClick={() => navigate(`/dashboard/patient/prescriptions?appt=${appointmentId}`)}
+              onClick={() => navigate(`/dashboard/history?role=patient&appt=${appointmentId}`)}
               className="w-full h-11 rounded-xl text-sm gap-2"
             >
               <Download className="w-4 h-4" />

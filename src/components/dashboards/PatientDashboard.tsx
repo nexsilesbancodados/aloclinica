@@ -48,7 +48,7 @@ const getQuickActions = (serviceType: ServiceType) => [
   { label: "Urgência", icon: Lightning,       path: "/dashboard/urgent-care?role=patient",                   color: "hsl(0,72%,48%)",   bg: "hsl(0,72%,48%,0.08)"   },
   { label: "Pingo IA", icon: Robot,           path: "/dashboard/ai-assistant?role=patient&tab=triagem",      color: "hsl(195,70%,38%)", bg: "hsl(195,70%,38%,0.10)" },
   { label: "Chat",     icon: ChatCircleDots,  path: "/dashboard/chat?role=patient",                          color: "hsl(168,55%,35%)", bg: "hsl(168,55%,35%,0.10)" },
-  { label: "Exames",   icon: ClipboardText,   path: "/dashboard/patient/exam-results?role=patient",          color: "hsl(225,55%,40%)", bg: "hsl(225,55%,40%,0.08)" },
+  { label: "Exames",   icon: ClipboardText,   path: "/dashboard/patient/exams?role=patient",                 color: "hsl(225,55%,40%)", bg: "hsl(225,55%,40%,0.08)" },
 ];
 
 const getGreeting = () => {

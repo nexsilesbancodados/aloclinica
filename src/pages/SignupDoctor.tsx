@@ -799,9 +799,9 @@ export default function SignupDoctor() {
 
               <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
                 Ao se cadastrar, você concorda com nossos{" "}
-                <button type="button" onClick={() => navigate("/termos")} className="underline hover:text-foreground">Termos</button>{" "}
+                <button type="button" onClick={() => navigate("/terms")} className="underline hover:text-foreground">Termos</button>{" "}
                 e{" "}
-                <button type="button" onClick={() => navigate("/privacidade")} className="underline hover:text-foreground">Política de Privacidade</button>.
+                <button type="button" onClick={() => navigate("/privacy")} className="underline hover:text-foreground">Política de Privacidade</button>.
               </p>
 
               <p className="text-center text-sm text-muted-foreground">

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import mascotReading from "@/assets/mascot-reading.png";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +47,15 @@ interface HistoryAppointment {
 const MedicalHistory = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+  const [searchParams] = useSearchParams();
+
+  // Deep link vinda do resumo pós-consulta, da busca global e do detalhe da
+  // consulta: ?appt=<id> destaca a consulta em vez de largar o paciente no
+  // topo de uma lista longa. Só destaca — não dispara o resumo de IA, que é
+  // uma ação explícita (e paga) do usuário.
+  const focusedAppointmentId = searchParams.get("appt");
+  const hasScrolledToFocus = useRef(false);
+
   const [appointments, setAppointments] = useState<HistoryAppointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
@@ -55,6 +63,14 @@ const MedicalHistory = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => { if (user) fetchHistory(); }, [user]);
+
+  useEffect(() => {
+    if (!focusedAppointmentId || loading || hasScrolledToFocus.current) return;
+    const card = document.getElementById(`appointment-${focusedAppointmentId}`);
+    if (!card) return;
+    hasScrolledToFocus.current = true;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusedAppointmentId, loading, appointments]);
 
   const fetchHistory = async () => {
     const { data: appts } = await db
@@ -169,7 +185,11 @@ const MedicalHistory = () => {
         ) : (
           <div className="space-y-4">
             {appointments.map(a => (
-              <Card key={a.id} className="border-border">
+              <Card
+                key={a.id}
+                id={`appointment-${a.id}`}
+                className={a.id === focusedAppointmentId ? "border-primary ring-2 ring-primary/30" : "border-border"}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>

@@ -367,7 +367,7 @@ const AppointmentDetail = () => {
               {prescriptions.map((p) => (
                 <a
                   key={p.id}
-                  href={p.pdf_url ?? `/dashboard/patient/prescriptions?appt=${appt.id}`}
+                  href={p.pdf_url ?? `/dashboard/history?role=patient&appt=${appt.id}`}
                   target={p.pdf_url ? "_blank" : undefined}
                   rel="noopener noreferrer"
                   className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/40 hover:border-primary/30 hover:bg-primary/[0.04] transition-colors group"

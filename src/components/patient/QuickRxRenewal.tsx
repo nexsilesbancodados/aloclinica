@@ -121,7 +121,7 @@ const QuickRxRenewal = () => {
         ) : !rx ? (
           <EmptyState variant="error" icon={AlertCircle} title="Receita não encontrada"
             description="Verifique o link ou acesse o histórico para escolher uma receita."
-            action={{ label: "Ver minhas receitas", onClick: () => navigate("/dashboard/patient/prescriptions") }} />
+            action={{ label: "Ver minhas receitas", onClick: () => navigate("/dashboard/history?role=patient") }} />
         ) : done ? (
           <Card>
             <CardContent className="p-8 text-center space-y-3">
@@ -130,7 +130,7 @@ const QuickRxRenewal = () => {
               </div>
               <p className="font-semibold text-foreground">Pedido enviado</p>
               <p className="text-sm text-muted-foreground">Você será notificado assim que o médico aprovar.</p>
-              <Button onClick={() => navigate("/dashboard/patient/prescriptions")} className="rounded-xl">
+              <Button onClick={() => navigate("/dashboard/history?role=patient")} className="rounded-xl">
                 Ver minhas receitas <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </CardContent>
