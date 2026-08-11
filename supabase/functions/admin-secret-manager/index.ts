@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { getCaller, checkRateLimit } from "../_shared/auth.ts";
+import { getCaller, checkRateLimit, type Caller } from "../_shared/auth.ts";
 import { RUNTIME_FLAGS, SECRET_DEFINITIONS } from "../_shared/secret-catalog.ts";
 
 const corsHeaders = {
@@ -42,6 +42,163 @@ const isConfigured = (key: string) => {
   ].some((token) => normalized.includes(token));
 };
 
+type HealthStatus = "ok" | "down" | "unconfigured";
+type HealthCheck = {
+  key: string;
+  label: string;
+  status: HealthStatus;
+  detail: string;
+  latencyMs?: number;
+  critical?: boolean;
+};
+
+const timedFetch = async (url: string, headers: Record<string, string> = {}) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6_000);
+  try {
+    return await fetch(url, { method: "GET", headers, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const httpHealth = async (
+  key: string,
+  label: string,
+  url: string | undefined,
+  headers: Record<string, string>,
+  critical = false,
+): Promise<HealthCheck> => {
+  if (!url) return { key, label, status: "unconfigured", detail: "Endpoint não configurado", critical };
+  const started = performance.now();
+  try {
+    const response = await timedFetch(url, headers);
+    const latencyMs = Math.round(performance.now() - started);
+    if (response.status >= 500) {
+      return { key, label, status: "down", detail: `HTTP ${response.status}`, latencyMs, critical };
+    }
+    if (response.status === 401 || response.status === 403) {
+      return { key, label, status: "down", detail: `Credencial recusada (HTTP ${response.status})`, latencyMs, critical };
+    }
+    return { key, label, status: "ok", detail: `Respondendo (HTTP ${response.status})`, latencyMs, critical };
+  } catch (error) {
+    return {
+      key,
+      label,
+      status: "down",
+      detail: error instanceof Error && error.name === "AbortError" ? "Timeout após 6s" : "Sem resposta",
+      latencyMs: Math.round(performance.now() - started),
+      critical,
+    };
+  }
+};
+
+type AdminCaller = Caller & { user: NonNullable<Caller["user"]>; client: NonNullable<Caller["client"]> };
+
+const runHealthChecks = async (caller: AdminCaller) => {
+  const services: HealthCheck[] = [];
+
+  const dbStarted = performance.now();
+  const { error: dbError } = await caller.client.from("specialties").select("id").limit(1);
+  services.push({
+    key: "database",
+    label: "Banco de dados",
+    status: dbError ? "down" : "ok",
+    detail: dbError?.message ?? "Respondendo",
+    latencyMs: Math.round(performance.now() - dbStarted),
+    critical: true,
+  });
+
+  const authStarted = performance.now();
+  services.push({
+    key: "auth",
+    label: "Autenticação",
+    status: "ok",
+    detail: "Sessão administrativa válida",
+    latencyMs: Math.round(performance.now() - authStarted),
+    critical: true,
+  });
+
+  const storageStarted = performance.now();
+  const { error: storageError } = await caller.client.storage.from("avatars").list("", { limit: 1 });
+  services.push({
+    key: "storage",
+    label: "Armazenamento",
+    status: storageError ? "down" : "ok",
+    detail: storageError?.message ?? "Bucket avatars acessível",
+    latencyMs: Math.round(performance.now() - storageStarted),
+    critical: true,
+  });
+
+  const integrationChecks = await Promise.all([
+    httpHealth(
+      "email",
+      "E-mail / Brevo",
+      isConfigured("BREVO_API_KEY") ? "https://api.brevo.com/v3/account" : undefined,
+      Deno.env.get("BREVO_API_KEY") ? { "api-key": Deno.env.get("BREVO_API_KEY")! } : {},
+      true,
+    ),
+    httpHealth(
+      "whatsapp",
+      "WhatsApp / Evolution",
+      isConfigured("EVOLUTION_API_URL") ? Deno.env.get("EVOLUTION_API_URL") : undefined,
+      Deno.env.get("EVOLUTION_API_KEY") ? { apikey: Deno.env.get("EVOLUTION_API_KEY")! } : {},
+    ),
+    httpHealth(
+      "payments",
+      "Pagamentos / Mercado Pago",
+      isConfigured("MERCADOPAGO_ACCESS_TOKEN") ? "https://api.mercadopago.com/users/me" : undefined,
+      Deno.env.get("MERCADOPAGO_ACCESS_TOKEN") ? { Authorization: `Bearer ${Deno.env.get("MERCADOPAGO_ACCESS_TOKEN")!}` } : {},
+      true,
+    ),
+    httpHealth(
+      "video",
+      "Vídeo / MiroTalk",
+      isConfigured("MIROTALK_URL") ? Deno.env.get("MIROTALK_URL") : undefined,
+      Deno.env.get("MIROTALK_API_KEY") ? { Authorization: `Bearer ${Deno.env.get("MIROTALK_API_KEY")!}` } : {},
+    ),
+    httpHealth(
+      "kyc",
+      "KYC / CompreFace",
+      isConfigured("COMPREFACE_URL") ? Deno.env.get("COMPREFACE_URL") : undefined,
+      (Deno.env.get("COMPREFACE_VERIFY_KEY") ?? Deno.env.get("COMPREFACE_API_KEY"))
+        ? { "x-api-key": (Deno.env.get("COMPREFACE_VERIFY_KEY") ?? Deno.env.get("COMPREFACE_API_KEY"))! }
+        : {},
+    ),
+  ]);
+  services.push(...integrationChecks);
+
+  if (isConfigured("FOCUS_NFE_TOKEN")) {
+    services.push({ key: "nfse", label: "NFS-e / Focus", status: "ok", detail: "Credencial presente; endpoint não testado", critical: false });
+  } else {
+    services.push({ key: "nfse", label: "NFS-e / Focus", status: "unconfigured", detail: "Credencial não configurada", critical: false });
+  }
+
+  const { data: backupLog } = await caller.client
+    .from("activity_logs")
+    .select("created_at, details")
+    .eq("action", "daily_backup_run")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const backupDate = backupLog?.created_at ? new Date(backupLog.created_at) : null;
+  const backupAgeHours = backupDate ? (Date.now() - backupDate.getTime()) / 3_600_000 : Infinity;
+  services.push({
+    key: "backup",
+    label: "Backup diário",
+    status: backupAgeHours <= 26 ? "ok" : backupDate ? "down" : "unconfigured",
+    detail: backupDate ? `Último backup ${backupDate.toISOString()}` : "Nenhum backup registrado",
+    latencyMs: 0,
+    critical: true,
+  });
+
+  return {
+    checkedAt: new Date().toISOString(),
+    services,
+    backup: backupLog ? { lastRunAt: backupLog.created_at, details: backupLog.details } : null,
+  };
+};
+
 const projectRefFromUrl = () => {
   const configured = Deno.env.get("SUPABASE_PROJECT_REF")?.trim();
   if (configured && /^[a-z0-9]+$/.test(configured)) return configured;
@@ -62,10 +219,6 @@ serve(async (req) => {
   const caller = await getCaller(req);
   if (!caller.user) return json({ error: "Não autenticado" }, 401);
   if (!caller.isAdmin) return json({ error: "Acesso restrito a administradores" }, 403);
-
-  if (!await checkRateLimit(caller.user.id, "admin-secret-manager", 10, 10)) {
-    return json({ error: "Muitas alterações. Aguarde alguns minutos." }, 429);
-  }
 
   let body: { action?: unknown; updates?: unknown };
   try {
@@ -88,6 +241,19 @@ serve(async (req) => {
         enabled: Deno.env.get(flag.key)?.trim().toLowerCase() === "true",
       })),
     });
+  }
+
+  if (body.action === "health") {
+    if (!caller.user || !caller.client) return json({ error: "Sessão administrativa indisponível" }, 401);
+    return json(await runHealthChecks({
+      user: caller.user,
+      isAdmin: caller.isAdmin,
+      client: caller.client,
+    }));
+  }
+
+  if (!await checkRateLimit(caller.user.id, "admin-secret-manager", 10, 10)) {
+    return json({ error: "Muitas alterações. Aguarde alguns minutos." }, 429);
   }
 
   const managementToken = Deno.env.get("PROJECT_SECRETS_MANAGEMENT_TOKEN")?.trim();

@@ -8,6 +8,7 @@ import { ContratoProvider } from "@/contexts/ContratoContext";
 import ThemeApplier from "@/components/ThemeApplier";
 import { ThemeProvider } from "next-themes";
 import { I18nProvider } from "@/i18n";
+import { FeatureFlagsProvider } from "@/hooks/use-feature-flags";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -18,6 +19,7 @@ import { logError } from "@/lib/logger";
 import { prefetchOnIdle } from "./hooks/use-prefetch-route";
 import ScrollToTop from "./components/ScrollToTop";
 import { PingoAssistantChat } from "@/components/ai/PingoAssistantChat";
+import MaintenanceBanner from "@/components/MaintenanceBanner";
 
 const Auth = lazy(() => import("./pages/Auth"));
 
@@ -321,6 +323,7 @@ const App = () => {
               <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <AuthProvider>
+                <FeatureFlagsProvider>
                 <ContratoProvider>
                   <Suspense fallback={null}>
                     <KeyboardShortcutsProvider />
@@ -340,6 +343,8 @@ const App = () => {
                     </Suspense>
                   </main>
 
+                  <MaintenanceBanner />
+
                   {showDeferredFeatures && (
                     <ErrorBoundary fallback={null}>
                       <Suspense fallback={null}>
@@ -352,6 +357,7 @@ const App = () => {
                     </ErrorBoundary>
                   )}
                 </ContratoProvider>
+                </FeatureFlagsProvider>
                 </AuthProvider>
               </BrowserRouter>
               </ConfirmProvider>

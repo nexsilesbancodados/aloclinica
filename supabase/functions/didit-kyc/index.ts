@@ -7,9 +7,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const COMPREFACE_URL = "http://72.62.138.208:8000";
-const COMPREFACE_VERIFY_KEY = "5f3c100e-0144-465d-87b3-86c34ba70a1e";
-const COMPREFACE_DETECT_KEY = "a2d930ec-e3ee-46b4-b770-023524e41178";
+const COMPREFACE_URL = Deno.env.get("COMPREFACE_URL")?.replace(/\/+$/, "") ?? "";
+const COMPREFACE_VERIFY_KEY = Deno.env.get("COMPREFACE_VERIFY_KEY") ?? "";
+const COMPREFACE_DETECT_KEY = Deno.env.get("COMPREFACE_DETECT_KEY") ?? Deno.env.get("COMPREFACE_API_KEY") ?? "";
 
 // Strict anti-fraud thresholds
 const MIN_SIMILARITY = 0.90;      // 90% face match required
@@ -129,6 +129,13 @@ Deno.serve(async (req) => {
       });
     }
     const userId = user.id;
+
+    if (!COMPREFACE_URL || !COMPREFACE_VERIFY_KEY || !COMPREFACE_DETECT_KEY) {
+      return new Response(JSON.stringify({
+        error: "KYC indisponível: configure COMPREFACE_URL, COMPREFACE_VERIFY_KEY e COMPREFACE_DETECT_KEY nos secrets da função.",
+        stage: "configuration",
+      }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const { document_image, selfie_image, document_back, document_type } = await req.json();
     if (!document_image || !selfie_image) {

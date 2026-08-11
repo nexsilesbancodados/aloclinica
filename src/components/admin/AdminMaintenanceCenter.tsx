@@ -81,8 +81,11 @@ const serviceIcons: Record<string, React.ReactNode> = {
   email: <Mail className="h-4 w-4" aria-hidden="true" />,
   video: <Video className="h-4 w-4" aria-hidden="true" />,
   payments: <Activity className="h-4 w-4" aria-hidden="true" />,
+  auth: <LockKeyhole className="h-4 w-4" aria-hidden="true" />,
+  storage: <Database className="h-4 w-4" aria-hidden="true" />,
   kyc: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
   nfse: <FileCheck2 className="h-4 w-4" aria-hidden="true" />,
+  backup: <ClipboardCheck className="h-4 w-4" aria-hidden="true" />,
 };
 
 const serviceLabel: Record<string, string> = {
@@ -91,8 +94,11 @@ const serviceLabel: Record<string, string> = {
   email: "E-mail / Brevo",
   video: "Vídeo / MiroTalk",
   payments: "Mercado Pago",
+  auth: "Autenticação",
+  storage: "Armazenamento",
   kyc: "KYC / CompreFace",
   nfse: "NFS-e / Focus",
+  backup: "Backup diário",
 };
 
 const formatDate = (value?: string | null) => {
@@ -125,6 +131,8 @@ const AdminMaintenanceCenter = () => {
   const [revealedSecrets, setRevealedSecrets] = useState<Record<string, boolean>>({});
   const [savingSecrets, setSavingSecrets] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+  const [backupRunning, setBackupRunning] = useState(false);
   const nav = getAdminNav("maintenance");
   const managementReady = secrets.some((secret) => secret.key === "PROJECT_SECRETS_MANAGEMENT_TOKEN" && secret.configured === true);
 
@@ -156,13 +164,41 @@ const AdminMaintenanceCenter = () => {
     }
   }, []);
 
-  useEffect(() => { void loadSecrets(); }, [loadSecrets]);
+  const loadBackupStatus = useCallback(async () => {
+    const { data } = await db
+      .from("activity_logs")
+      .select("created_at")
+      .eq("action", "daily_backup_run")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setLastBackupAt(data?.created_at ?? null);
+  }, []);
+
+  useEffect(() => {
+    void Promise.allSettled([loadSecrets(), loadBackupStatus()]);
+  }, [loadBackupStatus, loadSecrets]);
 
   const refreshAll = async () => {
     setRefreshing(true);
-    await Promise.allSettled([health.refresh(), loadSecrets()]);
+    await Promise.allSettled([health.refresh(), loadSecrets(), loadBackupStatus()]);
     setRefreshing(false);
     toast.success("Diagnóstico atualizado");
+  };
+
+  const runBackup = async () => {
+    if (!window.confirm("Executar um backup completo agora? A operação lê os dados operacionais e grava uma cópia privada no Storage.")) return;
+    setBackupRunning(true);
+    try {
+      const { data, error } = await db.functions.invoke("daily-backup", { body: { source: "admin-maintenance" } });
+      if (error || data?.error) throw new Error(data?.error ?? error?.message ?? "Backup não executado");
+      await loadBackupStatus();
+      toast.success("Backup concluído", { description: `${Object.keys(data?.summary ?? {}).length} conjuntos de dados processados.` });
+    } catch (error) {
+      toast.error("Não foi possível executar o backup", { description: error instanceof Error ? error.message : "Verifique os logs da função daily-backup." });
+    } finally {
+      setBackupRunning(false);
+    }
   };
 
   const saveSecrets = async () => {
@@ -270,11 +306,30 @@ const AdminMaintenanceCenter = () => {
           </CardContent>
         </Card>
 
+        <Card id="backup" className="border-primary/20">
+          <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-primary/10 p-2.5 text-primary"><Database className="h-5 w-5" aria-hidden="true" /></div>
+              <div>
+                <p className="font-semibold">Backup operacional</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {lastBackupAt ? `Último backup registrado em ${formatDate(lastBackupAt)}.` : "Nenhum backup registrado no histórico ainda."}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">A cópia é privada no Storage e a execução fica registrada na auditoria.</p>
+              </div>
+            </div>
+            <Button variant="outline" className="shrink-0 gap-2" onClick={runBackup} disabled={backupRunning}>
+              <Database className={backupRunning ? "h-4 w-4 animate-pulse" : "h-4 w-4"} aria-hidden="true" />
+              {backupRunning ? "Executando..." : "Executar backup agora"}
+            </Button>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base"><Server className="h-4 w-4 text-primary" aria-hidden="true" /> Saúde dos serviços</CardTitle>
-              <CardDescription>Verificação básica dos serviços acessíveis pelo navegador. O inventário de secrets continua protegido no servidor.</CardDescription>
+              <CardDescription>Diagnóstico server-side dos serviços críticos, com fallback limitado no navegador quando a função não estiver disponível.</CardDescription>
             </CardHeader>
             <CardContent>
               {health.loading && services.length === 0 ? <AdminLoading variant="list" count={5} /> : services.length === 0 ? <AdminEmpty title="Nenhum diagnóstico disponível" description="Execute uma verificação ou publique as funções operacionais." /> : (
@@ -447,7 +502,7 @@ const AdminMaintenanceCenter = () => {
             { title: "Modo manutenção", description: "Interromper acesso público com mensagem e previsão de retorno.", href: "/dashboard/admin/platform-settings?role=admin", icon: Settings2 },
             { title: "Segurança", description: "Auditar configurações, políticas e alertas de proteção.", href: "/dashboard/admin/security?role=admin", icon: ShieldCheck },
             { title: "Logs & auditoria", description: "Investigar ações administrativas e eventos da plataforma.", href: "/dashboard/admin/logs?role=admin", icon: FileCheck2 },
-            { title: "Backups e migrations", description: "Abrir o runbook antes de aplicar mudanças de banco.", href: "/dashboard/admin/compliance?role=admin", icon: Database },
+            { title: "Backups e migrations", description: "Consultar o último backup e o runbook antes de aplicar mudanças de banco.", href: "/dashboard/admin/maintenance?role=admin#backup", icon: Database },
           ].map(({ title, description, href, icon: Icon }) => (
             <Link key={title} to={href} className="group rounded-2xl border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-primary/[0.03]">
               <Icon className="mb-3 h-5 w-5 text-primary" /><p className="text-sm font-semibold group-hover:text-primary">{title}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p><span className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">Abrir <ArrowUpRight className="h-3 w-3" aria-hidden="true" /></span>

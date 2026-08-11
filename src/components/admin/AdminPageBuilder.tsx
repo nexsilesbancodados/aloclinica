@@ -1,6 +1,17 @@
 /**
- * AdminPageBuilder — editor de páginas visuais completo.
- * Permite criar e editar seções complexas e layout da página via JSON.
+ * AdminPageBuilder — PROTÓTIPO, SEM PERSISTÊNCIA.
+ *
+ * ⚠️ NÃO ROTEADO de propósito. O `save()` abaixo apenas valida o JSON e emite
+ * "Configuração salva com sucesso!" — nada é gravado. Enquanto esteve em
+ * /dashboard/admin/pages, um admin podia montar um layout inteiro, ver a
+ * confirmação de sucesso e perder tudo.
+ *
+ * Foi retirado da rota e do menu até o ciclo de CMS (§6) lhe dar um store real.
+ * A escolha do store precisa ser feita junto com AdminSiteConfig e
+ * AdminFullSiteEditor para não criar um TERCEIRO editor de página concorrente.
+ *
+ * Ao religar: substituir o save() por escrita real + preview e restaurar a rota
+ * em Dashboard.tsx e o item em adminNav.tsx.
  */
 import { useState } from "react";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";

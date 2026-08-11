@@ -68,3 +68,13 @@ Antes de usar a tela em produção:
 6. aplicar migrations somente após backup e revisão do estado real do banco.
 
 Sem a Edge Function publicada, a tela permanece funcional para saúde básica, mas marca o inventário de secrets como `N/D` por segurança.
+
+## Backup e modo de manutenção
+
+O Centro de manutenção mostra o último `daily_backup_run` e permite executar um backup manual. A função exige JWT de administrador para uso pelo painel ou `INTERNAL_FUNCTION_SECRET` para chamadas internas agendadas. O backup só é marcado como concluído depois que todas as tabelas e arquivos forem gravados no bucket privado `backups`; falhas ficam registradas como `daily_backup_failed`.
+
+O modo de manutenção é global. Com `block_users` desligado, aparece apenas um aviso dispensável. Com `block_users` ligado, usuários comuns recebem um bloqueio de tela e administradores continuam com acesso para desligar a manutenção. O scheduler do backup depende de `INTERNAL_FUNCTION_SECRET` configurado também no banco conforme a migration de chamadas internas.
+
+## Feature Flags
+
+O menu **Feature Flags** permite criar controles de recurso, ativar/desativar, fazer rollout percentual estável e criar regras por papel ou usuário. A avaliação é server-side por `get_feature_flags()`, e toda mudança pede motivo e entra no histórico de auditoria. A migration `20260810120000_feature_flags.sql` precisa ser aplicada no banco antes de usar a tela.

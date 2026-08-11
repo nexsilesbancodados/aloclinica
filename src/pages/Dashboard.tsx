@@ -95,6 +95,7 @@ const AdminApprovals = lazy(() => import("@/components/admin/AdminApprovals"));
 const AdminKycReview = lazy(() => import("@/components/admin/AdminKycReview"));
 
 const AdminPlatformSettings = lazy(() => import("@/components/admin/AdminPlatformSettings"));
+const AdminFeatureFlags = lazy(() => import("@/components/admin/AdminFeatureFlags"));
 const AdminMaintenanceCenter = lazy(() => import("@/components/admin/AdminMaintenanceCenter"));
 const AdminNotificationTemplates = lazy(() => import("@/components/admin/AdminNotificationTemplates"));
 const AdminSecurity = lazy(() => import("@/components/admin/AdminSecurity"));
@@ -113,7 +114,6 @@ const AdminDoctorApplications = lazy(() => import("@/components/admin/AdminDocto
 const AdminSiteConfig = lazy(() => import("@/components/admin/AdminSiteConfig"));
 const AdminFullSiteEditor = lazy(() => import("@/components/admin/AdminFullSiteEditor"));
 const AdminMediaLibrary = lazy(() => import("@/components/admin/AdminMediaLibrary"));
-const AdminPageBuilder = lazy(() => import("@/components/admin/AdminPageBuilder"));
 
 const AdminPayouts = lazy(() => import("@/components/admin/AdminPayouts"));
 const AdminContratos = lazy(() => import("@/components/admin/AdminContratos"));
@@ -355,6 +355,7 @@ const Dashboard = () => {
       <Route path="admin/approvals" element={<RoleGuard allowed={[]} roles={roles}><AdminApprovals /></RoleGuard>} />
       <Route path="admin/kyc-review" element={<RoleGuard allowed={[]} roles={roles}><AdminKycReview /></RoleGuard>} />
       
+      <Route path="admin/feature-flags" element={<RoleGuard allowed={[]} roles={roles}><AdminFeatureFlags /></RoleGuard>} />
       <Route path="admin/platform-settings" element={<RoleGuard allowed={[]} roles={roles}><AdminPlatformSettings /></RoleGuard>} />
       <Route path="admin/maintenance" element={<RoleGuard allowed={[]} roles={roles}><AdminMaintenanceCenter /></RoleGuard>} />
       <Route path="admin/notification-templates" element={<RoleGuard allowed={[]} roles={roles}><AdminNotificationTemplates /></RoleGuard>} />
@@ -374,7 +375,6 @@ const Dashboard = () => {
       <Route path="admin/site-config" element={<RoleGuard allowed={[]} roles={roles}><AdminSiteConfig /></RoleGuard>} />
       <Route path="admin/site-editor" element={<RoleGuard allowed={[]} roles={roles}><AdminFullSiteEditor /></RoleGuard>} />
       <Route path="admin/media" element={<RoleGuard allowed={[]} roles={roles}><AdminMediaLibrary /></RoleGuard>} />
-      <Route path="admin/pages" element={<RoleGuard allowed={[]} roles={roles}><AdminPageBuilder /></RoleGuard>} />
       
       <Route path="admin/payouts" element={<RoleGuard allowed={[]} roles={roles}><AdminPayouts /></RoleGuard>} />
       <Route path="admin/contratos" element={<RoleGuard allowed={[]} roles={roles}><AdminContratos /></RoleGuard>} />

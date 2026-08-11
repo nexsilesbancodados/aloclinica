@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAdminNav } from "@/components/admin/adminNav";
 import {
-  Users, ShieldCheck, ArrowRight,
+  Users, ShieldCheck, ArrowRight, Flag,
   Activity, RefreshCw, Monitor, Sparkles, LayoutGrid,
   UserPlus, Layers, TrendingUp, Zap, Settings2,
   FileText, PieChart, ShieldAlert, Database, 
@@ -45,6 +45,8 @@ const PANELS: Omit<PanelInfo, "onlineCount" | "totalUsers" | "recentUsers">[] = 
   { id: "appointments", label: "Consultas", description: "Agenda, status e operação das consultas", icon: CalendarCheck, gradient: "from-violet-500 to-purple-600", glow: "shadow-violet-500/25", route: "/dashboard/admin/appointments?role=admin", roleKey: "patient" },
   { id: "financial",    label: "Financeiro", description: "Receitas, repasses e indicadores financeiros", icon: Wallet, gradient: "from-green-500 to-emerald-600", glow: "shadow-green-500/25", route: "/dashboard/admin/financial?role=admin", roleKey: "doctor" },
   { id: "maintenance",  label: "Manutenção", description: "Integrações, chaves e saúde da plataforma", icon: Settings2, gradient: "from-cyan-500 to-blue-600", glow: "shadow-cyan-500/25", route: "/dashboard/admin/maintenance?role=admin", roleKey: "admin" },
+  { id: "platform-settings", label: "Configuração", description: "Modo de manutenção, SEO e robots.txt", icon: Settings2, gradient: "from-slate-500 to-slate-700", glow: "shadow-slate-500/25", route: "/dashboard/admin/platform-settings?role=admin", roleKey: "admin" },
+  { id: "feature-flags", label: "Feature Flags", description: "Rollouts graduais e controles de recursos", icon: Flag, gradient: "from-violet-500 to-indigo-600", glow: "shadow-violet-500/25", route: "/dashboard/admin/feature-flags?role=admin", roleKey: "admin" },
   { id: "security",     label: "Segurança", description: "Políticas, auditoria e proteção operacional", icon: ShieldAlert, gradient: "from-rose-500 to-red-600", glow: "shadow-rose-500/25", route: "/dashboard/admin/security?role=admin", roleKey: "admin" },
 ];
 
@@ -102,6 +104,8 @@ const PanelCenter = () => {
          else if (page.includes("/admin/appointments")) panelId = "appointments";
          else if (page.includes("/admin/financial")) panelId = "financial";
          else if (page.includes("/admin/maintenance")) panelId = "maintenance";
+         else if (page.includes("/admin/platform-settings")) panelId = "platform-settings";
+         else if (page.includes("/admin/feature-flags")) panelId = "feature-flags";
          else if (page.includes("/admin/security")) panelId = "security";
          else if (page.includes("role=admin") || page.includes("/admin/")) panelId = "admin";
 
@@ -806,7 +810,7 @@ const PanelCenter = () => {
               { label: "Logs de Erro", icon: ShieldAlert, color: "text-rose-500", bg: "bg-rose-500/10", route: "/dashboard/admin/logs?role=admin" },
               { label: "Site Config", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10", route: "/dashboard/admin/site-config?role=admin" },
               { label: "Relatórios", icon: PieChart, color: "text-amber-500", bg: "bg-amber-500/10", route: "/dashboard/admin/reports?role=admin" },
-              { label: "Banco Dados", icon: Database, color: "text-emerald-500", bg: "bg-emerald-500/10", route: "/dashboard/admin/system-health?role=admin" },
+              { label: "Banco Dados", icon: Database, color: "text-emerald-500", bg: "bg-emerald-500/10", route: "/dashboard/admin/health?role=admin" },
               { label: "Auditoria", icon: ShieldCheck, color: "text-indigo-500", bg: "bg-indigo-500/10", route: "/dashboard/admin/audit?role=admin" },
               { label: "Usuários", icon: UserPlus, color: "text-orange-500", bg: "bg-orange-500/10", route: "/dashboard/admin/users?role=admin" },
             ].map((action) => (

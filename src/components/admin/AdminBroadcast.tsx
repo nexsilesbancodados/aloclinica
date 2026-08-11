@@ -81,12 +81,16 @@ const AdminBroadcast = () => {
     setSending(true);
     setLastResult(null);
     try {
-      await notifyMany(userIds, title.trim(), message.trim(), "announcement", {
+      const result = await notifyMany(userIds, title.trim(), message.trim(), "announcement", {
         link: link.trim() || undefined,
         push: true,
       });
-      setLastResult({ sent: userIds.length, failed: 0 });
-      toast.success(`Broadcast enviado pra ${userIds.length} usuário(s)`);
+      // Antes gravávamos `failed: 0` fixo, então o painel mostrava "0 falhas"
+      // mesmo quando o push falhava para parte da audiência.
+      setLastResult({ sent: result.sent, failed: result.failed });
+      toast.success(`Broadcast processado para ${result.sent} usuário(s)`, {
+        description: result.failed > 0 ? `${result.failed} push(es) falharam; o registro in-app foi preservado.` : undefined,
+      });
       setTitle("");
       setMessage("");
       setLink("");

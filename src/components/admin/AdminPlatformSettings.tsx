@@ -28,11 +28,11 @@ import { warn } from "@/lib/logger";
 
 const adminNav = getAdminNav("platform-settings");
 
-type Maint = { enabled: boolean; message: string; expected_back_at: string | null; allow_admin: boolean };
+type Maint = { enabled: boolean; message: string; expected_back_at: string | null; allow_admin: boolean; block_users: boolean };
 type Seo = { site_name: string; default_title: string; default_description: string; twitter_handle: string };
 type Robots = { content: string };
 
-const defaultMaint: Maint = { enabled: false, message: "", expected_back_at: null, allow_admin: true };
+const defaultMaint: Maint = { enabled: false, message: "", expected_back_at: null, allow_admin: true, block_users: false };
 const defaultSeo: Seo = { site_name: "AloClínica", default_title: "", default_description: "", twitter_handle: "" };
 const defaultRobots: Robots = { content: "User-agent: *\nAllow: /\nSitemap: https://aloclinica.com.br/sitemap.xml\n" };
 
@@ -77,7 +77,7 @@ const AdminPlatformSettings = () => {
   };
 
   return (
-    <DashboardLayout title="Admin" nav={adminNav}>
+    <DashboardLayout title="Admin" nav={adminNav} role="admin">
       <div className="space-y-5 pb-24 md:pb-8">
         <AdminPageHeader
           icon={Settings}
@@ -111,8 +111,9 @@ const AdminPlatformSettings = () => {
               <CardHeader>
                 <CardTitle className="text-base">Modo manutenção</CardTitle>
                 <CardDescription>
-                  Quando ativado, todos os usuários veem um banner amarelo no topo do site.
-                  Admins continuam navegando normalmente se "Permitir admins" estiver ligado.
+                  Quando ativado, todos os usuários veem um aviso. Se o bloqueio estiver ligado,
+                  usuários comuns ficam impedidos de usar a plataforma; admins sempre mantêm acesso
+                  para encerrar a manutenção com segurança.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -146,11 +147,14 @@ const AdminPlatformSettings = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
-                  <Label className="font-normal text-sm">Permitir que admins continuem usando</Label>
+                <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                  <div>
+                    <Label className="font-normal text-sm">Bloquear usuários comuns</Label>
+                    <p className="text-xs text-muted-foreground">Impede acesso ao produto enquanto a manutenção estiver ativa.</p>
+                  </div>
                   <Switch
-                    checked={maint.allow_admin}
-                    onCheckedChange={(v) => setMaint({ ...maint, allow_admin: v })}
+                    checked={maint.block_users}
+                    onCheckedChange={(v) => setMaint({ ...maint, block_users: v })}
                   />
                 </div>
 

@@ -1,10 +1,9 @@
 /**
  * useServiceHealth — saúde dos serviços para o alerta e a página do admin.
  *
- * Executa uma verificação básica no navegador dos serviços críticos que podem
- * ser checados com segurança pelo cliente (Banco, Autenticação, Storage e
- * CompreFace/KYC). Secrets e integrações server-side são verificados pelo
- * `admin-secret-manager`, sem expor valores ao navegador.
+ * Prioriza o diagnóstico server-side do `admin-secret-manager`, sem expor
+ * valores de secrets ao navegador, e mantém uma verificação limitada no
+ * cliente como fallback quando a função administrativa não estiver disponível.
  *
  * Só roda para administradores. Com `poll: true`, revalida periodicamente.
  */
@@ -14,7 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SERVICES_PENDING_SETUP } from "@/config/service-status";
 
 export type ServiceStatus = "ok" | "down" | "unconfigured";
-export type HealthMode = "browser";
+export type HealthMode = "server" | "browser";
 
 export interface ServiceCheck {
   key: string;
@@ -69,6 +68,26 @@ async function runBrowserChecks(): Promise<ServiceCheck[]> {
   return out;
 }
 
+async function runServerChecks(): Promise<HealthResult> {
+  const { data, error } = await db.functions.invoke("admin-secret-manager", { body: { action: "health" } });
+  if (error || !Array.isArray(data?.services) || data.services.length === 0) {
+    throw new Error(error?.message ?? "Diagnóstico server-side indisponível");
+  }
+
+  const services = data.services.filter((service: Partial<ServiceCheck>) =>
+    typeof service.key === "string" &&
+    typeof service.label === "string" &&
+    (service.status === "ok" || service.status === "down" || service.status === "unconfigured") &&
+    typeof service.detail === "string",
+  ) as ServiceCheck[];
+  if (services.length === 0) throw new Error("Resposta de diagnóstico inválida");
+
+  return {
+    checkedAt: typeof data.checkedAt === "string" ? data.checkedAt : new Date().toISOString(),
+    services,
+  };
+}
+
 export function useServiceHealth(options?: { enabled?: boolean; poll?: boolean }) {
   const { roles } = useAuth();
   const isAdmin = roles.includes("admin");
@@ -85,9 +104,15 @@ export function useServiceHealth(options?: { enabled?: boolean; poll?: boolean }
     setLoading(true);
     setError(null);
     try {
-      const services = await runBrowserChecks();
-      setData({ checkedAt: new Date().toISOString(), services });
-      setMode("browser");
+      try {
+        const serverResult = await runServerChecks();
+        setData(serverResult);
+        setMode("server");
+      } catch {
+        const services = await runBrowserChecks();
+        setData({ checkedAt: new Date().toISOString(), services });
+        setMode("browser");
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Falha ao verificar serviços");
     } finally {

@@ -112,13 +112,28 @@ export const notifyMany = async (
   options: { link?: string; push?: boolean } = {},
 ) => {
   const { link, push = true } = options;
-  if (user_ids.length === 0) return;
-  await db.from("notifications").insert(
+  if (user_ids.length === 0) return { sent: 0, failed: 0 };
+
+  // A notificação in-app é o canal garantido: se o insert falha, nada foi
+  // entregue. O push é best-effort e é contabilizado separadamente para o
+  // painel poder reportar falhas REAIS em vez de assumir zero.
+  const { error: insertError } = await db.from("notifications").insert(
     user_ids.map(user_id => ({ user_id, title, message, type, link }))
   );
-  if (push) {
-    await Promise.allSettled(user_ids.map(uid => sendPush(uid, title, message, link)));
+  if (insertError) {
+    logError("notifyMany: falha ao gravar notificações", insertError);
+    return { sent: 0, failed: user_ids.length };
   }
+
+  let pushFailed = 0;
+  if (push) {
+    const results = await Promise.allSettled(
+      user_ids.map(uid => sendPush(uid, title, message, link)),
+    );
+    pushFailed = results.filter(r => r.status === "rejected").length;
+  }
+
+  return { sent: user_ids.length, failed: pushFailed };
 };
 
 // ─── Exported notification functions ──────────────────────────────────────────

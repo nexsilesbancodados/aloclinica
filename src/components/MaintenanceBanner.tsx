@@ -4,8 +4,8 @@
  * Lê `app_settings.maintenance_mode` via RPC pública. Se enabled=true:
  *   - Mostra banner amarelo no topo
  *   - Mensagem custom + ETA (se setado)
- *   - allow_admin=true: admin ainda navega normalmente
- *   - allow_admin=false: usuários comuns bloqueados (ainda em estudo, hoje só banner)
+ *   - block_users=true: usuários comuns ficam bloqueados em um overlay
+ *   - administradores sempre mantêm acesso para desligar a manutenção
  */
 import { useEffect, useState } from "react";
 import { db } from "@/integrations/supabase/untyped";
@@ -19,6 +19,7 @@ type MaintenanceConfig = {
   message?: string;
   expected_back_at?: string | null;
   allow_admin?: boolean;
+  block_users?: boolean;
 };
 
 export function MaintenanceBanner() {
@@ -40,11 +41,30 @@ export function MaintenanceBanner() {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  if (!cfg?.enabled || dismissed) return null;
+  if (!cfg?.enabled) return null;
 
   const isAdmin = roles?.includes("admin");
+  const blocksUsers = Boolean(cfg.enabled && !isAdmin && cfg.block_users === true);
   const eta = cfg.expected_back_at ? new Date(cfg.expected_back_at) : null;
   const etaText = eta ? format(eta, "dd/MM 'às' HH:mm", { locale: ptBR }) : null;
+
+  if (blocksUsers) {
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/95 px-6 backdrop-blur-md" role="alertdialog" aria-modal="true" aria-label="Plataforma em manutenção">
+        <div className="w-full max-w-md rounded-3xl border border-amber-500/30 bg-card p-7 text-center shadow-2xl">
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-amber-500" aria-hidden="true" />
+          <h1 className="text-xl font-bold text-foreground">Plataforma em manutenção</h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {cfg.message || "Estamos realizando uma atualização importante. O acesso será liberado assim que o serviço estiver seguro e estável."}
+          </p>
+          {etaText && <p className="mt-3 text-xs font-semibold text-amber-700">Previsão de retorno: {etaText}</p>}
+          <p className="mt-5 text-xs text-muted-foreground">Tente novamente em alguns minutos.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (dismissed) return null;
 
   return (
     <div
