@@ -7,9 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getAdminNav } from "@/components/admin/adminNav";
-import { DollarSign, AlertTriangle, Users, TrendingUp, CreditCard, FileText, Activity, Clock, Video, Star, LayoutGrid, Download, RefreshCw, UserPlus, Calendar } from "lucide-react";
+import { DollarSign, AlertTriangle, Users, TrendingUp, CreditCard, FileText, Activity, Clock, Video, Star, Download, RefreshCw, UserPlus, Calendar } from "lucide-react";
 import AdminAnalyticsCharts from "./AdminAnalyticsCharts";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -26,17 +25,6 @@ import { PremiumHero } from "./PremiumHero";
 import { AlertBox } from "./AlertBox";
 import SectionErrorBoundary from "@/components/ui/section-error-boundary";
 import pingoAdmin from "@/assets/pingo-admin.png";
-
-const panelOptions = [
-  { label: "Paciente", role: "patient", icon: "👤", description: "Ver como paciente" },
-  { label: "Médico", role: "doctor", icon: "🩺", description: "Ver como médico" },
-  { label: "Recepção", role: "receptionist", icon: "🏥", description: "Ver como recepcionista" },
-  { label: "Suporte", role: "support", icon: "🎧", description: "Ver como suporte" },
-  { label: "Clínica", role: "clinic", icon: "🏢", description: "Ver como clínica" },
-  { label: "Parceiro", role: "partner", icon: "🤝", description: "Ver como parceiro" },
-  
-  { label: "Assistente IA", role: "ai-assistant", icon: "🤖", description: "Chat inteligente com IA" },
-];
 
 const PERIOD_OPTIONS = [
   { value: "month", label: "Este mês" },
@@ -265,7 +253,7 @@ const AdminDashboard = () => {
   const statusLabel: Record<string, string> = { active: "Ativa", cancelled: "Cancelada", expired: "Vencida", paused: "Pausada" };
 
   return (
-    <DashboardLayout title="Administração" nav={getAdminNav("overview")}>
+    <DashboardLayout title="Administração" nav={getAdminNav("overview")} role="admin">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-5 pb-24 md:pb-8 pb-24 md:pb-8">
 
         {/* ── Premium Admin Hero ── */}
@@ -301,7 +289,7 @@ const AdminDashboard = () => {
           { label: "Usuários", icon: "👥", iconBg: "bg-blue-50 dark:bg-blue-950/30", path: "/dashboard/admin/users" },
           { label: "Médicos", icon: "🩺", iconBg: "bg-emerald-50 dark:bg-emerald-950/30", path: "/dashboard/admin/doctors" },
           { label: "Financeiro", icon: "💰", iconBg: "bg-amber-50 dark:bg-amber-950/30", path: "/dashboard/admin/financial" },
-          { label: "Painéis", icon: "🎛️", iconBg: "bg-violet-50 dark:bg-violet-950/30", path: "/dashboard/admin/switch-panel" },
+          { label: "Manutenção", icon: "🛠️", iconBg: "bg-cyan-50 dark:bg-cyan-950/30", path: "/dashboard/admin/maintenance?role=admin" },
           { label: "Relatórios", icon: "📊", iconBg: "bg-red-50 dark:bg-red-950/30", path: "/dashboard/admin/reports" },
         ]} />
 
@@ -361,28 +349,6 @@ const AdminDashboard = () => {
             }}>
               <UserPlus className="w-3.5 h-3.5" /> Seed
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="h-9 rounded-xl gap-1.5 bg-gradient-to-r from-foreground to-foreground/80 text-background hover:opacity-90 text-xs font-semibold">
-                  <LayoutGrid className="w-3.5 h-3.5" /> Trocar Painel
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5">
-                {panelOptions.map(p => (
-                  <DropdownMenuItem
-                    key={p.role}
-                    onClick={() => navigate(p.role === "ai-assistant" ? "/dashboard/ai-assistant" : `/dashboard?role=${p.role}`)}
-                    className="rounded-lg gap-2 cursor-pointer text-sm"
-                  >
-                    <span>{p.icon}</span>
-                    <div>
-                      <p className="font-medium">{p.label}</p>
-                      <p className="text-[10px] text-muted-foreground">{p.description}</p>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </motion.div>
 

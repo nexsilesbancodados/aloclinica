@@ -205,7 +205,8 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
   const isAdminViewingOtherPanel = isAdmin && forceRole && forceRole !== "admin";
 
   // Detectar role: se passado via props, use; se admin, use "admin"; senão detecte pela query string ou padrão
-  const role = propsRole || (isAdmin ? "admin" : forceRole || "patient");
+  const role = propsRole || (isAdmin ? (forceRole || "admin") : forceRole || "patient");
+  const isAdminShell = role === "admin";
   const grad = ROLE_GRADIENT[role] ?? ROLE_GRADIENT.patient;
   const ROLE_RING: Record<string, string> = {
     patient: "ring-blue-400", doctor: "ring-emerald-400",
@@ -236,6 +237,44 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
    const bottomNav = useMemo(() => {
      const items: NavItem[] = [];
      const currentPath = location.pathname;
+
+     // O administrador usa somente atalhos operacionais do painel. Chat,
+     // avisos e perfil continuam disponíveis no menu da conta quando necessário,
+     // mas não ocupam a navegação principal do console administrativo.
+     if (isAdminShell) {
+       return [
+         {
+           label: "Controle",
+           href: "/dashboard/admin/panel-center?role=admin",
+           icon: <House size={22} weight={currentPath.includes("panel-center") || currentPath === "/dashboard" ? "fill" : "regular"} />,
+           active: currentPath.includes("panel-center") || currentPath === "/dashboard"
+         },
+         {
+           label: "Ao Vivo",
+           href: "/dashboard/admin/live?role=admin",
+           icon: <VideoCamera size={22} weight={currentPath.includes("live") ? "fill" : "regular"} />,
+           active: currentPath.includes("live")
+         },
+         {
+           label: "Usuários",
+           href: "/dashboard/admin/users?role=admin",
+           icon: <UserCircle size={22} weight={currentPath.includes("/admin/users") ? "fill" : "regular"} />,
+           active: currentPath.includes("/admin/users")
+         },
+         {
+           label: "Manutenção",
+           href: "/dashboard/admin/maintenance?role=admin",
+           icon: <GearSix size={22} weight={currentPath.includes("maintenance") ? "fill" : "regular"} />,
+           active: currentPath.includes("maintenance")
+         },
+         {
+           label: "Segurança",
+           href: "/dashboard/admin/security?role=admin",
+           icon: <ShieldCheckIcon size={22} weight={currentPath.includes("security") ? "fill" : "regular"} />,
+           active: currentPath.includes("security")
+         },
+       ];
+     }
  
      // 1. Home (Dynamic based on role if needed, but /dashboard is standard)
      items.push({
@@ -294,7 +333,7 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
      });
  
      return items;
-   }, [role, location.pathname, forceRole]);
+   }, [role, location.pathname, forceRole, isAdminShell]);
 
   // CSS-only entrance — no GSAP import needed, saves ~30KB dynamic load
   useEffect(() => {
@@ -436,7 +475,7 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
       {/* User area */}
       <div className={`mt-auto shrink-0 border-t border-border/10 ${collapsed ? "p-1.5" : "p-2.5"}`}>
         {collapsed ? (
-          <button onClick={() => { navigate("/dashboard/profile"); onItemClick?.(); }}
+           <button onClick={() => { navigate(`/dashboard/profile?role=${role}`); onItemClick?.(); }}
             title="Meu Perfil"
             className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-muted/50 transition-all duration-200 relative">
             <Avatar className="h-7 w-7 ring-2 ring-border/15">
@@ -449,7 +488,7 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
             )}
           </button>
         ) : (
-          <button onClick={() => { navigate("/dashboard/profile"); onItemClick?.(); }}
+           <button onClick={() => { navigate(`/dashboard/profile?role=${role}`); onItemClick?.(); }}
             className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/50 transition-all duration-200 text-left group relative">
             <div className="relative">
               <Avatar className={`h-8 w-8 ring-2 ${avatarRing} group-hover:ring-primary/25 transition-all`}>
@@ -522,9 +561,9 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
  
          <div className="flex items-center gap-2">
            <LanguageSwitcher />
-           <NotificationBell />
+            <NotificationBell />
            <button
-             onClick={() => navigate("/dashboard/profile")}
+              onClick={() => navigate(`/dashboard/profile?role=${role}`)}
              aria-label="Abrir meu perfil"
              className="relative p-0.5 rounded-full ring-2 ring-primary/20 transition-transform active:scale-95"
            >
@@ -574,7 +613,9 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
               className="relative flex w-full items-center gap-2.5 h-10 px-3.5 rounded-2xl bg-background/60 hover:bg-background/90 border border-border/40 hover:border-primary/30 backdrop-blur-xl text-[12.5px] text-muted-foreground transition-all group shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:shadow-[0_4px_18px_-8px_hsl(var(--primary)/0.25)]"
               aria-label="Buscar">
               <MagnifyingGlass className="w-4 h-4 group-hover:text-primary transition-colors shrink-0" aria-hidden="true" />
-              <span className="flex-1 text-left font-medium">Buscar pacientes, consultas, receitas...</span>
+               <span className="flex-1 text-left font-medium">
+                 {isAdminShell ? "Buscar funções administrativas..." : "Buscar pacientes, consultas, receitas..."}
+               </span>
               <kbd className="font-mono text-[10px] bg-muted/60 border border-border/40 rounded-md px-1.5 py-0.5 leading-none font-bold">⌘K</kbd>
             </button>
           </div>
@@ -638,11 +679,11 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
                 </div>
                 <DropdownMenuSeparator className="bg-border/10 -mx-2" />
                 <div className="py-1 space-y-0.5">
-                  <DropdownMenuItem onClick={() => navigate("/dashboard/profile")} className="rounded-xl gap-3 cursor-pointer text-[13px] py-2.5 px-2.5 focus:bg-primary/8">
+                   <DropdownMenuItem onClick={() => navigate(`/dashboard/profile?role=${role}`)} className="rounded-xl gap-3 cursor-pointer text-[13px] py-2.5 px-2.5 focus:bg-primary/8">
                     <span className="flex items-center justify-center h-7 w-7 rounded-lg bg-primary/10"><User className="h-3.5 w-3.5 text-primary" /></span>
                     <span className="font-medium">Meu Perfil</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/dashboard/settings")} className="rounded-xl gap-3 cursor-pointer text-[13px] py-2.5 px-2.5 focus:bg-muted">
+                   <DropdownMenuItem onClick={() => navigate(`/dashboard/settings?role=${role}`)} className="rounded-xl gap-3 cursor-pointer text-[13px] py-2.5 px-2.5 focus:bg-muted">
                     <span className="flex items-center justify-center h-7 w-7 rounded-lg bg-muted"><GearSix className="h-3.5 w-3.5 text-muted-foreground" /></span>
                     <span className="font-medium">Configurações</span>
                   </DropdownMenuItem>
@@ -703,8 +744,8 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
       </div>
 
       <GlobalCommand role={role} />
-      <PWABanner role={role} />
-      <FaqChatWidget />
+      {!isAdminShell && <PWABanner role={role} />}
+      {!isAdminShell && <FaqChatWidget />}
 
        {/* ═══ Mobile bottom nav — Premium Floating TabBar ═══ */}
        {nav && nav.length > 0 && (

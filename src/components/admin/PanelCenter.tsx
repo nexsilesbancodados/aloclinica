@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAdminNav } from "@/components/admin/adminNav";
 import {
-  Users, Stethoscope, Building2, Headphones,
-  Handshake, Bot, ShieldCheck, ArrowRight,
+  Users, ShieldCheck, ArrowRight,
   Activity, RefreshCw, Monitor, Sparkles, LayoutGrid,
   UserPlus, Layers, TrendingUp, Zap, Settings2,
   FileText, PieChart, ShieldAlert, Database, 
@@ -40,12 +39,13 @@ interface PanelInfo {
 }
 
 const PANELS: Omit<PanelInfo, "onlineCount" | "totalUsers" | "recentUsers">[] = [
-  { id: "admin",        label: "Administração", description: "Controle total do sistema, permissões e auditoria", icon: ShieldCheck,  gradient: "from-primary to-blue-700",       glow: "shadow-primary/25",       route: "/dashboard?role=admin",        roleKey: "admin" },
-  { id: "doctor",       label: "Médico",        description: "Consultas, prontuários, receitas e telemedicina", icon: Stethoscope,  gradient: "from-emerald-500 to-teal-600",   glow: "shadow-emerald-500/25",   route: "/dashboard?role=doctor",       roleKey: "doctor" },
-  { id: "patient",      label: "Paciente",      description: "Agendamentos, histórico e jornada de saúde",   icon: Users,        gradient: "from-blue-500 to-blue-600",      glow: "shadow-blue-500/25",      route: "/dashboard?role=patient",      roleKey: "patient" },
-  { id: "support",      label: "Suporte",       description: "Tickets e monitoramento", icon: Headphones,   gradient: "from-amber-500 to-orange-600",      glow: "shadow-amber-500/25",      route: "/dashboard?role=support",      roleKey: "support" },
-  { id: "clinic",       label: "Clínicas",      description: "Unidades de saúde parceiras", icon: Building2,  gradient: "from-cyan-500 to-blue-600",      glow: "shadow-cyan-500/25",      route: "/dashboard/admin/clinics?role=admin",  roleKey: "clinic" },
-  { id: "ai-assistant", label: "Assistente IA", description: "Chat e triagem inteligente",        icon: Bot,          gradient: "from-purple-500 to-fuchsia-600", glow: "shadow-purple-500/25",    route: "/dashboard/ai-assistant",      roleKey: "ai-assistant" },
+  { id: "admin",        label: "Administração", description: "Controle total do sistema, permissões e auditoria", icon: ShieldCheck, gradient: "from-primary to-blue-700", glow: "shadow-primary/25", route: "/dashboard/admin/panel-center?role=admin", roleKey: "admin" },
+  { id: "users",        label: "Usuários", description: "Contas, acessos e permissões da plataforma", icon: Users, gradient: "from-blue-500 to-indigo-600", glow: "shadow-blue-500/25", route: "/dashboard/admin/users?role=admin", roleKey: "all-users" },
+  { id: "approvals",    label: "Aprovações", description: "Cadastros e verificações pendentes", icon: UserCheck, gradient: "from-emerald-500 to-teal-600", glow: "shadow-emerald-500/25", route: "/dashboard/admin/approvals?role=admin", roleKey: "approval-scope" },
+  { id: "appointments", label: "Consultas", description: "Agenda, status e operação das consultas", icon: CalendarCheck, gradient: "from-violet-500 to-purple-600", glow: "shadow-violet-500/25", route: "/dashboard/admin/appointments?role=admin", roleKey: "patient" },
+  { id: "financial",    label: "Financeiro", description: "Receitas, repasses e indicadores financeiros", icon: Wallet, gradient: "from-green-500 to-emerald-600", glow: "shadow-green-500/25", route: "/dashboard/admin/financial?role=admin", roleKey: "doctor" },
+  { id: "maintenance",  label: "Manutenção", description: "Integrações, chaves e saúde da plataforma", icon: Settings2, gradient: "from-cyan-500 to-blue-600", glow: "shadow-cyan-500/25", route: "/dashboard/admin/maintenance?role=admin", roleKey: "admin" },
+  { id: "security",     label: "Segurança", description: "Políticas, auditoria e proteção operacional", icon: ShieldAlert, gradient: "from-rose-500 to-red-600", glow: "shadow-rose-500/25", route: "/dashboard/admin/security?role=admin", roleKey: "admin" },
 ];
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
@@ -76,19 +76,13 @@ const PanelCenter = () => {
       const { data: allRoles } = await db.from("user_roles").select("user_id, role");
       const onlineUserIds = [...new Set((onlineUsers ?? []).map(u => u.user_id))];
 
-      const onlineRolesMap: Map<string, string[]> = new Map();
       const profilesMap: Map<string, string> = new Map();
 
       if (onlineUserIds.length > 0) {
-        const [{ data: onlineRoles }, { data: profiles }] = await Promise.all([
-          db.from("user_roles").select("user_id, role").in("user_id", onlineUserIds),
-          db.from("profiles").select("user_id, first_name, last_name").in("user_id", onlineUserIds),
-        ]);
-        (onlineRoles ?? []).forEach(r => {
-          const ex = onlineRolesMap.get(r.user_id) ?? [];
-          ex.push(r.role);
-          onlineRolesMap.set(r.user_id, ex);
-        });
+        const { data: profiles } = await db
+          .from("profiles")
+          .select("user_id, first_name, last_name")
+          .in("user_id", onlineUserIds);
         (profiles ?? []).forEach(p => {
           profilesMap.set(p.user_id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "Usuário");
         });
@@ -100,19 +94,16 @@ const PanelCenter = () => {
       const panelOnlineMap: Record<string, RecentUser[]> = {};
       (onlineUsers ?? []).forEach(u => {
         const page = u.current_page ?? "/dashboard";
-        const roles = onlineRolesMap.get(u.user_id) ?? ["patient"];
         const name = profilesMap.get(u.user_id) ?? "Usuário";
 
-        let panelId = "patient";
-        if (page.includes("ai-assistant")) panelId = "ai-assistant";
-        else if (page.includes("role=admin") || page.includes("/admin/")) panelId = "admin";
-        else if (page.includes("role=doctor") || page.includes("/doctor/")) panelId = "doctor";
-        else if (page.includes("role=receptionist") || page.includes("/reception/")) panelId = "receptionist";
-        else if (page.includes("role=support")) panelId = "support";
-        else if (page.includes("role=clinic") || page.includes("/clinic/")) panelId = "clinic";
-        else if (page.includes("role=partner")) panelId = "partner";
-        else if (roles.includes("doctor")) panelId = "doctor";
-        else if (roles.includes("admin")) panelId = "admin";
+         let panelId = "other";
+         if (page.includes("/admin/users")) panelId = "users";
+         else if (page.includes("/admin/approvals") || page.includes("/admin/kyc-review")) panelId = "approvals";
+         else if (page.includes("/admin/appointments")) panelId = "appointments";
+         else if (page.includes("/admin/financial")) panelId = "financial";
+         else if (page.includes("/admin/maintenance")) panelId = "maintenance";
+         else if (page.includes("/admin/security")) panelId = "security";
+         else if (page.includes("role=admin") || page.includes("/admin/")) panelId = "admin";
 
         if (!panelOnlineMap[panelId]) panelOnlineMap[panelId] = [];
         panelOnlineMap[panelId].push({
@@ -122,12 +113,17 @@ const PanelCenter = () => {
         });
       });
 
-      setPanels(PANELS.map(p => ({
-        ...p,
-        onlineCount: panelOnlineMap[p.id]?.length ?? 0,
-        totalUsers: p.id === "ai-assistant" ? 0 : (roleTotals[p.roleKey] ?? 0),
-        recentUsers: (panelOnlineMap[p.id] ?? []).slice(0, 5),
-      })));
+       const uniqueUserCount = new Set((allRoles ?? []).map(r => r.user_id)).size;
+       const panelTotals: Record<string, number> = {
+         "all-users": uniqueUserCount,
+         "approval-scope": (roleTotals.doctor ?? 0) + (roleTotals.clinic ?? 0),
+       };
+       setPanels(PANELS.map(p => ({
+         ...p,
+         onlineCount: panelOnlineMap[p.id]?.length ?? 0,
+         totalUsers: panelTotals[p.roleKey] ?? (roleTotals[p.roleKey] ?? 0),
+         recentUsers: (panelOnlineMap[p.id] ?? []).slice(0, 5),
+       })));
       setTotalOnline(onlineUserIds.length);
       setTotalUsers(new Set((allRoles ?? []).map(r => r.user_id)).size);
     } catch (e) {
@@ -198,7 +194,7 @@ const PanelCenter = () => {
       {
         label: "Aprovações",
         sublabel: "Médicos pendentes",
-        value: panels.find(p => p.id === "doctor")?.totalUsers ?? 0,
+         value: panels.find(p => p.id === "approvals")?.totalUsers ?? 0,
         icon: UserCheck,
         gradient: "from-orange-400 via-orange-500 to-red-600",
         ring: "ring-orange-500/30",

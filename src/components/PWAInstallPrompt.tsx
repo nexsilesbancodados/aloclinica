@@ -3,16 +3,26 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { Button } from "@/components/ui/button";
 import { DeviceMobile, X, DownloadSimple, Share, Plus } from "@phosphor-icons/react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "react-router-dom";
 
 const DISMISSED_KEY = "pwa-install-dismissed";
 const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export default function PWAInstallPrompt() {
+  const { roles } = useAuth();
+  const location = useLocation();
+  const forceRole = new URLSearchParams(location.search).get("role");
+  const isAdminShell = roles.includes("admin") && (!forceRole || forceRole === "admin");
   const { isInstallable, isInstalled, isIOS, promptInstall } = usePWAInstall();
   const [visible, setVisible] = useState(false);
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
+    if (isAdminShell) {
+      setVisible(false);
+      return;
+    }
     if (!isInstallable || isInstalled) return;
 
     // Check if user dismissed recently
@@ -25,7 +35,7 @@ export default function PWAInstallPrompt() {
     // Show after a short delay to not disrupt initial page load
     const timer = setTimeout(() => setVisible(true), 3000);
     return () => clearTimeout(timer);
-  }, [isInstallable, isInstalled]);
+  }, [isInstallable, isInstalled, isAdminShell]);
 
   const handleInstall = async () => {
     setInstalling(true);
@@ -38,6 +48,8 @@ export default function PWAInstallPrompt() {
     localStorage.setItem(DISMISSED_KEY, String(Date.now()));
     setVisible(false);
   };
+
+  if (isAdminShell) return null;
 
   return (
     <AnimatePresence>

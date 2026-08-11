@@ -34,7 +34,8 @@ const playNotificationSound = () => {
 };
 
 const NotificationBell = () => {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
+  const isAdmin = roles.includes("admin");
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
@@ -76,7 +77,7 @@ const NotificationBell = () => {
   useEffect(() => {
     if (!user) return;
     fetchNotifications();
-    fetchUnreadMessages();
+    if (!isAdmin) fetchUnreadMessages();
 
     // Defensive cleanup: remove any leftover channel instances with the same
     // names (HMR or unmount races can leave orphan channels in the client,
@@ -118,20 +119,20 @@ const NotificationBell = () => {
     channel.subscribe();
 
     // Realtime subscription for unread messages
-    const msgChannel = db.channel(msgChannelName);
-    msgChannel.on(
+    const msgChannel = !isAdmin ? db.channel(msgChannelName) : null;
+    msgChannel?.on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
       () => fetchUnreadMessages()
     );
-    msgChannel.subscribe();
+    msgChannel?.subscribe();
 
     return () => {
       db.removeChannel(channel);
-      db.removeChannel(msgChannel);
+      if (msgChannel) db.removeChannel(msgChannel);
       if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
     };
-  }, [user]);
+  }, [user, isAdmin]);
 
   const fetchUnreadMessages = async () => {
     if (!user) return;
@@ -299,17 +300,19 @@ const NotificationBell = () => {
         </ScrollArea>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-border/20 bg-gradient-to-r from-card/80 to-muted/10 flex items-center justify-between gap-2">
-          <PushNotificationToggle />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-[11px] h-7 rounded-lg font-semibold gap-1"
-            onClick={() => { setOpen(false); navigate("/dashboard/notifications"); }}
-          >
-            Ver todas
-          </Button>
-        </div>
+        {!isAdmin && (
+          <div className="px-5 py-3 border-t border-border/20 bg-gradient-to-r from-card/80 to-muted/10 flex items-center justify-between gap-2">
+            <PushNotificationToggle />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[11px] h-7 rounded-lg font-semibold gap-1"
+              onClick={() => { setOpen(false); navigate("/dashboard/notifications"); }}
+            >
+              Ver todas
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

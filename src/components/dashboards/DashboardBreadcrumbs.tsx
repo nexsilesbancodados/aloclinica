@@ -55,7 +55,6 @@ const ROUTE_LABELS: Record<string, string> = {
   "exam-request": "Solicitar Exame",
   "my-exams": "Meus Exames",
   "doctor-applications": "Candidaturas",
-  "switch-panel": "Trocar Painel",
   inbox: "Caixa de Entrada",
   online: "Online",
   audit: "Auditoria",

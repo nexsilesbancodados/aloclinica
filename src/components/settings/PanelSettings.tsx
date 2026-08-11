@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Globe, Shield, Loader2, Pencil, ChevronRight, Info, LogOut, Sparkles, ArrowLeft } from "lucide-react";
+import { Bell, Globe, Shield, ShieldCheck, User, Clock, Loader2, Pencil, ChevronRight, Info, LogOut, Sparkles, ArrowLeft } from "lucide-react";
 import { getDoctorNav } from "@/components/doctor/doctorNav";
 import { getPatientNav } from "@/components/patient/patientNav";
 import { getAdminNav } from "@/components/admin/adminNav";
@@ -76,6 +76,27 @@ const patientGroups: SettingGroup[] = [
   },
 ];
 
+const adminGroups: SettingGroup[] = [
+  {
+    title: "Plataforma", icon: Shield, items: [
+      { key: "maintenance_mode", label: "Modo de manutenção", desc: "Exibir manutenção para usuários", type: "toggle", icon: Shield },
+      { key: "open_registration", label: "Novos cadastros", desc: "Permitir novos registros na plataforma", type: "toggle", icon: User },
+      { key: "auto_approve_doctors", label: "Aprovação automática", desc: "Aprovar médicos sem revisão manual", type: "toggle", icon: ShieldCheck },
+      { key: "require_2fa", label: "Exigir autenticação em dois fatores", desc: "Reforçar segurança das contas administrativas", type: "toggle", icon: ShieldCheck },
+    ],
+  },
+  {
+    title: "Alertas e auditoria", icon: Bell, items: [
+      { key: "notify_new_doctor", label: "Novos médicos", desc: "Avisar quando houver cadastro para revisar", type: "toggle", icon: Bell },
+      { key: "notify_new_clinic", label: "Novas clínicas", desc: "Avisar quando houver cadastro para revisar", type: "toggle", icon: Bell },
+      { key: "notify_payments", label: "Pagamentos", desc: "Avisar sobre eventos financeiros", type: "toggle", icon: Bell },
+      { key: "weekly_reports", label: "Relatórios semanais", desc: "Receber resumo operacional semanal", type: "toggle", icon: Info },
+      { key: "detailed_logs", label: "Logs detalhados", desc: "Manter auditoria detalhada das operações", type: "toggle", icon: Shield },
+      { key: "session_timeout", label: "Tempo de sessão", type: "select", options: ["30 minutos", "1 hora", "4 horas", "8 horas"], icon: Clock },
+    ],
+  },
+];
+
 const PanelSettings = () => {
   const { user, profile, roles } = useAuth();
   const navigate = useNavigate();
@@ -83,7 +104,7 @@ const PanelSettings = () => {
 
   const forceRole = searchParams.get("role");
   const isAdmin = roles.includes("admin");
-  const activeRole = isAdmin && forceRole ? forceRole
+  const activeRole = isAdmin ? (forceRole || "admin")
     : roles.includes("doctor") ? "doctor"
     : roles.includes("receptionist") ? "receptionist"
     : roles.includes("support") ? "support"
@@ -133,7 +154,7 @@ const PanelSettings = () => {
   };
 
   const initials = `${profile?.first_name?.[0] ?? ""}${profile?.last_name?.[0] ?? ""}`.toUpperCase();
-  const groups = activeRole === "patient" ? patientGroups : patientGroups;
+  const groups = activeRole === "admin" ? adminGroups : patientGroups;
 
   return (
     <DashboardLayout title={roleLabels[activeRole] ?? "Configurações"} nav={nav} role={activeRole}>
@@ -225,7 +246,7 @@ const PanelSettings = () => {
             </Button>
 
             {/* Mascot helper */}
-            <motion.div
+            {activeRole !== "admin" && <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
@@ -236,7 +257,7 @@ const PanelSettings = () => {
                 <p className="text-[13px] font-medium text-foreground">Precisa de ajuda com o app?</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Fale com nosso suporte a qualquer momento</p>
               </div>
-            </motion.div>
+            </motion.div>}
           </div>
         )}
       </div>

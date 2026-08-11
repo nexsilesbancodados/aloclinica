@@ -54,7 +54,7 @@ const UserProfile = () => {
     if (mp === "err") toast.error("Falha ao conectar o Mercado Pago", { description: searchParams.get("reason") || undefined });
   }, [searchParams]);
   const isAdmin = roles.includes("admin");
-  const activeRole = isAdmin && forceRole ? forceRole
+  const activeRole = isAdmin ? (forceRole || "admin")
     : roles.includes("doctor") ? "doctor"
     : roles.includes("receptionist") ? "receptionist"
     : roles.includes("support") ? "support"
@@ -224,7 +224,7 @@ const UserProfile = () => {
     ...(isPatient && kycPending ? [{ icon: ShieldCheck, label: "Verificação de Identidade", desc: "⚠️ Pendente — Complete para agendar consultas", action: () => setShowKyc(true) }] : []),
     { icon: Bell, label: "Notificações", desc: "Gerencie alertas de consultas e exames", action: () => navigate(`/dashboard/settings?role=${activeRole}&tab=notifications`) },
     { icon: Shield, label: "Segurança", desc: "Alterar senha e biometria", action: () => navigate(`/dashboard/settings?role=${activeRole}&tab=security`) },
-    { icon: HelpCircle, label: "Ajuda", desc: "Central de suporte e FAQ", action: () => navigate("/dashboard/patient/support?role=patient") },
+    ...(activeRole !== "admin" ? [{ icon: HelpCircle, label: "Ajuda", desc: "Central de suporte e FAQ", action: () => navigate("/dashboard/patient/support?role=patient") }] : []),
   ];
 
   // Profile view (not editing)

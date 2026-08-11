@@ -11,10 +11,16 @@ import { SUPABASE_FUNCTIONS_URL } from "@/lib/supabase-config";
 import { SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabase-config";
 import { logError } from "@/lib/logger";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "react-router-dom";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
 export function PingoAssistantChat() {
+  const { roles } = useAuth();
+  const location = useLocation();
+  const forceRole = new URLSearchParams(location.search).get("role");
+  const isAdminShell = roles.includes("admin") && (!forceRole || forceRole === "admin");
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
@@ -169,6 +175,8 @@ export function PingoAssistantChat() {
       send();
     }
   };
+
+  if (isAdminShell) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-4 pointer-events-none">

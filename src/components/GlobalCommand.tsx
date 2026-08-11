@@ -27,9 +27,12 @@ interface NavItem {
 }
 
 const getNavItems = (role: string): NavItem[] => {
+  const accountItems: NavItem[] = [
+    { label: "Meu Perfil", href: `/dashboard/profile?role=${role}`, icon: <User className="w-4 h-4" />, group: "Conta", shortcut: "G P" },
+    { label: "Configurações", href: `/dashboard/settings?role=${role}`, icon: <Settings className="w-4 h-4" />, group: "Conta" },
+  ];
   const base: NavItem[] = [
-    { label: "Meu Perfil", href: "/dashboard/profile", icon: <User className="w-4 h-4" />, group: "Conta", shortcut: "G P" },
-    { label: "Configurações", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" />, group: "Conta" },
+    ...accountItems,
     { label: "Assistente IA", href: "/dashboard/ai-assistant", icon: <Bot className="w-4 h-4" />, group: "Conta" },
   ];
 
@@ -56,19 +59,19 @@ const getNavItems = (role: string): NavItem[] => {
   ];
 
   if (role === "admin") return [
-    { label: "Painel Admin", href: "/dashboard", icon: <BarChart3 className="w-4 h-4" />, group: "Admin", shortcut: "G D" },
+    { label: "Painel Admin", href: "/dashboard/admin/panel-center?role=admin", icon: <BarChart3 className="w-4 h-4" />, group: "Admin", shortcut: "G D" },
     { label: "Centro de Manutenção", href: "/dashboard/admin/maintenance?role=admin", icon: <Settings className="w-4 h-4" />, group: "Admin" },
-    { label: "Aprovações", href: "/dashboard/admin/approvals", icon: <ShieldCheck className="w-4 h-4" />, group: "Admin" },
-    { label: "Usuários", href: "/dashboard/admin/users", icon: <Users className="w-4 h-4" />, group: "Admin" },
-    { label: "Pacientes", href: "/dashboard/admin/patients", icon: <User className="w-4 h-4" />, group: "Admin" },
-    { label: "Médicos", href: "/dashboard/admin/doctors", icon: <Stethoscope className="w-4 h-4" />, group: "Admin" },
-    { label: "Clínicas", href: "/dashboard/admin/clinics", icon: <Building2 className="w-4 h-4" />, group: "Admin" },
-    { label: "Agendamentos", href: "/dashboard/admin/appointments", icon: <Calendar className="w-4 h-4" />, group: "Admin" },
-    { label: "Financeiro", href: "/dashboard/admin/financial", icon: <DollarSign className="w-4 h-4" />, group: "Admin" },
-    { label: "KYC Review", href: "/dashboard/admin/kyc", icon: <ScanFace className="w-4 h-4" />, group: "Admin" },
-    { label: "Logs", href: "/dashboard/admin/logs", icon: <FileText className="w-4 h-4" />, group: "Admin" },
-    { label: "Configurações da Plataforma", href: "/dashboard/admin/platform-settings", icon: <Settings className="w-4 h-4" />, group: "Admin" },
-    ...base,
+    { label: "Aprovações", href: "/dashboard/admin/approvals?role=admin", icon: <ShieldCheck className="w-4 h-4" />, group: "Admin" },
+    { label: "Usuários", href: "/dashboard/admin/users?role=admin", icon: <Users className="w-4 h-4" />, group: "Admin" },
+    { label: "Pacientes", href: "/dashboard/admin/patients?role=admin", icon: <User className="w-4 h-4" />, group: "Admin" },
+    { label: "Médicos", href: "/dashboard/admin/doctors?role=admin", icon: <Stethoscope className="w-4 h-4" />, group: "Admin" },
+    { label: "Clínicas", href: "/dashboard/admin/clinics?role=admin", icon: <Building2 className="w-4 h-4" />, group: "Admin" },
+    { label: "Agendamentos", href: "/dashboard/admin/appointments?role=admin", icon: <Calendar className="w-4 h-4" />, group: "Admin" },
+    { label: "Financeiro", href: "/dashboard/admin/financial?role=admin", icon: <DollarSign className="w-4 h-4" />, group: "Admin" },
+    { label: "KYC Review", href: "/dashboard/admin/kyc-review?role=admin", icon: <ScanFace className="w-4 h-4" />, group: "Admin" },
+    { label: "Logs", href: "/dashboard/admin/logs?role=admin", icon: <FileText className="w-4 h-4" />, group: "Admin" },
+    { label: "Configurações da Plataforma", href: "/dashboard/admin/platform-settings?role=admin", icon: <Settings className="w-4 h-4" />, group: "Admin" },
+    ...accountItems,
   ];
 
   if (role === "support") return [
@@ -106,7 +109,7 @@ const GlobalCommand = ({ role = "patient" }: GlobalCommandProps) => {
 
   // Busca dinâmica: appointments/receitas/pacientes (debounce 250ms)
   useEffect(() => {
-    if (!open || query.trim().length < 2 || !user) { setResults([]); return; }
+    if (role === "admin" || !open || query.trim().length < 2 || !user) { setResults([]); setSearching(false); return; }
     const handle = setTimeout(async () => {
       setSearching(true);
       try {
@@ -185,7 +188,7 @@ const GlobalCommand = ({ role = "patient" }: GlobalCommandProps) => {
       }
     }, 250);
     return () => clearTimeout(handle);
-  }, [open, query, user?.id, roles?.join(",")]);
+  }, [open, query, role, user?.id, roles?.join(",")]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -215,7 +218,7 @@ const GlobalCommand = ({ role = "patient" }: GlobalCommandProps) => {
   return (
     <CommandDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
       <CommandInput
-        placeholder={(user) ? "Buscar paciente, receita, consulta, seção…" : "Buscar seção, funcionalidade..."}
+        placeholder={role === "admin" ? "Buscar função administrativa..." : (user ? "Buscar paciente, receita, consulta, seção…" : "Buscar seção, funcionalidade...")}
         value={query}
         onValueChange={setQuery}
       />

@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SHORTCUTS: { keys: string; description: string }[] = [
   { keys: "Alt + H", description: "Ir para a Página Inicial" },
@@ -29,14 +30,18 @@ const isInteractiveTarget = (target: EventTarget | null) => {
 export function useKeyboardShortcuts() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { roles } = useAuth();
+  const forceRole = new URLSearchParams(location.search).get("role");
+  const isAdminShell = roles.includes("admin") && (!forceRole || forceRole === "admin");
 
   const showHelp = useCallback(() => {
-    const lines = SHORTCUTS.map((s) => `${s.keys} → ${s.description}`).join("  ·  ");
+    const shortcuts = isAdminShell ? SHORTCUTS.filter((s) => s.keys !== "Alt + N") : SHORTCUTS;
+    const lines = shortcuts.map((s) => `${s.keys} → ${s.description}`).join("  ·  ");
     toast.info("⌨️ Atalhos de Teclado", {
       description: lines,
       duration: 6000,
     });
-  }, []);
+  }, [isAdminShell]);
 
   useEffect(() => {
     const isDashboardRoute = location.pathname.startsWith("/dashboard");
@@ -55,15 +60,19 @@ export function useKeyboardShortcuts() {
             break;
           case "d":
             e.preventDefault();
-            navigate("/dashboard");
+            navigate(isAdminShell ? "/dashboard/admin/panel-center?role=admin" : "/dashboard");
             break;
           case "n":
+            if (isAdminShell) {
+              e.preventDefault();
+              break;
+            }
             e.preventDefault();
             navigate("/dashboard/schedule");
             break;
           case "p":
             e.preventDefault();
-            navigate("/dashboard/profile");
+            navigate(isAdminShell ? "/dashboard/profile?role=admin" : forceRole ? `/dashboard/profile?role=${forceRole}` : "/dashboard/profile");
             break;
         }
         return;
@@ -77,6 +86,6 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [location.pathname, navigate, showHelp]);
+  }, [location.pathname, location.search, navigate, showHelp, isAdminShell, forceRole]);
 }
 
