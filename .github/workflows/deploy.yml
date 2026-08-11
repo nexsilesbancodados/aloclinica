@@ -119,6 +119,25 @@ jobs:
             docker compose up -d --force-recreate aloclinica-web
             docker image prune -f
 
+      - name: Refresh Traefik backend after container replacement
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          timeout: 300s
+          command_timeout: 5m
+          script: |
+            set -e
+            route_file="/etc/easypanel/traefik/config/aloclinica-web-frontend.yml"
+            container_ip="$(docker inspect -f '{{(index .NetworkSettings.Networks "easypanel").IPAddress}}' aloclinica-web)"
+            test -n "$container_ip"
+            test -f "$route_file"
+            tmp_route="${route_file}.tmp"
+            sed -E "s#url: \"http://[^\"]+:80\"#url: \"http://${container_ip}:80\"#" "$route_file" > "$tmp_route"
+            mv "$tmp_route" "$route_file"
+            echo "Traefik backend refreshed for aloclinica-web (${container_ip})."
+
       - name: Health check
         uses: appleboy/ssh-action@v1.0.3
         with:
