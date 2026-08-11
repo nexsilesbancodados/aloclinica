@@ -160,6 +160,9 @@ describe("Jitsi Meet — src/lib/jitsi.ts", () => {
 const mockInvoke = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: "test-access-token" } } }),
+    },
     functions: {
       invoke: (...args: any[]) => mockInvoke(...args),
     },

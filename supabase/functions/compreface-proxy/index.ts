@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { checkRateLimit, getCaller } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,22 @@ serve(async (req) => {
         JSON.stringify({ error: "Missing or invalid action param (detect|verify)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    const caller = await getCaller(req);
+    if (!caller.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const allowed = await checkRateLimit(`user:${caller.user.id}`, `compreface:${action}`, 20, 15);
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Muitas verificações. Aguarde alguns minutos." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
+      });
     }
 
     // Forward the multipart form data as-is

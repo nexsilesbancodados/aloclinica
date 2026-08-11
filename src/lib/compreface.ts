@@ -4,8 +4,18 @@
  */
 
 import { SUPABASE_FUNCTIONS_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabase-config";
+import { db } from "@/integrations/supabase/untyped";
 
 const PROXY_URL = `${SUPABASE_FUNCTIONS_URL}/compreface-proxy`;
+
+const getProxyHeaders = async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session?.access_token) throw new Error("Sessão expirada. Entre novamente para continuar.");
+  return {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Authorization: `Bearer ${session.access_token}`,
+  };
+};
 
 export interface VerificacaoResult {
   aprovado: boolean;
@@ -27,12 +37,11 @@ export async function verificarFace(
   const formData = new FormData();
   formData.append("source_image", selfie);
   formData.append("target_image", fotoDoc);
+  const headers = await getProxyHeaders();
 
   const res = await fetch(`${PROXY_URL}?action=verify`, {
     method: "POST",
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-    },
+    headers,
     body: formData,
   });
 
@@ -58,12 +67,11 @@ export async function verificarFace(
 export async function detectarFace(imagem: File): Promise<DeteccaoResult> {
   const formData = new FormData();
   formData.append("file", imagem);
+  const headers = await getProxyHeaders();
 
   const res = await fetch(`${PROXY_URL}?action=detect`, {
     method: "POST",
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-    },
+    headers,
     body: formData,
   });
 
