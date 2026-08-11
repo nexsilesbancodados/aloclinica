@@ -68,9 +68,6 @@ jobs:
           # when stale files exist on the VPS.
           target: "/opt/aloclinica/.deploy-upload/"
           strip_components: 0
-          # The VPS keeps the deployment directory between runs. Force tar to
-          # replace the previous dist files so index.html and its hashed assets
-          # always come from the same build.
           overwrite: true
           timeout: 300s
           command_timeout: 20m
@@ -134,8 +131,6 @@ jobs:
             for i in 1 2 3 4 5 6 7 8 9 10; do
               if curl -skf https://aloclinica.com.br/health > /dev/null 2>&1; then
                 echo "Deploy OK (attempt $i)"
-                echo "Container index assets:"
-                docker exec aloclinica-web sh -c "grep -oE '/assets/[^\" ]+\\.(js|css)' /usr/share/nginx/html/index.html | sort -u"
 
                 echo "Validating published frontend assets..."
                 html="$(curl -skf https://aloclinica.com.br/)"
@@ -149,8 +144,6 @@ jobs:
                   status="$(curl -sk -o /dev/null -w '%{http_code}' "https://aloclinica.com.br${asset}")"
                   if [[ "$status" != "200" ]]; then
                     echo "Frontend asset is not reachable: ${asset} (HTTP ${status})"
-                    echo "Public index assets:"
-                    printf '%s\n' "$html" | grep -oE '/assets/[^\" ]+\.(js|css)' | sort -u || true
                     exit 1
                   fi
                 done <<< "$assets"
@@ -161,8 +154,6 @@ jobs:
               sleep 5
             done
             echo "Health check failed after 50s"
-            echo "Published container index:" 
-            docker exec aloclinica-web sh -c "grep -oE '/assets/[^\" ]+\\.(js|css)' /usr/share/nginx/html/index.html | sort -u" || true
             docker logs aloclinica-web --tail 30
             exit 1
 
