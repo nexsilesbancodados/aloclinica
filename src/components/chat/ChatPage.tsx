@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -38,6 +38,7 @@ const ChatPage = () => {
   const [selected, setSelected] = useState<ChatConversation | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const userId = user?.id;
 
   const isDoctor = roles.includes("doctor");
   const forceRole = searchParams.get("role");
@@ -45,20 +46,19 @@ const ChatPage = () => {
   const nav = activeRole === "doctor" ? getDoctorNav("chat") : getPatientNav("chat");
   const backHref = activeRole === "doctor" ? "/dashboard?role=doctor" : "/dashboard?role=patient";
 
-  useEffect(() => { if (user) fetchConversations(); }, [user]);
-
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
+    if (!userId) return;
     let query = db.from("appointments").select("id, scheduled_at, status, patient_id, doctor_id")
       .in("status", ["scheduled", "confirmed", "waiting", "in_progress", "completed"])
       .order("scheduled_at", { ascending: false })
       .limit(50);
 
     if (isDoctor) {
-      const { data: doc } = await db.from("doctor_profiles").select("id").eq("user_id", user!.id).single();
+      const { data: doc } = await db.from("doctor_profiles").select("id").eq("user_id", userId).single();
       if (doc) query = query.eq("doctor_id", doc.id);
       else { setLoading(false); return; }
     } else {
-      query = query.eq("patient_id", user!.id);
+      query = query.eq("patient_id", userId);
     }
 
     const { data: appts } = await query;
@@ -90,7 +90,7 @@ const ChatPage = () => {
       .select("appointment_id")
       .in("appointment_id", apptIds)
       .eq("is_read", false)
-      .neq("sender_id", user!.id);
+      .neq("sender_id", userId);
 
     const unreadMap = new Map<string, number>();
     (unreadMsgs ?? []).forEach((m: { appointment_id: string }) => {
@@ -109,7 +109,9 @@ const ChatPage = () => {
 
     setConversations(convos);
     setLoading(false);
-  };
+  }, [isDoctor, userId]);
+
+  useEffect(() => { void fetchConversations(); }, [fetchConversations]);
 
   const statusLabel: Record<string, string> = {
     scheduled: "Agendada", confirmed: "Confirmada", waiting: "Aguardando", in_progress: "Em andamento", completed: "Concluída",

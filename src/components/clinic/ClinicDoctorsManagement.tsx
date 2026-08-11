@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -54,25 +54,9 @@ const ClinicDoctorsManagement = () => {
   const [commissionDialogOpen, setCommissionDialogOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<ClinicDoctor | null>(null);
   const [commissionValue, setCommissionValue] = useState(70);
+  const userId = user?.id;
 
-  useEffect(() => { if (user) fetchClinicProfile(); }, [user]);
-
-  const fetchClinicProfile = async () => {
-    const { data } = await db
-      .from("clinic_profiles")
-      .select("id, name")
-      .eq("user_id", user!.id)
-      .single();
-
-    if (data) {
-      setClinicProfileId(data.id);
-      setClinicName(data.name);
-      fetchDoctors(data.id);
-    }
-    setLoading(false);
-  };
-
-  const fetchDoctors = async (clinicId: string) => {
+  const fetchDoctors = useCallback(async (clinicId: string) => {
     const { data: affiliations } = await db
       .from("clinic_affiliations")
       .select("id, doctor_id, status, commission_percent")
@@ -120,7 +104,25 @@ const ClinicDoctorsManagement = () => {
     });
 
     setDoctors(results);
-  };
+  }, []);
+
+  const fetchClinicProfile = useCallback(async () => {
+    if (!userId) return;
+    const { data } = await db
+      .from("clinic_profiles")
+      .select("id, name")
+      .eq("user_id", userId)
+      .single();
+
+    if (data) {
+      setClinicProfileId(data.id);
+      setClinicName(data.name);
+      fetchDoctors(data.id);
+    }
+    setLoading(false);
+  }, [fetchDoctors, userId]);
+
+  useEffect(() => { void fetchClinicProfile(); }, [fetchClinicProfile]);
 
   const searchDoctor = async () => {
     if (!searchCrm.trim()) return;

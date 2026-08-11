@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -19,23 +19,12 @@ const ClinicWaitingRoom = () => {
   const [patients, setPatients] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const now = new Date();
+  const userId = user?.id;
 
-  useEffect(() => { if (user) fetchData(); }, [user]);
-
-  // Real-time updates
-  useEffect(() => {
-    const channel = db
-      .channel("clinic-waiting-room")
-      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => {
-        if (user) fetchData();
-      })
-      .subscribe();
-    return () => { db.removeChannel(channel); };
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
-    const { data: clinic } = await db.from("clinic_profiles").select("id").eq("user_id", user!.id).single();
+    const { data: clinic } = await db.from("clinic_profiles").select("id").eq("user_id", userId).single();
     if (!clinic) { setLoading(false); return; }
 
     const { data: affiliations } = await db.from("clinic_affiliations").select("doctor_id").eq("clinic_id", clinic.id).eq("status", "active");
@@ -56,7 +45,7 @@ const ClinicWaitingRoom = () => {
     setDoctors(docMap);
 
     // Today's upcoming/confirmed appointments (waiting room)
-    const todayStr = format(now, "yyyy-MM-dd");
+    const todayStr = format(new Date(), "yyyy-MM-dd");
     const { data: appts } = await db.from("appointments")
       .select("*")
       .in("doctor_id", doctorIds)
@@ -77,7 +66,20 @@ const ClinicWaitingRoom = () => {
     }
 
     setLoading(false);
-  };
+  }, [userId]);
+
+  useEffect(() => { void fetchData(); }, [fetchData]);
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = db
+      .channel("clinic-waiting-room")
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => {
+        if (userId) void fetchData();
+      })
+      .subscribe();
+    return () => { db.removeChannel(channel); };
+  }, [fetchData, userId]);
 
   const getWaitTime = (scheduledAt: string) => {
     const diff = differenceInMinutes(new Date(scheduledAt), now);

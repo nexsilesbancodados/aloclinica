@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import mascotWelcome from "@/assets/mascot-welcome.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/integrations/supabase/untyped";
@@ -27,12 +27,12 @@ const ClinicPatients = () => {
   const [patients, setPatients] = useState<PatientRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const userId = user?.id;
 
-  useEffect(() => { if (user) fetchData(); }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
-    const { data: clinic } = await db.from("clinic_profiles").select("id").eq("user_id", user!.id).single();
+    const { data: clinic } = await db.from("clinic_profiles").select("id").eq("user_id", userId).single();
     if (!clinic) { setLoading(false); return; }
 
     const { data: affiliations } = await db.from("clinic_affiliations").select("doctor_id").eq("clinic_id", clinic.id).eq("status", "active");
@@ -76,7 +76,9 @@ const ClinicPatients = () => {
 
     setPatients(rows);
     setLoading(false);
-  };
+  }, [userId]);
+
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   const filtered = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.phone ?? "").includes(search));
 

@@ -6,7 +6,7 @@
  *  2. Cartões salvos — vault Mercado Pago
  *  3. Histórico — todas transações (paid/refunded/pending)
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/integrations/supabase/untyped";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -82,6 +82,7 @@ const statusBadge = (status: string) => {
 
 export function BillingPortal() {
   const { user } = useAuth();
+  const userId = user?.id;
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,15 +91,15 @@ export function BillingPortal() {
   });
   const [tab, setTab] = useState<"subscriptions" | "cards" | "history">("subscriptions");
 
-  const fetchAll = async () => {
-    if (!user) return;
+  const fetchAll = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
 
     const [subsRes] = await Promise.all([
       (db as any)
         .from("subscriptions")
         .select("*, plans(name)")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false }),
     ]);
 
@@ -107,9 +108,9 @@ export function BillingPortal() {
     setSubs(((subsRes.data ?? []) as any[]).map(s => ({ ...s, plan_name: s.plans?.name })));
     setTxs([]); // payment_transactions table was removed
     setLoading(false);
-  };
+  }, [userId]);
 
-  useEffect(() => { fetchAll(); }, [user]);
+  useEffect(() => { void fetchAll(); }, [fetchAll]);
 
   const cancelSubscription = async () => {
     const sub = cancelDialog.sub;

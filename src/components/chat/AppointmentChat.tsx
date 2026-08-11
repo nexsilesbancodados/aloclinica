@@ -51,6 +51,7 @@ const TypingIndicator = () => (
 
 const AppointmentChat = ({ appointmentId, otherUserName }: AppointmentChatProps) => {
   const { user } = useAuth();
+  const userId = user?.id;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -82,9 +83,24 @@ const AppointmentChat = ({ appointmentId, otherUserName }: AppointmentChatProps)
     checkExpiry();
   }, [appointmentId]);
 
+  const fetchMessages = useCallback(async () => {
+    if (!userId) return;
+    const { data } = await db
+      .from("messages")
+      .select("*")
+      .eq("appointment_id", appointmentId)
+      .order("created_at", { ascending: true });
+    setMessages((data as Message[]) ?? []);
+
+    const unread = (data ?? []).filter((m: { is_read: boolean; sender_id: string }) => !m.is_read && m.sender_id !== userId);
+    if (unread.length > 0) {
+      await db.from("messages").update({ is_read: true }).in("id", unread.map((m: any) => m.id));
+    }
+  }, [appointmentId, userId]);
+
   useEffect(() => {
-    if (!user || !appointmentId) return;
-    fetchMessages();
+    if (!userId || !appointmentId) return;
+    void fetchMessages();
 
     // Realtime for new messages
     const channel = db
@@ -98,7 +114,7 @@ const AppointmentChat = ({ appointmentId, otherUserName }: AppointmentChatProps)
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
-          if (newMsg.sender_id !== user.id) {
+          if (newMsg.sender_id !== userId) {
             db.from("messages").update({ is_read: true }).eq("id", newMsg.id).then(() => {});
             setOtherTyping(false);
           }
@@ -117,7 +133,7 @@ const AppointmentChat = ({ appointmentId, otherUserName }: AppointmentChatProps)
     // Presence channel for typing indicators
     const presenceChannel = db.channel(`typing-${appointmentId}`)
       .on("broadcast", { event: "typing" }, (payload) => {
-        if (payload.payload.user_id !== user.id) {
+        if (payload.payload.user_id !== userId) {
           setOtherTyping(true);
           setTimeout(() => setOtherTyping(false), 3000);
         }
@@ -130,25 +146,11 @@ const AppointmentChat = ({ appointmentId, otherUserName }: AppointmentChatProps)
       db.removeChannel(channel);
       db.removeChannel(presenceChannel);
     };
-  }, [user, appointmentId]);
+  }, [appointmentId, fetchMessages, userId]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, otherTyping]);
-
-  const fetchMessages = async () => {
-    const { data } = await db
-      .from("messages")
-      .select("*")
-      .eq("appointment_id", appointmentId)
-      .order("created_at", { ascending: true });
-    setMessages((data as Message[]) ?? []);
-
-    const unread = (data ?? []).filter((m: { is_read: boolean; sender_id: string }) => !m.is_read && m.sender_id !== user!.id);
-    if (unread.length > 0) {
-      await db.from("messages").update({ is_read: true }).in("id", unread.map((m: any) => m.id));
-    }
-  };
 
   const broadcastTyping = useCallback(() => {
     if (!channelRef.current || !user) return;

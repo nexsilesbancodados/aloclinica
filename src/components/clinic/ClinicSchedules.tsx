@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import pingoReception from "@/assets/pingo-reception.jpg";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/integrations/supabase/untyped";
@@ -34,14 +34,12 @@ const ClinicSchedules = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const userId = user?.id;
 
-  useEffect(() => {
-    if (user) fetchData();
-  }, [user, selectedDate]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
-    const { data: clinic } = await db.from("clinic_profiles").select("id").eq("user_id", user!.id).single();
+    const { data: clinic } = await db.from("clinic_profiles").select("id").eq("user_id", userId).single();
     if (!clinic) { setLoading(false); return; }
 
     const { data: affiliations } = await db.from("clinic_affiliations").select("doctor_id").eq("clinic_id", clinic.id).eq("status", "active");
@@ -83,7 +81,9 @@ const ClinicSchedules = () => {
     }
 
     setLoading(false);
-  };
+  }, [selectedDate, userId]);
+
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   const filtered = appointments.filter(a => {
     const patientName = patients.get(a.patient_id) ?? "";
