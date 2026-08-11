@@ -85,30 +85,6 @@ jobs:
           timeout: 300s
           command_timeout: 5m
 
-      - name: Inspect active Traefik provider
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ env.VPS_HOST }}
-          username: root
-          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          timeout: 300s
-          command_timeout: 5m
-          script: |
-            set -e
-            echo "Traefik containers:"
-            docker ps --format '{{.Names}}' | grep -i traefik || true
-            echo "Host Traefik config files:"
-            find /etc/easypanel/traefik -maxdepth 4 -type f 2>/dev/null | sort | head -n 120 || true
-            for container in $(docker ps --format '{{.Names}}' | grep -i traefik || true); do
-              echo "Container: $container"
-              docker inspect "$container" --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
-              docker inspect "$container" --format '{{range .Config.Cmd}}{{.}} {{end}}{{range .Config.Entrypoint}}{{.}} {{end}}'
-              echo "Mounted dynamic config files:"
-              docker exec "$container" sh -c 'find /data /etc/traefik /etc/easypanel/traefik -maxdepth 4 -type f 2>/dev/null | sort | head -n 120' || true
-              echo "Recent Traefik config errors:"
-              docker logs "$container" --since 2m 2>&1 | grep -iE 'error|provider|config|router|aloclinica' | tail -n 80 || true
-            done
-
       - name: Build and restart container on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -127,22 +103,6 @@ jobs:
             docker compose build --no-cache aloclinica-web
             docker compose up -d --force-recreate aloclinica-web
             docker image prune -f
-
-      - name: Verify container asset layout
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ env.VPS_HOST }}
-          username: root
-          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          timeout: 300s
-          command_timeout: 5m
-          script: |
-            set -e
-            echo "Published container files:"
-            docker exec aloclinica-web sh -c \
-              'find /usr/share/nginx/html -maxdepth 3 -type f | sed "s#^/usr/share/nginx/html/##" | sort | grep -E "^(index\.html|dist/|assets/)" | head -n 40'
-            docker exec aloclinica-web sh -c \
-              'asset=$(grep -oE "/assets/[^\" ]+\\.css" /usr/share/nginx/html/index.html | head -n 1); echo "Container asset: $asset"; test -f "/usr/share/nginx/html$asset"; wget -qSO /dev/null "http://127.0.0.1$asset" 2>&1 | head -n 12'
 
       - name: Health check
         uses: appleboy/ssh-action@v1.0.3
