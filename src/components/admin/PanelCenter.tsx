@@ -13,7 +13,7 @@ import {
   UserPlus, Layers, TrendingUp, Zap, Settings2,
   FileText, PieChart, ShieldAlert, Database, 
   CreditCard, ClipboardList, CheckCircle, AlertCircle, History,
-  Eye, Heart, Phone, CalendarCheck, UserCheck, Wallet, Megaphone
+  Eye, Heart, Phone, CalendarCheck, UserCheck, Wallet, Megaphone, Handshake
 } from "lucide-react";
 import { SquaresFour, WhatsappLogo, ShieldStar, Tag, Graph } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
