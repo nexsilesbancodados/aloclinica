@@ -115,6 +115,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # The deploy step compares against github.event.before. Keep the
+          # previous commit available so changed Edge Functions are detected.
+          fetch-depth: 0
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
