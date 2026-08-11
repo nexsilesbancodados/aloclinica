@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
 import { getAdminNav } from "./adminNav";
 import { AdminPageHeader } from "./AdminPageHeader";
@@ -112,12 +112,7 @@ const AdminFinancial = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null); // withdrawal id being actioned
 
-  useEffect(() => {
-    fetchData();
-    fetchWithdrawals();
-  }, [period]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - parseInt(period));
@@ -215,9 +210,9 @@ const AdminFinancial = () => {
     setMonthlyTrend(months);
 
     setLoading(false);
-  };
+  }, [period]);
 
-  const fetchWithdrawals = async () => {
+  const fetchWithdrawals = useCallback(async () => {
     setWithdrawalsLoading(true);
     const { data: wrs, error } = await db
       .from("withdrawal_requests")
@@ -253,7 +248,12 @@ const AdminFinancial = () => {
 
     setWithdrawals(enriched);
     setWithdrawalsLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchData();
+    void fetchWithdrawals();
+  }, [fetchData, fetchWithdrawals]);
 
   const handleWithdrawalAction = async (
     withdrawal: WithdrawalRequest,

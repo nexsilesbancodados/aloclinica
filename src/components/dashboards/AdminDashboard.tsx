@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/integrations/supabase/untyped";
 import DashboardLayout from "@/components/dashboards/DashboardLayout";
@@ -53,19 +53,7 @@ const AdminDashboard = () => {
   const [liveAppts, setLiveAppts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchAll(); }, [periodFilter]);
-
-  useEffect(() => {
-    const channel = db
-      .channel("admin-live-monitor")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "appointments" }, () => {
-        fetchLiveStats();
-      })
-      .subscribe();
-    return () => { db.removeChannel(channel); };
-  }, []);
-
-  const fetchLiveStats = async () => {
+  const fetchLiveStats = useCallback(async () => {
     const [liveRes, waitRes, liveListRes] = await Promise.all([
       db.from("appointments").select("id", { count: "exact", head: true }).eq("status", "in_progress"),
       db.from("appointments").select("id", { count: "exact", head: true }).eq("status", "waiting"),
@@ -105,9 +93,9 @@ const AdminDashboard = () => {
     } else {
       setLiveAppts([]);
     }
-  };
+  }, []);
 
-  const fetchAll = async (showRefreshing = false) => {
+  const fetchAll = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
     const now = new Date();
     let periodStart: Date;
@@ -190,8 +178,20 @@ const AdminDashboard = () => {
 
     setLoading(false);
     setRefreshing(false);
-    fetchLiveStats();
-  };
+    void fetchLiveStats();
+  }, [fetchLiveStats, periodFilter]);
+
+  useEffect(() => { void fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    const channel = db
+      .channel("admin-live-monitor")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "appointments" }, () => {
+        void fetchLiveStats();
+      })
+      .subscribe();
+    return () => { db.removeChannel(channel); };
+  }, [fetchLiveStats]);
 
   const exportAdminPDF = async () => {
     const { default: jsPDF } = await import("jspdf");
