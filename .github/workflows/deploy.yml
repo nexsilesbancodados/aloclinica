@@ -104,6 +104,8 @@ jobs:
             echo "Published container files:"
             docker exec aloclinica-web sh -c \
               'find /usr/share/nginx/html -maxdepth 3 -type f | sed "s#^/usr/share/nginx/html/##" | sort | grep -E "^(index\.html|dist/|assets/)" | head -n 40'
+            docker exec aloclinica-web sh -c \
+              'asset=$(grep -oE "/assets/[^\" ]+\\.css" /usr/share/nginx/html/index.html | head -n 1); echo "Container asset: $asset"; test -f "/usr/share/nginx/html$asset"; wget -qSO /dev/null "http://127.0.0.1$asset" 2>&1 | head -n 12'
 
       - name: Health check
         uses: appleboy/ssh-action@v1.0.3
