@@ -18,6 +18,10 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
+      // Service workers are long-lived browser state. Versioning the URL makes
+      // every production build bypass a stale CDN copy of /sw.js and lets the
+      // current app take over the existing registration for the same scope.
+      filename: `sw-${process.env.GITHUB_SHA?.slice(0, 12) ?? "local"}.js`,
       registerType: "autoUpdate",
       injectRegister: "auto",
       includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
