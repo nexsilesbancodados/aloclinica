@@ -85,6 +85,26 @@ jobs:
           timeout: 300s
           command_timeout: 5m
 
+      - name: Inspect active Traefik provider
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          timeout: 300s
+          command_timeout: 5m
+          script: |
+            set -e
+            echo "Traefik containers:"
+            docker ps --format '{{.Names}}' | grep -i traefik || true
+            for container in $(docker ps --format '{{.Names}}' | grep -i traefik || true); do
+              echo "Container: $container"
+              docker inspect "$container" --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+              docker inspect "$container" --format '{{range .Config.Cmd}}{{.}} {{end}}{{range .Config.Entrypoint}}{{.}} {{end}}'
+              echo "Mounted dynamic config files:"
+              docker exec "$container" sh -c 'find /etc/traefik /etc/easypanel/traefik -maxdepth 4 -type f 2>/dev/null | sort | head -n 80' || true
+            done
+
       - name: Build and restart container on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
