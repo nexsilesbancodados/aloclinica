@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdminShell } from "@/hooks/use-admin-shell";
 
 const SHORTCUTS: { keys: string; description: string }[] = [
   { keys: "Alt + H", description: "Ir para a Página Inicial" },
@@ -30,9 +30,8 @@ const isInteractiveTarget = (target: EventTarget | null) => {
 export function useKeyboardShortcuts() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { roles } = useAuth();
   const forceRole = new URLSearchParams(location.search).get("role");
-  const isAdminShell = roles.includes("admin") && (!forceRole || forceRole === "admin");
+  const isAdminShell = useIsAdminShell();
 
   const showHelp = useCallback(() => {
     const shortcuts = isAdminShell ? SHORTCUTS.filter((s) => s.keys !== "Alt + N") : SHORTCUTS;

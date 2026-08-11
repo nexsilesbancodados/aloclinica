@@ -1,4 +1,4 @@
-import { ReactNode, useState, useMemo, useEffect, useRef, isValidElement, cloneElement } from "react";
+import { ReactNode, useState, useMemo, useEffect, useRef, isValidElement, cloneElement, lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
@@ -23,7 +23,9 @@ import { DevModeToggle } from "@/components/dev/DevModeToggle";
 const logoImg = PINGO_LOGO_URL;
 const mascotImg = PINGO_LOGO_URL;
 import DashboardBreadcrumbs from "@/components/dashboards/DashboardBreadcrumbs";
-import FaqChatWidget from "@/components/support/FaqChatWidget";
+// Lazy: o painel admin não renderiza o widget, e assim não carrega
+// react-markdown junto com o shell.
+const FaqChatWidget = lazy(() => import("@/components/support/FaqChatWidget"));
 import useNotificationTitle from "@/hooks/use-notification-title";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useSessionSecurity } from "@/hooks/use-session-security";
@@ -252,8 +254,8 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
          {
            label: "Ao Vivo",
            href: "/dashboard/admin/live?role=admin",
-           icon: <VideoCamera size={22} weight={currentPath.includes("live") ? "fill" : "regular"} />,
-           active: currentPath.includes("live")
+           icon: <VideoCamera size={22} weight={currentPath.includes("/admin/live") ? "fill" : "regular"} />,
+           active: currentPath.includes("/admin/live")
          },
          {
            label: "Usuários",
@@ -745,7 +747,7 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
 
       <GlobalCommand role={role} />
       {!isAdminShell && <PWABanner role={role} />}
-      {!isAdminShell && <FaqChatWidget />}
+      {!isAdminShell && <Suspense fallback={null}><FaqChatWidget /></Suspense>}
 
        {/* ═══ Mobile bottom nav — Premium Floating TabBar ═══ */}
        {nav && nav.length > 0 && (

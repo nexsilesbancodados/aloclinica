@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import PushNotificationToggle from "./PushNotificationToggle";
 import { isNotifAllowed } from "@/lib/notificationPrefs";
+import { useIsAdminShell } from "@/hooks/use-admin-shell";
 
 interface Notification {
   id: string;
@@ -34,8 +35,10 @@ const playNotificationSound = () => {
 };
 
 const NotificationBell = () => {
-  const { user, roles } = useAuth();
-  const isAdmin = roles.includes("admin");
+  const { user } = useAuth();
+  // Shell admin, não "usuário é admin": em "ver como paciente" o sino volta a
+  // ser o do paciente (contador de mensagens, push e "Ver todas").
+  const isAdminShell = useIsAdminShell();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
@@ -77,7 +80,11 @@ const NotificationBell = () => {
   useEffect(() => {
     if (!user) return;
     fetchNotifications();
-    if (!isAdmin) fetchUnreadMessages();
+    // O contador de mensagens é da conversa do usuário; para o admin a policy
+    // "Support users can view all chat messages" faria dele a contagem de toda
+    // a plataforma, então some junto com o rodapé.
+    if (isAdminShell) setUnreadMessages(0);
+    else fetchUnreadMessages();
 
     // Defensive cleanup: remove any leftover channel instances with the same
     // names (HMR or unmount races can leave orphan channels in the client,
@@ -119,7 +126,7 @@ const NotificationBell = () => {
     channel.subscribe();
 
     // Realtime subscription for unread messages
-    const msgChannel = !isAdmin ? db.channel(msgChannelName) : null;
+    const msgChannel = !isAdminShell ? db.channel(msgChannelName) : null;
     msgChannel?.on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
@@ -132,7 +139,7 @@ const NotificationBell = () => {
       if (msgChannel) db.removeChannel(msgChannel);
       if (pulseTimeout.current) clearTimeout(pulseTimeout.current);
     };
-  }, [user, isAdmin]);
+  }, [user, isAdminShell]);
 
   const fetchUnreadMessages = async () => {
     if (!user) return;
@@ -300,7 +307,7 @@ const NotificationBell = () => {
         </ScrollArea>
 
         {/* Footer */}
-        {!isAdmin && (
+        {!isAdminShell && (
           <div className="px-5 py-3 border-t border-border/20 bg-gradient-to-r from-card/80 to-muted/10 flex items-center justify-between gap-2">
             <PushNotificationToggle />
             <Button

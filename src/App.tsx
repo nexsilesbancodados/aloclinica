@@ -9,7 +9,7 @@ import ThemeApplier from "@/components/ThemeApplier";
 import { ThemeProvider } from "next-themes";
 import { I18nProvider } from "@/i18n";
 import { FeatureFlagsProvider } from "@/hooks/use-feature-flags";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Index from "./pages/Index";
@@ -17,6 +17,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute"));
 import { logError } from "@/lib/logger";
 import { prefetchOnIdle } from "./hooks/use-prefetch-route";
+import { useIsAdminShell } from "@/hooks/use-admin-shell";
 import ScrollToTop from "./components/ScrollToTop";
 import { PingoAssistantChat } from "@/components/ai/PingoAssistantChat";
 import MaintenanceBanner from "@/components/MaintenanceBanner";
@@ -151,6 +152,17 @@ const SubdomainRedirectProvider = lazy(() =>
     default: () => { m.useSubdomainRedirect(); return null; },
   }))
 );
+
+/**
+ * Widgets de usuário comum (assistente de dúvidas, convite de instalação do
+ * app): úteis no site público e nos painéis de paciente/médico, ruído no
+ * console administrativo. Vivem fora do DashboardLayout, então precisam do
+ * próprio gate.
+ */
+const NonAdminOnly = ({ children }: { children: ReactNode }) => {
+  const isAdminShell = useIsAdminShell();
+  return isAdminShell ? null : <>{children}</>;
+};
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -332,7 +344,7 @@ const App = () => {
                   </Suspense>
                   <ScrollToTop />
                   
-                  <PingoAssistantChat />
+                  <NonAdminOnly><PingoAssistantChat /></NonAdminOnly>
                   
                   <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium">
                     Pular para o conteúdo
@@ -351,7 +363,7 @@ const App = () => {
                         <TermsReconsentDialog />
                         <OfflineIndicator />
                         <PWAUpdateBanner />
-                        <PWAInstallPrompt />
+                        <NonAdminOnly><PWAInstallPrompt /></NonAdminOnly>
                         <CookieBanner />
                       </Suspense>
                     </ErrorBoundary>
