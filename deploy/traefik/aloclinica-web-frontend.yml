@@ -5,10 +5,11 @@ http:
     aloclinica-web-frontend:
       rule: "Host(`aloclinica.com.br`) || Host(`www.aloclinica.com.br`)"
       priority: 10000
-      entryPoints: ["websecure"]
       service: aloclinica-web-frontend
-      tls:
-        certResolver: letsencrypt
+      # Easypanel names entrypoints differently across installations. Leaving
+      # this unset lets Traefik bind the TLS router to the configured HTTPS
+      # entrypoint while reusing the active certificate store.
+      tls: {}
 
   services:
     aloclinica-web-frontend:
