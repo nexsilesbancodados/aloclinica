@@ -65,6 +65,10 @@ jobs:
           source: "dist/,nginx.conf,Dockerfile.ci,docker-compose.yml,.dockerignore"
           target: "/opt/aloclinica/"
           strip_components: 0
+          # The VPS keeps the deployment directory between runs. Force tar to
+          # replace the previous dist files so index.html and its hashed assets
+          # always come from the same build.
+          overwrite: true
           timeout: 300s
           command_timeout: 20m
 
@@ -99,6 +103,23 @@ jobs:
             for i in 1 2 3 4 5 6 7 8 9 10; do
               if curl -skf https://aloclinica.com.br/health > /dev/null 2>&1; then
                 echo "Deploy OK (attempt $i)"
+
+                echo "Validating published frontend assets..."
+                html="$(curl -skf https://aloclinica.com.br/)"
+                assets="$(printf '%s' "$html" | grep -oE '/assets/[^\" ]+\.(js|css)' | sort -u || true)"
+                if [[ -z "$assets" ]]; then
+                  echo "No JS/CSS assets were referenced by the published index.html"
+                  exit 1
+                fi
+                while IFS= read -r asset; do
+                  [[ -z "$asset" ]] && continue
+                  status="$(curl -sk -o /dev/null -w '%{http_code}' "https://aloclinica.com.br${asset}")"
+                  if [[ "$status" != "200" ]]; then
+                    echo "Frontend asset is not reachable: ${asset} (HTTP ${status})"
+                    exit 1
+                  fi
+                done <<< "$assets"
+                echo "Frontend assets are reachable."
                 exit 0
               fi
               echo "waiting... ($i/10)"
