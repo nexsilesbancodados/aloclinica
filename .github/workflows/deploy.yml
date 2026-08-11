@@ -63,7 +63,10 @@ jobs:
           username: root
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           source: "dist/,nginx.conf,Dockerfile.ci,docker-compose.yml,.dockerignore"
-          target: "/opt/aloclinica/"
+          # Upload outside the live directory. The SSH step swaps the complete
+          # dist tree after validating index.html, avoiding mixed hash sets
+          # when stale files exist on the VPS.
+          target: "/opt/aloclinica/.deploy-upload/"
           strip_components: 0
           # The VPS keeps the deployment directory between runs. Force tar to
           # replace the previous dist files so index.html and its hashed assets
@@ -96,6 +99,21 @@ jobs:
           script: |
             set -e
             cd /opt/aloclinica
+            test -f .deploy-upload/dist/index.html
+            test -f .deploy-upload/nginx.conf
+            test -f .deploy-upload/Dockerfile.ci
+            test -f .deploy-upload/docker-compose.yml
+            rm -rf dist.next
+            mv .deploy-upload/dist dist.next
+            rm -rf dist
+            mv dist.next dist
+            mv -f .deploy-upload/nginx.conf nginx.conf
+            mv -f .deploy-upload/Dockerfile.ci Dockerfile.ci
+            mv -f .deploy-upload/docker-compose.yml docker-compose.yml
+            if [ -f .deploy-upload/.dockerignore ]; then
+              mv -f .deploy-upload/.dockerignore .dockerignore
+            fi
+            rm -rf .deploy-upload
             # The VPS may contain a legacy container created outside this
             # Compose project. Remove only the named web container so Compose
             # can recreate the image with the uploaded build.
@@ -139,6 +157,8 @@ jobs:
               sleep 5
             done
             echo "Health check failed after 50s"
+            echo "Published container index:" 
+            docker exec aloclinica-web sh -c "grep -oE '/assets/[^\" ]+\\.(js|css)' /usr/share/nginx/html/index.html | sort -u" || true
             docker logs aloclinica-web --tail 30
             exit 1
 
