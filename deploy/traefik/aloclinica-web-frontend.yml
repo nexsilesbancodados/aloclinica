@@ -1,0 +1,17 @@
+# Canonical production route for the frontend container.
+# This file is loaded by Easypanel's Traefik file provider.
+http:
+  routers:
+    aloclinica-web-frontend:
+      rule: "Host(`aloclinica.com.br`) || Host(`www.aloclinica.com.br`)"
+      priority: 10000
+      entryPoints: ["websecure"]
+      service: aloclinica-web-frontend
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    aloclinica-web-frontend:
+      loadBalancer:
+        servers:
+          - url: "http://aloclinica-web:80"
