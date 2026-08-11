@@ -152,24 +152,28 @@ jobs:
                 echo "Deploy OK (attempt $i)"
 
                 echo "Validating published frontend assets..."
-                html="$(curl -skf https://aloclinica.com.br/)"
+                html="$(curl -skf https://aloclinica.com.br/ || true)"
                 assets="$(printf '%s' "$html" | grep -oE '/assets/[^\" ]+\.(js|css)' | sort -u || true)"
                 if [[ -z "$assets" ]]; then
-                  echo "No JS/CSS assets were referenced by the published index.html"
-                  exit 1
-                fi
-                while IFS= read -r asset; do
-                  [[ -z "$asset" ]] && continue
-                  status="$(curl -sk -o /dev/null -w '%{http_code}' "https://aloclinica.com.br${asset}")"
-                  if [[ "$status" != "200" ]]; then
-                    echo "Frontend asset is not reachable: ${asset} (HTTP ${status})"
-                    exit 1
+                  echo "No JS/CSS assets were referenced yet; retrying for CDN propagation..."
+                else
+                  assets_ok=true
+                  while IFS= read -r asset; do
+                    [[ -z "$asset" ]] && continue
+                    status="$(curl -sk -o /dev/null -w '%{http_code}' "https://aloclinica.com.br${asset}")"
+                    if [[ "$status" != "200" ]]; then
+                      echo "Frontend asset is not reachable yet: ${asset} (HTTP ${status}); retrying..."
+                      assets_ok=false
+                      break
+                    fi
+                  done <<< "$assets"
+                  if [[ "$assets_ok" == true ]]; then
+                    echo "Frontend assets are reachable."
+                    exit 0
                   fi
-                done <<< "$assets"
-                echo "Frontend assets are reachable."
-                exit 0
+                fi
               fi
-              echo "waiting... ($i/10)"
+              echo "waiting for stable health/assets... ($i/10)"
               sleep 5
             done
             echo "Health check failed after 50s"
