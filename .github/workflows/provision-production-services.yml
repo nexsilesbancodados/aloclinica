@@ -1,0 +1,197 @@
+name: One-shot — Provisionar serviços críticos de produção
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Digite PROVISION para instalar Coturn e sincronizar backup"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  SUPABASE_PROJECT_REF: pwxvvimdtmvzinbspgx
+  VPS_HOST: 72.62.138.208
+  VPS_USER: root
+
+jobs:
+  provision:
+    name: Provisionar Coturn e backup
+    if: ${{ inputs.confirm == 'PROVISION' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar confirmação
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.confirm }}" != "PROVISION" ]]; then
+            echo "Confirmação inválida."
+            exit 1
+          fi
+
+      - name: Gerar segredos efêmeros e mascarados
+        shell: bash
+        run: |
+          set -euo pipefail
+          coturn_pass="$(openssl rand -hex 32)"
+          internal_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$coturn_pass"
+          echo "::add-mask::$internal_secret"
+          {
+            echo "COTURN_PASS=$coturn_pass"
+            echo "INTERNAL_FUNCTION_SECRET=$internal_secret"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.113.0
+
+      - name: Configurar segredos do Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets set \
+            COTURN_HOST="$VPS_HOST" \
+            COTURN_PORT=3478 \
+            COTURN_USER=mirotalk \
+            COTURN_PASS="$COTURN_PASS" \
+            INTERNAL_FUNCTION_SECRET="$INTERNAL_FUNCTION_SECRET" \
+            --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Sincronizar segredo interno no banco
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql="ALTER DATABASE postgres SET app.settings.internal_function_secret = '$INTERNAL_FUNCTION_SECRET';"
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/query.json"
+          http_code="$(curl -sS -w '%{http_code}' -o "$RUNNER_TEMP/query-response.json" \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/query.json")"
+          if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+            echo "Falha ao sincronizar configuração interna do banco (HTTP $http_code)."
+            exit 1
+          fi
+
+      - name: Instalar e configurar Coturn na VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: ${{ env.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          envs: COTURN_PASS
+          timeout: 300s
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y -qq coturn
+
+            install -d -m 0750 /var/log/turnserver
+            cat > /etc/turnserver.conf <<EOF
+            listening-port=3478
+            listening-ip=0.0.0.0
+            external-ip=${VPS_HOST}
+            fingerprint
+            lt-cred-mech
+            user=mirotalk:${COTURN_PASS}
+            realm=aloclinica.com.br
+            server-name=aloclinica.com.br
+            min-port=49152
+            max-port=65535
+            no-cli
+            no-loopback-peers
+            no-multicast-peers
+            stale-nonce
+            simple-log
+            log-file=/var/log/turnserver/turnserver.log
+            EOF
+            chmod 600 /etc/turnserver.conf
+
+            if [ -f /etc/default/coturn ]; then
+              sed -i '/^TURNSERVER_ENABLED=/d' /etc/default/coturn
+              echo 'TURNSERVER_ENABLED=1' >> /etc/default/coturn
+            fi
+
+            if systemctl list-unit-files | grep -q '^coturn.service'; then
+              turn_service=coturn
+            elif systemctl list-unit-files | grep -q '^turnserver.service'; then
+              turn_service=turnserver
+            else
+              echo 'Serviço systemd do Coturn não foi encontrado.'
+              exit 1
+            fi
+            systemctl enable "$turn_service"
+            systemctl restart "$turn_service"
+            systemctl is-active --quiet "$turn_service"
+
+            if command -v ufw >/dev/null 2>&1 && ufw status | grep -q 'Status: active'; then
+              ufw allow 3478/tcp
+              ufw allow 3478/udp
+              ufw allow 49152:65535/udp
+            fi
+
+            ss -lntup | grep -E ':(3478)\b'
+            echo 'Coturn ativo.'
+
+      - name: Executar backup real e validar registro
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          ANON_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          function_url="https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/daily-backup"
+          response_file="$RUNNER_TEMP/backup-response.json"
+          http_code="$(curl -sS -w '%{http_code}' -o "$response_file" \
+            -X POST "$function_url" \
+            -H "Authorization: Bearer $ANON_KEY" \
+            -H "apikey: $ANON_KEY" \
+            -H "x-internal-secret: $INTERNAL_FUNCTION_SECRET" \
+            -H 'Content-Type: application/json' \
+            --data '{"source":"production-provisioning"}')"
+          if [[ "$http_code" != "200" ]]; then
+            echo "Backup não foi concluído (HTTP $http_code)."
+            jq -c '{ok, error, date, summary, failures}' "$response_file" || true
+            exit 1
+          fi
+          jq -c '{ok, date, summary}' "$response_file"
+          jq -e '.ok == true' "$response_file" >/dev/null
+
+          sql="select max(created_at) as last_backup from public.activity_logs where action = 'daily_backup_run';"
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/backup-query.json"
+          http_code="$(curl -sS -w '%{http_code}' -o "$RUNNER_TEMP/backup-query-response.json" \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/backup-query.json")"
+          if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+            echo "Não foi possível validar o registro do backup (HTTP $http_code)."
+            exit 1
+          fi
+          jq -c '.' "$RUNNER_TEMP/backup-query-response.json"
+          jq -e 'length > 0 and .[0].last_backup != null' "$RUNNER_TEMP/backup-query-response.json" >/dev/null
+
+      - name: Resumo seguro
+        run: |
+          {
+            echo '## Provisionamento concluído'
+            echo ''
+            echo '- Coturn instalado na VPS e escutando TCP/UDP 3478.'
+            echo '- Credenciais do Coturn sincronizadas no Supabase.'
+            echo '- Segredo interno sincronizado entre Edge Functions e banco.'
+            echo '- Backup real executado e registrado em `activity_logs`.'
+            echo '- Valores de segredo não são exibidos nem gravados no repositório.'
+          } >> "$GITHUB_STEP_SUMMARY"
