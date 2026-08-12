@@ -98,7 +98,6 @@ lines.push(
   "  source: supabase/functions/*/index.ts",
   "  policy: supabase/config.toml",
   "  note: Payloads must be expanded from source before publishing an external SDK.",
-  "",
 );
 
 const generated = `${lines.join("\n")}\n`;

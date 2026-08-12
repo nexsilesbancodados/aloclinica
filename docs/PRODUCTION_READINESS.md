@@ -8,11 +8,18 @@ This document defines the sequence to move AloClinica from advanced MVP to real 
 - Production VPS: `72.62.138.208`
 - Frontend container: `aloclinica-web`
 - Video fallback server: `mirotalk` at `https://meet.telemedicinaaloclinica.sbs`
-- TURN/STUN server: `coturn`
+- TURN/STUN server: `coturn` (required for reliable WebRTC fallback; not currently installed on the inspected VPS)
 - KYC face stack: `compreface-*`
-- WhatsApp gateways: `waha` and Evolution API containers
+- WhatsApp gateway: Evolution API (`aloclinica_evolution-api`)
 - Supabase project: `pwxvvimdtmvziynbspgx`
 - Deploy path: GitHub Actions builds `dist/`, copies to VPS, rebuilds the Nginx container, then deploys Supabase Edge Functions.
+
+## VPS verification (2026-08-12)
+
+- `aloclinica-web`, MiroTalk, Evolution API, CompreFace and Traefik were running.
+- `https://whatsapp.telemedicinaaloclinica.sbs/` now has an active Traefik route and returned HTTP 200 after the route was installed.
+- No `coturn` service, `turnserver` binary or UDP 3478/5349 listener was found. The `turn-credentials` function therefore cannot provide the private TURN fallback until a TURN secret is synchronized with Supabase.
+- The public `aloclinica.com.br` domain still resolves through Cloudflare to the VPS origin; the EasyPanel `web` service must not be deleted as a duplicate without identifying a separate Cloudflare Pages/Workers deployment.
 
 ## Production gates
 

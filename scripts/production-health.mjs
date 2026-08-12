@@ -133,13 +133,22 @@ async function checkVpsDocker() {
       ],
       { timeout: timeoutMs }
     );
-    const required = ["aloclinica-web", "mirotalk", "coturn", "waha", "compreface-api"];
+    // Easypanel runs the application as Swarm services, so container names
+    // include a task suffix (and underscores). Keep the checks aligned with
+    // the production topology instead of the legacy standalone names.
+    const required = [
+      { id: "aloclinica-web", patterns: [/^aloclinica-web(?:\||$)/i, /^aloclinica_web\./i] },
+      { id: "mirotalk", patterns: [/^aloclinica_mirotalk\./i, /^mirotalk(?:\||$)/i] },
+      { id: "evolution-api", patterns: [/^aloclinica_evolution-api\./i, /^evolution-api(?:\||$)/i] },
+      { id: "coturn", patterns: [/^coturn(?:\||$)/i, /turnserver/i] },
+      { id: "compreface-api", patterns: [/^aloclinica_compreface-compreface-api-/i, /^compreface-api(?:\||$)/i] },
+    ];
     const rows = stdout.trim().split(/\r?\n/).filter(Boolean);
-    return required.map((name) => {
-      const row = rows.find((line) => line.startsWith(`${name}|`));
+    return required.map(({ id, patterns }) => {
+      const row = rows.find((line) => patterns.some((pattern) => pattern.test(line)));
       return {
         type: "docker",
-        name: `docker-${name}`,
+        name: `docker-${id}`,
         ok: Boolean(row) && /Up/i.test(row),
         status: row?.split("|")[1] ?? "missing",
         critical: true,

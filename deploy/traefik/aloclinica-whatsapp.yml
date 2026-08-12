@@ -1,0 +1,30 @@
+# Public Evolution API route for the production WhatsApp integration.
+# Loaded by Easypanel's Traefik dynamic file provider.
+# The service remains private on the Docker network; only Traefik exposes it.
+
+http:
+  routers:
+    aloclinica-whatsapp-http:
+      rule: "Host(`whatsapp.telemedicinaaloclinica.sbs`) && PathPrefix(`/`)"
+      entryPoints:
+        - http
+      middlewares:
+        - redirect-to-https
+      service: aloclinica-whatsapp
+
+    aloclinica-whatsapp-https:
+      rule: "Host(`whatsapp.telemedicinaaloclinica.sbs`) && PathPrefix(`/`)"
+      entryPoints:
+        - https
+      service: aloclinica-whatsapp
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "whatsapp.telemedicinaaloclinica.sbs"
+
+  services:
+    aloclinica-whatsapp:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://aloclinica_evolution-api:8080/"
