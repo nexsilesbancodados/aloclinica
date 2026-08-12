@@ -24,7 +24,7 @@ transmitidos pelo WhatsApp; o titular acessa a plataforma autenticada para obtê
 
 | Fluxo | Dado no corpo da mensagem | Natureza |
 |---|---|---|
-| `send-prescription` | Nome do titular, nome do profissional | Metadado (ver §4) |
+| `send-prescription` | Titular, profissional, **medicamentos prescritos** | Sensível — ver §4 |
 | `appointment-confirmed` | Profissional, data/hora, recibo | Metadado de agenda |
 | `appointment-reminders` | Profissional, data/hora | Metadado de agenda |
 | `post-consultation-survey` | Profissional | Metadado de agenda |
@@ -53,23 +53,29 @@ Verificado em 2026-08-12:
 > (`DATABASE_SAVE_DATA_NEW_MESSAGE=false`). Enquanto o banco está vazio, essa decisão não
 > tem custo de migração — é o momento mais barato para tomá-la.
 
-## 4. Decisão tomada: conteúdo clínico fora do WhatsApp
+## 4. Decisão tomada: diagnóstico fora do WhatsApp, medicamentos dentro
 
-Até 2026-08-12 a mensagem de `send-prescription` transportava, **no corpo**, a lista de
-medicamentos prescritos e o diagnóstico. Isso foi removido.
+Até 2026-08-12 a mensagem de `send-prescription` transportava, no corpo, a lista de
+medicamentos **e** o diagnóstico. O diagnóstico foi removido; a lista de medicamentos
+permaneceu.
 
-Motivo — o WhatsApp tem três pontos de exposição que a plataforma autenticada não tem:
+O WhatsApp tem três exposições que a plataforma autenticada não tem:
 
 1. O gateway persiste a mensagem no banco (§3);
-2. A prévia da mensagem aparece na tela bloqueada do aparelho;
+2. A prévia aparece na tela bloqueada do aparelho;
 3. O número pode estar em aparelho compartilhado.
 
-Diagnóstico e prescrição são **dado pessoal sensível** (LGPD, Art. 5º, II). O conteúdo
-completo permanece disponível na plataforma, sob autenticação, e a própria mensagem já
-instruía o titular a acessá-la — a remoção não retira informação do alcance dele.
+O critério aplicado foi **utilidade para o titular versus sensibilidade**:
 
-A restrição está documentada em comentário no código, em `send-prescription/index.ts`,
-para não ser reintroduzida por engano.
+- **Medicamentos ficam.** É o que o paciente precisa ter à mão na farmácia. Obrigá-lo a
+  abrir a plataforma só para saber o que tomar é atrito sem ganho real — ele já sabe o que
+  lhe foi prescrito, e a consulta acabou de acontecer.
+- **Diagnóstico sai.** É a parte mais sensível (LGPD, Art. 5º, II) e a menos acionável
+  naquele momento: não é necessário para comprar o medicamento. Continua disponível na
+  plataforma, sob autenticação.
+
+O critério está registrado em comentário no código, em `send-prescription/index.ts`, para
+que uma alteração futura seja uma decisão consciente e não um descuido.
 
 ## 5. Risco aberto: `whatsapp-notify`
 

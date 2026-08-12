@@ -154,23 +154,28 @@ serve(async (req) => {
 
     if (phone) {
       try {
-        // Conteúdo clínico NÃO trafega no corpo da mensagem — nem `medList`,
-        // nem `diagnosis`. Diagnóstico e prescrição são dado pessoal sensível
-        // (LGPD, Art. 5º, II) e o WhatsApp tem três pontos de exposição que a
-        // plataforma não tem: o gateway Evolution persiste toda mensagem no
+        // A lista de medicamentos VAI na mensagem: é o que o paciente precisa
+        // ter à mão na farmácia, e obrigá-lo a abrir a plataforma só para saber
+        // o que tomar é atrito sem ganho real de privacidade — ele já sabe o
+        // que foi prescrito.
+        //
+        // O `diagnosis` NÃO vai. É a parte mais sensível (LGPD, Art. 5º, II) e
+        // a menos acionável para o paciente naquele momento: não é preciso para
+        // comprar o medicamento. O WhatsApp tem exposições que a plataforma
+        // autenticada não tem — o gateway Evolution persiste toda mensagem no
         // banco dele (DATABASE_SAVE_DATA_NEW_MESSAGE=true), a prévia aparece na
-        // tela bloqueada do aparelho, e o número pode estar num aparelho
-        // compartilhado. O conteúdo completo já está na plataforma, que exige
-        // autenticação. Não reintroduza medList/diagnosis aqui.
+        // tela bloqueada, e o número pode estar num aparelho compartilhado.
+        // O diagnóstico continua disponível na plataforma.
         const whatsappMessage = [
           `🏥 *AloClinica — Receita Médica*`,
           ``,
           `Olá, *${recipientName}*!`,
           ``,
-          `O(a) *${doctor_name}* emitiu uma nova receita para você.`,
+          `O(a) *${doctor_name}* prescreveu:`,
           ``,
-          `Por segurança, os detalhes da prescrição não são enviados por WhatsApp.`,
-          `Acesse a plataforma para ver a receita completa e baixar o PDF.`,
+          medList,
+          ``,
+          `Acesse a plataforma para ver a receita completa e baixar o PDF assinado.`,
           ``,
           `_Receita digital emitida pela AloClinica_`,
         ].filter(Boolean).join("\n");
