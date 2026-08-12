@@ -93,7 +93,7 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
    # 401 com realm = auth exigida; Allocate OK = relay funcionando
    docker logs coturn --tail 30 | grep -iE 'allocat|401|error'
    ```
-4. Containers up no VPS:
+5. Containers up no VPS:
    ```bash
    ssh root@72.62.138.208 'docker ps | grep -E "mirotalk|coturn"'
    ```
