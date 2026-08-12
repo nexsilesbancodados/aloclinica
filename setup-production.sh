@@ -11,7 +11,7 @@ success() { echo -e "${GREEN}[OK]${NC}   $1"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
-PROJECT_REF="oaixgmuocuwhsabidpei"
+PROJECT_REF="pwxvvimdtmvziynbspgx"
 
 echo ""
 echo -e "${BLUE}╔═══════════════════════════════════════════════╗${NC}"
@@ -24,7 +24,6 @@ info "Verificando pré-requisitos..."
 
 command -v supabase >/dev/null 2>&1 || { error "supabase CLI não encontrado. Instale: https://supabase.com/docs/guides/cli"; exit 1; }
 command -v gh >/dev/null 2>&1      || warn "gh (GitHub CLI) não encontrado — secrets do GitHub não serão configurados"
-command -v openssl >/dev/null 2>&1 || { error "openssl não encontrado"; exit 1; }
 
 # ─── Check supabase login ─────────────────────────────────────────────────────
 info "Verificando login no Supabase..."
@@ -40,46 +39,74 @@ prompt() {
   local var_name="$1"; local prompt_text="$2"; local default="$3"
   if [ -n "$default" ]; then
     read -rp "$(echo -e "${GREEN}${prompt_text}${NC} [${default}]: ")" val
-    eval "${var_name}=\"${val:-$default}\""
+    printf -v "$var_name" '%s' "${val:-$default}"
   else
     read -rp "$(echo -e "${GREEN}${prompt_text}${NC}: ")" val
     while [ -z "$val" ]; do
       warn "Valor obrigatório."
       read -rp "$(echo -e "${GREEN}${prompt_text}${NC}: ")" val
     done
-    eval "${var_name}=\"$val\""
+    printf -v "$var_name" '%s' "$val"
   fi
+}
+
+# Secrets are never echoed while this interactive setup collects them.
+prompt_secret() {
+  local var_name="$1"; local prompt_text="$2"
+  read -rsp "$(echo -e "${GREEN}${prompt_text}${NC}: ")" val
+  echo ""
+  while [ -z "$val" ]; do
+    warn "Valor obrigatÃ³rio."
+    read -rsp "$(echo -e "${GREEN}${prompt_text}${NC}: ")" val
+    echo ""
+  done
+  printf -v "$var_name" '%s' "$val"
+}
+
+prompt_secret_optional() {
+  local var_name="$1"; local prompt_text="$2"
+  read -rsp "$(echo -e "${GREEN}${prompt_text}${NC}: ")" val
+  echo ""
+  printf -v "$var_name" '%s' "$val"
+}
+
+prompt_optional() {
+  local var_name="$1"; local prompt_text="$2"
+  read -rp "$(echo -e "${GREEN}${prompt_text}${NC}: ")" val
+  printf -v "$var_name" '%s' "$val"
 }
 
 # Email (Resend)
 echo -e "\n${BLUE}📧 Email — Resend.com (https://resend.com)${NC}"
-prompt RESEND_API_KEY         "RESEND_API_KEY (re_...)"
+prompt_secret BREVO_API_KEY   "BREVO_API_KEY"
+prompt_secret_optional RESEND_API_KEY "RESEND_API_KEY (opcional, leads B2B)"
 prompt EMAIL_FROM_ADDRESS     "EMAIL_FROM_ADDRESS (ex: noreply@aloclinica.com.br)" "noreply@aloclinica.com.br"
 prompt EMAIL_FROM_NAME        "EMAIL_FROM_NAME" "AloClínica"
 prompt SITE_DOMAIN            "SITE_DOMAIN (sem https://)" "aloclinica.com.br"
 SITE_URL="https://${SITE_DOMAIN}"
 
-# Payments (Asaas)
-echo -e "\n${BLUE}💳 Pagamentos — Asaas (https://asaas.com)${NC}"
-prompt ASAAS_API_KEY          "ASAAS_API_KEY (\$aact_...)"
-prompt ASAAS_ENVIRONMENT      "ASAAS_ENVIRONMENT (production|sandbox)" "production"
-ASAAS_WEBHOOK_TOKEN=$(openssl rand -hex 32)
-info "ASAAS_WEBHOOK_TOKEN gerado automaticamente: ${ASAAS_WEBHOOK_TOKEN}"
-info "Configure este token no painel Asaas: Integrações → Webhooks → Access Token"
+# Payments (Mercado Pago)
+echo -e "\n${BLUE}💳 Pagamentos — Mercado Pago (https://www.mercadopago.com.br/developers)${NC}"
+prompt_secret MERCADOPAGO_ACCESS_TOKEN "MERCADOPAGO_ACCESS_TOKEN"
+prompt_secret MERCADOPAGO_WEBHOOK_SECRET "MERCADOPAGO_WEBHOOK_SECRET"
+prompt_secret_optional MERCADOPAGO_APP_ID "MERCADOPAGO_APP_ID (opcional, marketplace OAuth)"
+prompt_secret_optional MERCADOPAGO_CLIENT_SECRET "MERCADOPAGO_CLIENT_SECRET (opcional, marketplace OAuth)"
+info "Mercado Pago usa MERCADOPAGO_WEBHOOK_SECRET configurado acima."
+info "Configure a assinatura no painel do Mercado Pago, apontando para mercadopago-webhook."
 
-# AI / DeepSeek
-echo -e "\n${BLUE}🤖 IA — DeepSeek via OpenRouter (https://openrouter.ai)${NC}"
-prompt DEEPSEEK_API_KEY       "DEEPSEEK_API_KEY (sk-or-...)"
+# AI (optional)
+echo -e "\n${BLUE}🤖 IA — Anthropic (opcional)${NC}"
+prompt_secret_optional ANTHROPIC_API_KEY "ANTHROPIC_API_KEY (opcional)"
 
 # WhatsApp (Evolution API)
 echo -e "\n${BLUE}📱 WhatsApp — Evolution API${NC}"
-prompt EVOLUTION_API_URL      "EVOLUTION_API_URL (ex: http://72.62.138.208:8080)" "http://72.62.138.208:8080"
-prompt EVOLUTION_API_KEY      "EVOLUTION_API_KEY"
+prompt EVOLUTION_API_URL      "EVOLUTION_API_URL" "https://whatsapp.telemedicinaaloclinica.sbs"
+prompt_secret EVOLUTION_API_KEY "EVOLUTION_API_KEY"
 
 # Video (Metered.ca)
 echo -e "\n${BLUE}🎥 Vídeo — Metered.ca (https://www.metered.ca)${NC}"
-prompt METERED_APP_NAME       "METERED_APP_NAME"
-prompt METERED_SECRET_KEY     "METERED_SECRET_KEY"
+prompt_optional METERED_APP_NAME "METERED_APP_NAME (opcional)"
+prompt_secret_optional METERED_SECRET_KEY "METERED_SECRET_KEY (opcional)"
 
 # Push Notifications (VAPID)
 echo -e "\n${BLUE}🔔 Push Notifications — VAPID${NC}"
@@ -108,12 +135,12 @@ fi
 
 # DocuSeal
 echo -e "\n${BLUE}📄 Assinaturas Digitais — DocuSeal${NC}"
-prompt DOCUSEAL_API_KEY       "DOCUSEAL_API_KEY" "${DOCUSEAL_API_KEY:-}"
+prompt_secret_optional DOCUSEAL_API_KEY "DOCUSEAL_API_KEY (opcional)"
 
 # Optional
 echo -e "\n${BLUE}🔧 Serviços opcionais (pressione Enter para pular)${NC}"
-read -rp "$(echo -e "${GREEN}MEMED_API_KEY (prescriptions)${NC} [pular]: ")" MEMED_API_KEY
-read -rp "$(echo -e "${GREEN}MEMED_SECRET_KEY${NC} [pular]: ")"               MEMED_SECRET_KEY
+prompt_secret_optional MEMED_API_KEY "MEMED_API_KEY (opcional)"
+prompt_secret_optional MEMED_SECRET_KEY "MEMED_SECRET_KEY (opcional)"
 
 read -rp "$(echo -e "${GREEN}VITE_SENTRY_DSN (monitoramento)${NC} [pular]: ")" VITE_SENTRY_DSN
 
@@ -122,21 +149,24 @@ echo ""
 info "Configurando secrets no Supabase..."
 
 SECRETS_ARGS=(
-  "RESEND_API_KEY=${RESEND_API_KEY}"
+  "BREVO_API_KEY=${BREVO_API_KEY}"
   "EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}"
   "EMAIL_FROM_NAME=${EMAIL_FROM_NAME}"
   "SITE_DOMAIN=${SITE_DOMAIN}"
   "SITE_URL=${SITE_URL}"
-  "ASAAS_API_KEY=${ASAAS_API_KEY}"
-  "ASAAS_ENVIRONMENT=${ASAAS_ENVIRONMENT}"
-  "ASAAS_WEBHOOK_TOKEN=${ASAAS_WEBHOOK_TOKEN}"
-  "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}"
-  "EVOLUTION_API_URL=${EVOLUTION_API_URL}"
-  "EVOLUTION_API_KEY=${EVOLUTION_API_KEY}"
-  "METERED_APP_NAME=${METERED_APP_NAME}"
-  "METERED_SECRET_KEY=${METERED_SECRET_KEY}"
   "VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}"
 )
+
+[ -n "$RESEND_API_KEY" ]              && SECRETS_ARGS+=("RESEND_API_KEY=${RESEND_API_KEY}")
+[ -n "$MERCADOPAGO_ACCESS_TOKEN" ]   && SECRETS_ARGS+=("MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}")
+[ -n "$MERCADOPAGO_WEBHOOK_SECRET" ] && SECRETS_ARGS+=("MERCADOPAGO_WEBHOOK_SECRET=${MERCADOPAGO_WEBHOOK_SECRET}")
+[ -n "$MERCADOPAGO_APP_ID" ]         && SECRETS_ARGS+=("MERCADOPAGO_APP_ID=${MERCADOPAGO_APP_ID}")
+[ -n "$MERCADOPAGO_CLIENT_SECRET" ]  && SECRETS_ARGS+=("MERCADOPAGO_CLIENT_SECRET=${MERCADOPAGO_CLIENT_SECRET}")
+[ -n "$ANTHROPIC_API_KEY" ]          && SECRETS_ARGS+=("ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}")
+[ -n "$EVOLUTION_API_URL" ]          && SECRETS_ARGS+=("EVOLUTION_API_URL=${EVOLUTION_API_URL}")
+[ -n "$EVOLUTION_API_KEY" ]          && SECRETS_ARGS+=("EVOLUTION_API_KEY=${EVOLUTION_API_KEY}")
+[ -n "$METERED_APP_NAME" ]           && SECRETS_ARGS+=("METERED_APP_NAME=${METERED_APP_NAME}")
+[ -n "$METERED_SECRET_KEY" ]         && SECRETS_ARGS+=("METERED_SECRET_KEY=${METERED_SECRET_KEY}")
 
 [ -n "$DOCUSEAL_API_KEY"    ] && SECRETS_ARGS+=("DOCUSEAL_API_KEY=${DOCUSEAL_API_KEY}")
 [ -n "$MEMED_API_KEY"       ] && SECRETS_ARGS+=("MEMED_API_KEY=${MEMED_API_KEY}")
@@ -152,8 +182,8 @@ supabase db push --project-ref "${PROJECT_REF}" && success "Migrations aplicadas
 
 # ─── Deploy Edge Functions ────────────────────────────────────────────────────
 echo ""
-info "Fazendo deploy de todas as edge functions..."
-supabase functions deploy --project-ref "${PROJECT_REF}" --no-verify-jwt 2>&1 | tail -5
+info "Fazendo deploy de todas as edge functions conforme supabase/config.toml..."
+supabase functions deploy --project-ref "${PROJECT_REF}" 2>&1 | tail -5
 success "Edge functions deployadas"
 
 # ─── GitHub Secrets ───────────────────────────────────────────────────────────
@@ -181,19 +211,18 @@ fi
 
 # ─── Asaas Webhook URL ────────────────────────────────────────────────────────
 echo ""
-echo -e "${YELLOW}━━━ Configure estes webhooks no Asaas ━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}━━━ Configure este webhook no Mercado Pago ━━━━━━━━━━${NC}"
 echo ""
-echo -e "URL:   ${GREEN}https://${PROJECT_REF}.supabase.co/functions/v1/asaas-webhook${NC}"
-echo -e "Token: ${GREEN}${ASAAS_WEBHOOK_TOKEN}${NC}"
-echo -e "Eventos: PAYMENT_CONFIRMED, PAYMENT_RECEIVED, PAYMENT_OVERDUE,"
-echo -e "         PAYMENT_DELETED, PAYMENT_REFUNDED, PAYMENT_CHARGEBACK_*"
+echo -e "URL:   ${GREEN}https://${PROJECT_REF}.supabase.co/functions/v1/mercadopago-webhook${NC}"
+echo -e "Use MERCADOPAGO_WEBHOOK_SECRET para validar a assinatura HMAC no painel Mercado Pago."
+echo -e "Eventos: payment, subscription_preapproval, subscription_authorized_payment"
 echo ""
 
 # ─── Summary ──────────────────────────────────────────────────────────────────
 echo -e "${GREEN}━━━ Setup Concluído! ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo "Próximos passos:"
-echo "  1. Configure o webhook no Asaas (URL e token acima)"
+echo "  1. Configure o webhook no Mercado Pago (URL acima e assinatura HMAC)"
 echo "  2. Adicione VPS_SSH_PRIVATE_KEY no GitHub"
 echo "  3. Faça push para main para acionar o deploy automático"
 echo "  4. Verifique os logs: supabase functions logs appointment-reminders"
