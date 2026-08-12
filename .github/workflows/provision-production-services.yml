@@ -137,11 +137,13 @@ jobs:
 
       - name: Instalar e configurar Coturn na VPS
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          VPS_HOST: ${{ env.VPS_HOST }}
         with:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          envs: COTURN_PASS
+          envs: COTURN_PASS,VPS_HOST
           timeout: 300s
           command_timeout: 20m
           script: |
