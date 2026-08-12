@@ -153,6 +153,7 @@ jobs:
             apt-get install -y -qq coturn
 
             install -d -m 0750 /var/log/turnserver
+            chown turnserver:turnserver /var/log/turnserver
             cat > /etc/turnserver.conf <<EOF
             listening-port=3478
             listening-ip=0.0.0.0
@@ -188,7 +189,11 @@ jobs:
               exit 1
             fi
             systemctl enable "$turn_service"
-            systemctl restart "$turn_service"
+            if ! systemctl restart "$turn_service"; then
+              systemctl status "$turn_service" --no-pager || true
+              journalctl -u "$turn_service" -n 80 --no-pager || true
+              exit 1
+            fi
             systemctl is-active --quiet "$turn_service"
 
             if command -v ufw >/dev/null 2>&1 && ufw status | grep -q 'Status: active'; then
