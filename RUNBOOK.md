@@ -13,7 +13,7 @@ Atualizado em 2026-05-29 — versão **v2.0**.
 | **Status page** | https://aloclinica.com.br/status |
 | **Repositório** | https://github.com/nexsilesbancodados/aloclinica |
 | **Supabase project** | `pwxvvimdtmvziynbspgx` |
-| **VPS (frontend + MiroTalk)** | `72.62.138.208` (root via `~/.ssh/aloclinica_vps`) |
+| **VPS (frontend + MiroTalk)** | `72.62.138.208` (root via `~/.ssh/aloclinica_github_actions`) |
 | **Edge functions URL** | `https://pwxvvimdtmvziynbspgx.supabase.co/functions/v1/<name>` |
 | **Vídeo (MiroTalk)** | https://meet.telemedicinaaloclinica.sbs |
 | **Subdomínios B2G** | `acoes.`, `parceiros.`, `orgaos.`, `empresas.` |
@@ -133,7 +133,7 @@ SELECT cron.unschedule('<nome>');
 1. `curl https://aloclinica.com.br/` → deve ser 200.
 2. Conferir Traefik na VPS:
    ```bash
-   ssh -i ~/.ssh/aloclinica_vps root@72.62.138.208 'docker ps | grep -E "traefik|aloclinica-web"'
+   ssh -i ~/.ssh/aloclinica_github_actions root@72.62.138.208 'docker ps | grep -E "traefik|aloclinica-web"'
    ```
 3. Reiniciar nginx do site: `docker restart aloclinica-web`.
 4. Conferir certificados (Let's Encrypt):
@@ -141,7 +141,7 @@ SELECT cron.unschedule('<nome>');
 
 ### Vídeo (MiroTalk) fora
 - Health: `curl https://meet.telemedicinaaloclinica.sbs/` → 200.
-- Restart: `ssh -i ~/.ssh/aloclinica_vps root@72.62.138.208 'docker restart mirotalk'`.
+- Restart: `ssh -i ~/.ssh/aloclinica_github_actions root@72.62.138.208 'docker restart mirotalk'`.
 - ⚠️ A **config dos botões** (`/src/app/src/config.js` dentro do container) **reseta** ao recriar o container. Reaplicar via SSH + sed (backup em `app/src/config.js.bak.*`).
 
 ### Edge function falhando

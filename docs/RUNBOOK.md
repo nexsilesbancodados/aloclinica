@@ -12,7 +12,7 @@ Procedimentos práticos pra rodar a plataforma em produção.
 | Painel admin | https://aloclinica.com.br/dashboard?role=admin |
 | Supabase | https://supabase.com/dashboard/project/pwxvvimdtmvziynbspgx |
 | GitHub | https://github.com/nexsilesbancodados/aloclinica |
-| VPS SSH | `ssh -i ~/.ssh/aloclinica_vps root@72.62.138.208` |
+| VPS SSH | `ssh -i ~/.ssh/aloclinica_github_actions root@72.62.138.208` |
 | Easypanel | http://72.62.138.208:3000 |
 | MiroTalk | https://meet.telemedicinaaloclinica.sbs |
 | WhatsApp gateway | https://whatsapp.telemedicinaaloclinica.sbs |
@@ -80,8 +80,13 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
 
 ### "Vídeo não conecta"
 1. MiroTalk respondendo? `curl -I https://meet.telemedicinaaloclinica.sbs`
-2. Coturn (TURN próprio) acessível? `nc -zv 72.62.138.208 3478` (TCP)
+2. **Coturn NÃO está implantado hoje** — `nc -zv 72.62.138.208 3478` falha por design,
+   não é o sintoma. Sem TURN, paciente atrás de NAT simétrico/CGNAT não conecta e o
+   Google STUN não resolve. Se o relato for "só alguns pacientes não conectam", esta é
+   a causa mais provável e a correção é provisionar TURN (coturn ou serviço gerenciado).
 3. Edge function `turn-credentials` retorna ICE servers válidos? Logs no Supabase.
+   Não configure `COTURN_PASS` sem o relay no ar: isso passa a anunciar um TURN
+   inalcançável e piora a negociação ICE.
 4. Containers up no VPS:
    ```bash
    ssh root@72.62.138.208 'docker ps | grep -E "mirotalk|coturn"'
@@ -145,8 +150,8 @@ cache. Não altere DNS sem validar também os subdomínios de vídeo e WhatsApp.
 
 ### SSH para VPS
 ```bash
-chmod 600 ~/.ssh/aloclinica_vps
-ssh -i ~/.ssh/aloclinica_vps root@72.62.138.208
+chmod 600 ~/.ssh/aloclinica_github_actions
+ssh -i ~/.ssh/aloclinica_github_actions root@72.62.138.208
 ```
 
 ### Ver containers

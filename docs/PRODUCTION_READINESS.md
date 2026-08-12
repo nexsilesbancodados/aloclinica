@@ -68,7 +68,7 @@ npm run health:production
 Optional health check with VPS Docker verification:
 
 ```bash
-VPS_HOST=72.62.138.208 VPS_USER=root VPS_SSH_KEY="$HOME/.ssh/aloclinica_vps" npm run health:production
+VPS_HOST=72.62.138.208 VPS_USER=root VPS_SSH_KEY="$HOME/.ssh/aloclinica_github_actions" npm run health:production
 ```
 
 HTTP baseline load test:

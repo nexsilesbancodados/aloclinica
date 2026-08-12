@@ -7,9 +7,21 @@ http:
       priority: 10000
       service: aloclinica-web-frontend
       # Easypanel names entrypoints differently across installations. Leaving
-      # this unset lets Traefik bind the TLS router to the configured HTTPS
-      # entrypoint while reusing the active certificate store.
-      tls: {}
+      # the entrypoint unset lets Traefik bind the TLS router to the configured
+      # HTTPS entrypoint while reusing the active certificate store.
+      #
+      # The certResolver must stay declared here. This router outranks the
+      # Easypanel-generated one (priority 0), so without its own resolver the
+      # apex certificate would only be renewed as a side effect of that lower
+      # priority router — removing it would silently stop renewals.
+      #
+      # Não declare um bloco `domains` aqui. Fixar `main`/`sans` faz o Traefik
+      # casar com a entrada correspondente do store, que pode ser um certificado
+      # mais estreito/antigo que o emitido a partir da regra. Sem `domains`, ele
+      # deriva os hosts da própria `rule` (apex + www) e serve/renova o
+      # certificado que cobre os dois.
+      tls:
+        certResolver: letsencrypt
 
   services:
     aloclinica-web-frontend:

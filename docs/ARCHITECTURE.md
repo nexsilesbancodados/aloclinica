@@ -21,8 +21,8 @@ sempre que adicionar uma nova integração externa, edge function ou tabela.
 │  - Auth                                  │         │  - aloclinica-web (nginx)   │
 │  - PostgreSQL + RLS                      │         │  - mirotalk (vídeo)         │
 │  - Edge Functions (Deno) — 30+          │         │  - compreface (KYC face)    │
-│  - Storage                               │         │  - coturn (TURN próprio)    │
-│  - Realtime                              │         │  - waha (WhatsApp)          │
+│  - Storage                               │         │  - evolution-api (WhatsApp) │
+│  - Realtime                              │         │    + Postgres + Redis       │
 │  - pg_cron                               │         │                             │
 └──────────────────────────────────────────┘         └────────────────────────────┘
                     ▲                                              ▲
@@ -87,7 +87,7 @@ sempre que adicionar uma nova integração externa, edge function ou tabela.
 Veja `supabase/functions/`. Categorias:
 - **Pagamentos:** `mercadopago-create-payment`, `-webhook`, `-save-card`, `-charge-saved-card`, `-create-subscription`, `-cancel-subscription`, `-refund`, `-withdraw` (saque PIX médico via Money Out)
 - **KYC:** `didit-kyc` (CompreFace + Claude Vision), `compreface-proxy`
-- **Vídeo:** `turn-credentials` (coturn próprio + Google STUN fallback)
+- **Vídeo:** `turn-credentials` (Google STUN + Metered opcional; coturn próprio ainda não implantado)
 - **Notificações:** `send-email` (Brevo, 40+ templates), `send-whatsapp`, `send-push-notification`
 - **IA:** `pingo-chat`, `sugerir-laudo`, `symptom-triage`, `structure-report`
 - **Assinatura:** `register-signature`, `vidaas-sign`, `vidaas-callback` (DocuSeal)
@@ -110,9 +110,14 @@ Veja `supabase/functions/`. Categorias:
 |---|---|---|---|
 | `aloclinica-web` | 80 | aloclinica.com.br | Front (nginx servindo dist/) |
 | `mirotalk` | 3000 | meet.telemedicinaaloclinica.sbs | Vídeo WebRTC |
-| `coturn` | 3478 (host net) | direto (`stun:72.62.138.208:3478`) | TURN/STUN próprio |
+| `evolution-api` | 8080 | whatsapp.telemedicinaaloclinica.sbs | Gateway WhatsApp (v2.3.7, com Postgres + Redis próprios) |
 | `compreface-fe` | 80 | face.aloclinica.com.br | KYC face matching |
-| `waha` | 3000 | whatsapp.telemedicinaaloclinica.sbs | WhatsApp gateway |
+
+> **coturn NÃO está implantado.** Não há container, pacote nem binário `turnserver`
+> na VPS, e nada escuta em 3478/5349. `turn-credentials` só anuncia o relay próprio
+> quando `COTURN_PASS` está configurado — não configure esse secret antes de
+> provisionar o coturn, sob pena de anunciar um servidor ICE fantasma. Sem TURN,
+> pacientes atrás de NAT simétrico/CGNAT não conseguem estabelecer a chamada.
 
 
 **Traefik routing:** `/etc/easypanel/traefik/config/aloclinica-stack.yaml` — todas as rotas HTTPS via Let's Encrypt automático.
