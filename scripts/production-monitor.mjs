@@ -83,7 +83,7 @@ const checkVps = async () => {
     return;
   }
   const user = process.env.VPS_USER ?? "root";
-  const command = "set -eu; echo __STATS__; docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemPerc}}'; echo __MEM__; free -m | awk 'NR==2 {print $2\"|\"$3\"|\"$7}'; echo __DISK__; df -P / | awk 'NR==2 {print $5}'";
+  const command = "set -eu; echo __STATS__; docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemPerc}}'; echo __MEM__; free -m | awk 'NR==2 {print $2\"|\"$3\"|\"$7}'; echo __DISK__; df -P / | awk 'NR==2 {print $5}'; echo __TURN__; docker ps --format '{{.Names}}'; echo __TURN_PORTS__; ss -lunH 2>/dev/null | awk '{print $5}' | grep -E '(3478|5349)$' || true";
   try {
     const sshArgs = ["-i", key, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"];
     const knownHostsFile = process.env.VPS_KNOWN_HOSTS_FILE;
@@ -97,7 +97,19 @@ const checkVps = async () => {
     const { stdout } = await execFileAsync("ssh", sshArgs, { timeout: timeoutMs });
     const statsBlock = stdout.split("__STATS__")[1]?.split("__MEM__")[0] ?? "";
     const memBlock = stdout.split("__MEM__")[1]?.split("__DISK__")[0]?.trim() ?? "";
-    const disk = Number.parseFloat((stdout.split("__DISK__")[1] ?? "").replace("%", "").trim());
+    const disk = Number.parseFloat((stdout.split("__DISK__")[1] ?? "").split("__TURN__")[0].replace("%", "").trim());
+    const turnContainersBlock = stdout.split("__TURN__")[1]?.split("__TURN_PORTS__")[0] ?? "";
+    const turnPortsBlock = stdout.split("__TURN_PORTS__")[1] ?? "";
+    const turnContainerDetected = turnContainersBlock.split(/\r?\n/).some((name) => /(^|[-_])(coturn|turnserver)([-_.]|$)/i.test(name.trim()));
+    const turnUdpListenerDetected = turnPortsBlock.split(/\r?\n/).some((line) => /(3478|5349)\s*$/.test(line.trim()));
+    results.push({
+      name: "coturn",
+      kind: "turn-relay",
+      ok: turnContainerDetected || turnUdpListenerDetected,
+      critical: true,
+      containerDetected: turnContainerDetected,
+      udpListenerDetected: turnUdpListenerDetected,
+    });
     for (const line of statsBlock.trim().split(/\r?\n/).filter(Boolean)) {
       const [name, cpuText, memoryText] = line.split("|");
       const cpu = Number.parseFloat(cpuText);
