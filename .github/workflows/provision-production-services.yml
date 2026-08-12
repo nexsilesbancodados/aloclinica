@@ -22,6 +22,9 @@ jobs:
     if: ${{ inputs.confirm == 'PROVISION' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Validar confirmação
         run: |
           set -euo pipefail
@@ -62,13 +65,13 @@ jobs:
             INTERNAL_FUNCTION_SECRET="$INTERNAL_FUNCTION_SECRET" \
             --project-ref "$SUPABASE_PROJECT_REF"
 
-      - name: Sincronizar segredo interno no banco
+      - name: Sincronizar segredo interno no Vault
         env:
           SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          sql="ALTER ROLE postgres SET app.settings.internal_function_secret = '$INTERNAL_FUNCTION_SECRET';"
+          sql="select id from vault.secrets where name = 'internal_function_secret' limit 1;"
           jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/query.json"
           http_code="$(curl -sS -w '%{http_code}' -o "$RUNNER_TEMP/query-response.json" \
             -X POST \
@@ -83,7 +86,26 @@ jobs:
             exit 1
           fi
 
-          sql="select current_setting('app.settings.internal_function_secret', true) is not null as configured;"
+          secret_id="$(jq -r '.[0].id // empty' "$RUNNER_TEMP/query-response.json")"
+          if [[ -n "$secret_id" ]]; then
+            sql="select vault.update_secret('$secret_id'::uuid, '$INTERNAL_FUNCTION_SECRET', 'internal_function_secret', 'Shared secret for internal Edge Function calls');"
+          else
+            sql="select vault.create_secret('$INTERNAL_FUNCTION_SECRET', 'internal_function_secret', 'Shared secret for internal Edge Function calls');"
+          fi
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/update-vault-query.json"
+          http_code="$(curl -sS -w '%{http_code}' -o "$RUNNER_TEMP/update-vault-response.json" \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/update-vault-query.json")"
+          if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+            echo "Falha ao gravar segredo interno no Vault (HTTP $http_code)."
+            exit 1
+          fi
+
+          sql="select decrypted_secret is not null as configured from vault.decrypted_secrets where name = 'internal_function_secret' limit 1;"
           jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/verify-query.json"
           curl -sS -f \
             -X POST \
@@ -93,6 +115,25 @@ jobs:
             "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
             --data-binary @"$RUNNER_TEMP/verify-query.json" > "$RUNNER_TEMP/verify-response.json"
           jq -e '.[0].configured == true' "$RUNNER_TEMP/verify-response.json" >/dev/null
+
+      - name: Atualizar funÃ§Ã£o de chamadas internas
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query: .}' supabase/migrations/20260812150000_internal_function_secret_vault.sql > "$RUNNER_TEMP/function-migration.json"
+          http_code="$(curl -sS -w '%{http_code}' -o "$RUNNER_TEMP/function-migration-response.json" \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/function-migration.json")"
+          if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+            echo "Falha ao atualizar a funÃ§Ã£o de chamadas internas (HTTP $http_code)."
+            exit 1
+          fi
 
       - name: Instalar e configurar Coturn na VPS
         uses: appleboy/ssh-action@v1.0.3
