@@ -12,8 +12,8 @@ import { test, expect } from "@playwright/test";
  * These tests use the Supabase REST API directly to verify RLS.
  */
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://oaixgmuocuwhsabidpei.supabase.co";
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9haXhnbXVvY3V3aHNhYmlkcGVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODUyNjksImV4cCI6MjA4Njc2MTI2OX0.J9KUdJRNxSFdhI4hNu4V9CDQw4rl7wHPvRy3WU8mqrc";
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://pwxvvimdtmvziynbspgx.supabase.co";
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3eHZ2aW1kdG12eml5bmJzcGd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjMwNDAsImV4cCI6MjA5MTY5OTA0MH0.GYOrbxDlr_GxII92m6Fk7BiVoT5D2uuAk4Uhn0PZzNM";
 
 async function getAuthToken(email: string, password: string): Promise<string | null> {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {

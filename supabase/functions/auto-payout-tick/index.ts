@@ -10,6 +10,7 @@
  * Auth: header `x-tick-secret` deve bater com AUTO_PAYOUT_TICK_SECRET.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { safeEqual } from "../_shared/auth.ts";
 
 const MIN_WITHDRAWAL = 50;
 
@@ -33,7 +34,7 @@ function isPayoutDay(freq: "daily" | "weekly" | "monthly", now: Date): boolean {
 Deno.serve(async (req) => {
   try {
     const expected = Deno.env.get("AUTO_PAYOUT_TICK_SECRET");
-    if (!expected || req.headers.get("x-tick-secret") !== expected) {
+    if (!safeEqual(req.headers.get("x-tick-secret"), expected)) {
       return json({ error: "Unauthorized" }, 401);
     }
 

@@ -87,45 +87,109 @@ serve(async (req) => {
       `https://${meteredDomain}/api/v1/room/${roomName}?secretKey=${secretKey}`
     );
 
-    if (getRes.ok) {
-      const room = await getRes.json();
-      return new Response(JSON.stringify({
-        roomURL: `${meteredDomain}/${roomName}`,
-        roomName: room.roomName,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!getRes.ok && getRes.status !== 404) {
+      console.error("Metered room lookup failed:", getRes.status, await getRes.text());
+      return new Response(JSON.stringify({ error: "Video service unavailable" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Create room
-    const createRes = await fetch(
-      `https://${meteredDomain}/api/v1/room?secretKey=${secretKey}`,
+    let room: { roomName?: string; privacy?: string };
+
+    if (getRes.ok) {
+      room = await getRes.json();
+
+      // Rooms created by older versions were public. Upgrade them before
+      // issuing a token so a leaked room URL cannot bypass authorization.
+      if (room.privacy !== "private") {
+        const updateRes = await fetch(
+          `https://${meteredDomain}/api/v1/room/${roomName}?secretKey=${secretKey}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              privacy: "private",
+              enableRequestToJoin: false,
+              autoJoin: true,
+              maxParticipants: 4,
+              ejectAtRoomExp: true,
+              expireUnixSec: Math.floor(Date.now() / 1000) + 4 * 3600,
+            }),
+          },
+        );
+        if (!updateRes.ok) {
+          console.error("Metered private-room upgrade failed:", await updateRes.text());
+          return new Response(JSON.stringify({ error: "Failed to secure video room" }), {
+            status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        room = await updateRes.json();
+      }
+    } else {
+      // New rooms are private from the moment they are created.
+      const createRes = await fetch(
+        `https://${meteredDomain}/api/v1/room?secretKey=${secretKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roomName,
+            privacy: "private",
+            enableRequestToJoin: false,
+            autoJoin: true,
+            maxParticipants: 4,
+            ejectAtRoomExp: true,
+            expireUnixSec: Math.floor(Date.now() / 1000) + 4 * 3600,
+          }),
+        },
+      );
+
+      if (!createRes.ok) {
+        const err = await createRes.text();
+        console.error("Metered create room error:", err);
+        return new Response(JSON.stringify({ error: "Failed to create room" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      room = await createRes.json();
+    }
+
+    // Metered private rooms require a room-scoped access token. The token is
+    // short-lived and tied to the already-authorized platform user.
+    const tokenRes = await fetch(
+      `https://${meteredDomain}/api/v1/token?secretKey=${secretKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           roomName,
-          privacy: "public",
-          autoJoin: true,
-          maxParticipants: 4,
-          ejectAtRoomExp: true,
+          externalUserId: caller.user.id,
+          email: caller.user.email,
+          name: caller.user.email ?? "Participante",
+          isAdmin: caller.isAdmin,
           expireUnixSec: Math.floor(Date.now() / 1000) + 4 * 3600,
         }),
-      }
+      },
     );
 
-    if (!createRes.ok) {
-      const err = await createRes.text();
-      console.error("Metered create room error:", err);
-      return new Response(JSON.stringify({ error: "Failed to create room" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!tokenRes.ok) {
+      console.error("Metered token generation failed:", await tokenRes.text());
+      return new Response(JSON.stringify({ error: "Failed to authorize video room" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const room = await createRes.json();
+    const tokenPayload = await tokenRes.json();
+    if (!tokenPayload?.token) {
+      return new Response(JSON.stringify({ error: "Metered returned no access token" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({
-      roomURL: `${meteredDomain}/${room.roomName}`,
-      roomName: room.roomName,
+      roomURL: `${meteredDomain}/${room.roomName ?? roomName}`,
+      roomName: room.roomName ?? roomName,
+      accessToken: tokenPayload.token,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

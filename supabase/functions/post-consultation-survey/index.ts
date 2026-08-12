@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isInternalOrService } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // This worker reads appointments and contact data with the service role. It
+  // is triggered by database automation only; public callers must not be able
+  // to replay it and send surveys in bulk.
+  if (!isInternalOrService(req)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
+    const requestBody = await req.json().catch(() => ({}));
+    const requestedAppointmentId =
+      typeof requestBody?.appointment_id === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestBody.appointment_id)
+        ? requestBody.appointment_id
+        : null;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -23,12 +40,21 @@ serve(async (req) => {
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
     const oneHour10Ago = new Date(now.getTime() - 70 * 60 * 1000).toISOString();
 
-    const { data: completed } = await supabase
+    let completedQuery = supabase
       .from("appointments")
       .select("id, patient_id, doctor_id, scheduled_at, duration_minutes")
-      .eq("status", "completed")
-      .gte("updated_at", oneHour10Ago)
-      .lte("updated_at", oneHourAgo);
+      .eq("status", "completed");
+
+    if (requestedAppointmentId) {
+      // The status trigger sends the exact appointment that just completed.
+      // Prefer it over a time window so a fast trigger cannot miss the survey.
+      completedQuery = completedQuery.eq("id", requestedAppointmentId);
+    } else {
+      // Keep the window fallback for an eventual scheduled invocation.
+      completedQuery = completedQuery.gte("updated_at", oneHour10Ago).lte("updated_at", oneHourAgo);
+    }
+
+    const { data: completed } = await completedQuery;
 
     if (!completed || completed.length === 0) {
       return new Response(JSON.stringify({ sent: 0 }), {
@@ -77,7 +103,8 @@ serve(async (req) => {
         if (docName) drName = `Dr(a). ${docName.first_name} ${docName.last_name}`;
       }
 
-      const surveyLink = `https://allo-medico-care.lovable.app/rate/${appt.id}`;
+      const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://aloclinica.com.br";
+      const surveyLink = `${appBaseUrl.replace(/\/$/, "")}/rate/${appt.id}`;
 
       // Send email
       if (patientEmail) {

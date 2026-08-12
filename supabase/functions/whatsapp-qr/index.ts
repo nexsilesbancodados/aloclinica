@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { fetchEvolution, normalizeEvolutionUrl } from "../_shared/evolution.ts";
+import { getCaller } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +20,14 @@ const isPlaceholder = (value?: string | null) =>
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const caller = await getCaller(req);
+  if (!caller.user) {
+    return jsonResponse({ success: false, error: "Unauthorized" }, 401);
+  }
+  if (!caller.isAdmin) {
+    return jsonResponse({ success: false, error: "Admin access required" }, 403);
   }
 
   try {
