@@ -178,9 +178,10 @@ jobs:
               echo 'TURNSERVER_ENABLED=1' >> /etc/default/coturn
             fi
 
-            if systemctl list-unit-files | grep -q '^coturn.service'; then
+            systemctl daemon-reload || true
+            if [ -f /usr/lib/systemd/system/coturn.service ] || [ -f /etc/systemd/system/coturn.service ]; then
               turn_service=coturn
-            elif systemctl list-unit-files | grep -q '^turnserver.service'; then
+            elif [ -f /usr/lib/systemd/system/turnserver.service ] || [ -f /etc/systemd/system/turnserver.service ]; then
               turn_service=turnserver
             else
               echo 'Serviço systemd do Coturn não foi encontrado.'
