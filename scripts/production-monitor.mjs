@@ -85,7 +85,16 @@ const checkVps = async () => {
   const user = process.env.VPS_USER ?? "root";
   const command = "set -eu; echo __STATS__; docker stats --no-stream --format '{{.Name}}|{{.CPUPerc}}|{{.MemPerc}}'; echo __MEM__; free -m | awk 'NR==2 {print $2\"|\"$3\"|\"$7}'; echo __DISK__; df -P / | awk 'NR==2 {print $5}'";
   try {
-    const { stdout } = await execFileAsync("ssh", ["-i", key, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", `${user}@${host}`, command], { timeout: timeoutMs });
+    const sshArgs = ["-i", key, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"];
+    const knownHostsFile = process.env.VPS_KNOWN_HOSTS_FILE;
+    if (knownHostsFile) {
+      // The workflow can provide a pinned known_hosts file. accept-new keeps
+      // first-run monitoring non-interactive while still rejecting changes
+      // after a key has been recorded.
+      sshArgs.push("-o", "StrictHostKeyChecking=accept-new", "-o", `UserKnownHostsFile=${knownHostsFile}`);
+    }
+    sshArgs.push(`${user}@${host}`, command);
+    const { stdout } = await execFileAsync("ssh", sshArgs, { timeout: timeoutMs });
     const statsBlock = stdout.split("__STATS__")[1]?.split("__MEM__")[0] ?? "";
     const memBlock = stdout.split("__MEM__")[1]?.split("__DISK__")[0]?.trim() ?? "";
     const disk = Number.parseFloat((stdout.split("__DISK__")[1] ?? "").replace("%", "").trim());
@@ -112,9 +121,7 @@ await Promise.all([
   checkHttp("whatsapp", process.env.WHATSAPP_URL ?? "https://whatsapp.telemedicinaaloclinica.sbs/", [200, 401, 403], false),
   checkHttp("database-rest", `https://${ref}.supabase.co/rest/v1/`, [200, 401, 403]),
 ]);
-if (supabaseKey) {
-  results.at(-1).headersConfigured = true;
-}
+if (supabaseKey) results.find((item) => item.name === "database-rest").headersConfigured = true;
 await Promise.all([checkDatabaseSignals(), checkVps()]);
 
 const report = { checkedAt: new Date().toISOString(), site, results, failed: results.filter((item) => !item.ok && !item.skipped).length };

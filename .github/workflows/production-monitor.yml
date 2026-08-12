@@ -37,6 +37,7 @@ jobs:
       - name: Preparar chave SSH temporária
         env:
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           if [[ -n "${VPS_SSH_PRIVATE_KEY:-}" ]]; then
@@ -44,6 +45,11 @@ jobs:
             key_path="$RUNNER_TEMP/aloclinica-vps-monitor"
             printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$key_path"
             echo "VPS_SSH_KEY=$key_path" >> "$GITHUB_ENV"
+            known_hosts_path="$RUNNER_TEMP/aloclinica-vps-known-hosts"
+            if [[ -n "${VPS_SSH_KNOWN_HOSTS:-}" ]]; then
+              printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > "$known_hosts_path"
+            fi
+            echo "VPS_KNOWN_HOSTS_FILE=$known_hosts_path" >> "$GITHUB_ENV"
           else
             echo "VPS_SSH_PRIVATE_KEY não configurado; métricas privadas serão marcadas como indisponíveis."
           fi

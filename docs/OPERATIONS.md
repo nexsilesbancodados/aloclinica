@@ -40,6 +40,7 @@ Secrets usados pelo monitor:
 
 - `SUPABASE_ACCESS_TOKEN` para consultar backup e falhas recentes sem expor dados;
 - `VPS_SSH_PRIVATE_KEY` para métricas privadas da VPS;
+- `VPS_SSH_KNOWN_HOSTS` opcional para fixar a chave pública SSH da VPS; sem ele, a primeira chave é aceita e alterações posteriores são rejeitadas;
 - `ALERT_WEBHOOK_URL` opcional para Slack, Discord ou outro receptor compatível.
 
 ## OpenAPI
