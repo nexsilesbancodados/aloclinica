@@ -164,16 +164,32 @@ const SystemHealth = () => {
     }
 
     // 6–10. VPS Services
-    const vpsServices = [
-      { name: "CompreFace (Biometria)", url: "http://72.62.138.208:8000", icon: <Shield className="w-5 h-5" /> },
-      { name: "DocuSeal (Assinaturas)", url: "http://72.62.138.208:3200", icon: <FileText className="w-5 h-5" /> },
-      { name: "Jitsi Meet (Vídeo)", url: "https://meet.telemedicinaaloclinica.sbs", icon: <Video className="w-5 h-5" /> },
+    //
+    // Só entram aqui os serviços publicados por HTTPS. Endereços `http://IP:porta`
+    // não servem para diagnóstico: o navegador bloqueia como mixed content antes
+    // de qualquer requisição sair, então o resultado seria sempre "inacessível"
+    // independentemente do estado real do serviço.
+    const vpsServices: Array<{
+      name: string;
+      url: string | null;
+      icon: React.ReactNode;
+      /** Serviço ainda não implantado na VPS — reportar sem tentar a rede. */
+      notDeployed?: string;
+    }> = [
+      { name: "CompreFace (Biometria)", url: "https://face.aloclinica.com.br", icon: <Shield className="w-5 h-5" /> },
+      { name: "MiroTalk (Vídeo)", url: "https://meet.telemedicinaaloclinica.sbs", icon: <Video className="w-5 h-5" /> },
+      { name: "WhatsApp (Evolution API)", url: "https://whatsapp.telemedicinaaloclinica.sbs", icon: <Server className="w-5 h-5" /> },
+      { name: "DocuSeal (Assinaturas)", url: null, icon: <FileText className="w-5 h-5" />, notDeployed: "Não implantado na VPS" },
     ];
 
     for (const svc of vpsServices) {
+      if (!svc.url) {
+        results.push({ name: svc.name, status: "error", message: svc.notDeployed, icon: svc.icon, group: "vps" });
+        continue;
+      }
       const start = performance.now();
       try {
-        const res = await fetch(svc.url, { mode: "no-cors", signal: AbortSignal.timeout(5000) });
+        await fetch(svc.url, { mode: "no-cors", signal: AbortSignal.timeout(5000) });
         const latency = Math.round(performance.now() - start);
         results.push({ name: svc.name, status: "ok", latency, message: `Acessível • ${latency}ms`, icon: svc.icon, group: "vps" });
       } catch (e: unknown) {
