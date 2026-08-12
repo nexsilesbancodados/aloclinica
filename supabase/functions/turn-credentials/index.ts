@@ -14,7 +14,8 @@ const corsHeaders = {
  *   2. Metered.live (se MET_KEY configurado) — TURN dinâmico expira em 4h
  *   3. Google STUN público — fallback (apenas STUN, NÃO funciona atrás de NAT simétrico)
  *
- * Sempre retorna pelo menos a camada 1 (coturn próprio) que cobre 95%+ dos casos.
+ * A camada própria só é anunciada quando COTURN_PASS está configurado. Sem o
+ * relay instalado, anunciar o IP da VPS cria um servidor ICE fantasma.
  */
 
 // coturn rodando na VPS — credenciais long-term (não expiram)
@@ -25,14 +26,12 @@ const COTURN_USER = Deno.env.get("COTURN_USER") || "mirotalk";
 const COTURN_PASS = Deno.env.get("COTURN_PASS") || "";
 
 function ownIceServers() {
-  const servers: Array<Record<string, unknown>> = [
-    // STUN próprio (descoberta de IP)
-    { urls: `stun:${COTURN_HOST}:${COTURN_PORT}` },
-  ];
-  // TURN próprio só quando a credencial estiver configurada via env.
+  const servers: Array<Record<string, unknown>> = [];
+  // Só anunciar o relay próprio quando a credencial estiver configurada via env.
   if (COTURN_PASS) {
     servers.push({
       urls: [
+        `stun:${COTURN_HOST}:${COTURN_PORT}`,
         `turn:${COTURN_HOST}:${COTURN_PORT}?transport=udp`,
         `turn:${COTURN_HOST}:${COTURN_PORT}?transport=tcp`,
       ],
@@ -75,7 +74,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Camada 1: sempre incluir coturn próprio
+    // Camada própria só quando o relay está configurado.
     const iceServers = ownIceServers();
 
     // Camada 2: tentar Metered como reforço (não bloqueante)
@@ -115,7 +114,8 @@ Deno.serve(async (req) => {
     });
   } catch (error: any) {
     console.error("TURN credentials error:", error);
-    // Mesmo em erro, devolver coturn próprio para não quebrar vídeo
+    // Mesmo em erro, devolver os servidores públicos disponíveis para não
+    // quebrar o fluxo de vídeo por causa de uma falha opcional do Metered.
     return new Response(JSON.stringify({ iceServers: ownIceServers() }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
