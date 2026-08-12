@@ -36,6 +36,18 @@ export type RuntimeFlagDefinition = {
 };
 
 export const SECRET_DEFINITIONS: SecretDefinition[] = [
+  { key: "APP_BASE_URL", label: "URL base da aplicação", group: "Administração e jobs", required: false, editable: true, description: "URL usada em links enviados por notificações e pesquisas." },
+  { key: "APP_URL", label: "URL de retorno da aplicação", group: "Administração e jobs", required: false, editable: true, description: "URL de retorno usada por pagamentos e assinaturas." },
+  { key: "EMAIL_FROM", label: "Remetente legado", group: "Comunicação", required: false, editable: true, description: "Remetente usado pelo fluxo legado de checkout." },
+  { key: "EMAIL_FROM_NAME", label: "Nome do remetente", group: "Comunicação", required: false, editable: true, description: "Nome apresentado nos e-mails enviados pela plataforma." },
+  { key: "EMAIL_SUPPORT_ADDRESS", label: "E-mail de suporte", group: "Comunicação", required: false, editable: true, description: "Caixa de entrada usada para suporte e respostas." },
+  { key: "EMAIL_COMPANY_ADDRESS", label: "E-mail da empresa", group: "Comunicação", required: false, editable: true, description: "Endereço institucional usado em templates e rodapés." },
+  { key: "SITE_DOMAIN", label: "Domínio do site", group: "Comunicação", required: false, editable: true, description: "Domínio usado nos links e metadados de e-mail." },
+  { key: "SITE_URL", label: "URL pública do site", group: "Comunicação", required: false, editable: true, description: "URL pública usada em links de mensagens." },
+  { key: "PLATFORM_FEE_PERCENT", label: "Taxa da plataforma (%)", group: "Pagamentos", required: false, editable: true, description: "Percentual padrão retido nas cobranças marketplace." },
+  { key: "COTURN_HOST", label: "Coturn Host", group: "Vídeo e infraestrutura", required: false, editable: true, description: "Endereço do servidor TURN próprio." },
+  { key: "COTURN_PORT", label: "Coturn Port", group: "Vídeo e infraestrutura", required: false, editable: true, description: "Porta do servidor TURN próprio." },
+  { key: "COTURN_USER", label: "Coturn User", group: "Vídeo e infraestrutura", required: false, editable: true, description: "Usuário do servidor TURN próprio." },
   { key: "SUPABASE_SERVICE_ROLE_KEY", label: "Supabase Service Role", group: "Base", required: true, editable: false, description: "Acesso servidor às operações protegidas do banco. Gerenciada pelo Supabase; configure fora deste painel." },
   { key: "SUPABASE_ANON_KEY", label: "Supabase Anon", group: "Base", required: true, editable: false, description: "Chave pública usada pelas Edge Functions para validar sessões. Gerenciada pelo Supabase; configure fora deste painel." },
   { key: "INTERNAL_FUNCTION_SECRET", label: "Internal Function Secret", group: "Base", required: true, editable: false, description: "Autentica chamadas internas disparadas por triggers e jobs. A rotação precisa coincidir com o segredo configurado no banco." },

@@ -279,11 +279,12 @@ serve(async (req) => {
       if (typeof name === "string") rejectedKeys.push(name.slice(0, 128));
       continue;
     }
-    if (typeof value !== "string" || value.length < 1 || new TextEncoder().encode(value).byteLength > 48 * 1024) {
+    const normalizedValue = typeof value === "string" ? value.trim() : "";
+    if (!normalizedValue || new TextEncoder().encode(normalizedValue).byteLength > 48 * 1024) {
       return json({ error: `Valor inválido para ${name}` }, 400);
     }
     seen.add(name);
-    updates.push({ name, value });
+    updates.push({ name, value: normalizedValue });
   }
 
   if (rejectedKeys.length > 0) {

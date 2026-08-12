@@ -69,24 +69,29 @@ describe("AdminMaintenanceCenter", () => {
   });
 
   it("mostra diagnóstico, todos os grupos de integração e não expõe valores", async () => {
-    const { default: AdminMaintenanceCenter } = await import("@/components/admin/AdminMaintenanceCenter");
+    const { default: AdminMaintenanceCenter } = await import("@/components/admin/AdminMaintenanceCenterV2");
 
     render(<BrowserRouter><AdminMaintenanceCenter /></BrowserRouter>);
 
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("admin-secret-manager", { body: { action: "status" } }));
     expect(screen.getByRole("heading", { name: "Centro de manutenção" })).toBeInTheDocument();
-    expect(screen.getByText("Saúde dos serviços")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Chaves/ }));
+    await waitFor(() => expect(screen.getByText("Resend (B2B)")).toBeInTheDocument());
     expect(screen.getAllByText("Administração e jobs").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Assinatura digital").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Resend (B2B)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Configurada").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Pendente").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("tab", { name: /Manutenção/ }));
     expect(screen.getByText("Flags de risco do runtime")).toBeInTheDocument();
     expect(screen.getByText("Desativada")).toBeInTheDocument();
     expect(screen.queryByText("valor-super-secreto")).not.toBeInTheDocument();
   });
 
   it("envia somente os campos preenchidos e limpa o valor após salvar", async () => {
-    const { default: AdminMaintenanceCenter } = await import("@/components/admin/AdminMaintenanceCenter");
+    const { default: AdminMaintenanceCenter } = await import("@/components/admin/AdminMaintenanceCenterV2");
     render(<BrowserRouter><AdminMaintenanceCenter /></BrowserRouter>);
+    fireEvent.click(screen.getByRole("tab", { name: /Chaves/ }));
 
     const brevoInput = await waitFor(() => {
       const input = document.getElementById("secret-input-BREVO_API_KEY");
@@ -103,10 +108,12 @@ describe("AdminMaintenanceCenter", () => {
   });
 
   it("mantém chaves gerenciadas fora do painel bloqueadas", async () => {
-    const { default: AdminMaintenanceCenter } = await import("@/components/admin/AdminMaintenanceCenter");
+    const { default: AdminMaintenanceCenter } = await import("@/components/admin/AdminMaintenanceCenterV2");
     render(<BrowserRouter><AdminMaintenanceCenter /></BrowserRouter>);
+    fireEvent.click(screen.getByRole("tab", { name: /Chaves/ }));
 
-    await waitFor(() => expect(document.getElementById("secret-input-SUPABASE_SERVICE_ROLE_KEY")).toBeDisabled());
+    await waitFor(() => expect(document.getElementById("secret-input-SUPABASE_SERVICE_ROLE_KEY")).not.toBeNull());
+    expect(document.getElementById("secret-input-SUPABASE_SERVICE_ROLE_KEY")).toBeDisabled();
     expect(document.getElementById("secret-input-SUPABASE_ANON_KEY")).toBeDisabled();
     expect(document.getElementById("secret-input-INTERNAL_FUNCTION_SECRET")).toBeDisabled();
     expect(document.getElementById("secret-input-BREVO_API_KEY")).not.toBeDisabled();

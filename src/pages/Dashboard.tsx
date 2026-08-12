@@ -96,7 +96,7 @@ const AdminKycReview = lazy(() => import("@/components/admin/AdminKycReview"));
 
 const AdminPlatformSettings = lazy(() => import("@/components/admin/AdminPlatformSettings"));
 const AdminFeatureFlags = lazy(() => import("@/components/admin/AdminFeatureFlags"));
-const AdminMaintenanceCenter = lazy(() => import("@/components/admin/AdminMaintenanceCenter"));
+const AdminMaintenanceCenter = lazy(() => import("@/components/admin/AdminMaintenanceCenterV2"));
 const AdminNotificationTemplates = lazy(() => import("@/components/admin/AdminNotificationTemplates"));
 const AdminSecurity = lazy(() => import("@/components/admin/AdminSecurity"));
 const AdminLgpdExports = lazy(() => import("@/components/admin/AdminLgpdExports"));
