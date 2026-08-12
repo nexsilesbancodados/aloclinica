@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sql="ALTER DATABASE postgres SET app.settings.internal_function_secret = '$INTERNAL_FUNCTION_SECRET';"
+          sql="ALTER ROLE postgres SET app.settings.internal_function_secret = '$INTERNAL_FUNCTION_SECRET';"
           jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/query.json"
           http_code="$(curl -sS -w '%{http_code}' -o "$RUNNER_TEMP/query-response.json" \
             -X POST \
@@ -78,9 +78,21 @@ jobs:
             "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
             --data-binary @"$RUNNER_TEMP/query.json")"
           if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
-            echo "Falha ao sincronizar configuração interna do banco (HTTP $http_code)."
+            message="$(jq -r 'if type == "array" then (.[0].message // .[0].error // .[0].hint // "sem detalhe") else (.message // .error // .hint // "sem detalhe") end' "$RUNNER_TEMP/query-response.json" 2>/dev/null || echo 'sem detalhe')"
+            echo "Falha ao sincronizar configuração interna do banco (HTTP $http_code): $message"
             exit 1
           fi
+
+          sql="select current_setting('app.settings.internal_function_secret', true) is not null as configured;"
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/verify-query.json"
+          curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/verify-query.json" > "$RUNNER_TEMP/verify-response.json"
+          jq -e '.[0].configured == true' "$RUNNER_TEMP/verify-response.json" >/dev/null
 
       - name: Instalar e configurar Coturn na VPS
         uses: appleboy/ssh-action@v1.0.3
