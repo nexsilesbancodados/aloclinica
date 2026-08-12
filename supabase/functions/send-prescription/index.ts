@@ -154,16 +154,22 @@ serve(async (req) => {
 
     if (phone) {
       try {
+        // Conteúdo clínico NÃO trafega no corpo da mensagem — nem `medList`,
+        // nem `diagnosis`. Diagnóstico e prescrição são dado pessoal sensível
+        // (LGPD, Art. 5º, II) e o WhatsApp tem três pontos de exposição que a
+        // plataforma não tem: o gateway Evolution persiste toda mensagem no
+        // banco dele (DATABASE_SAVE_DATA_NEW_MESSAGE=true), a prévia aparece na
+        // tela bloqueada do aparelho, e o número pode estar num aparelho
+        // compartilhado. O conteúdo completo já está na plataforma, que exige
+        // autenticação. Não reintroduza medList/diagnosis aqui.
         const whatsappMessage = [
           `🏥 *AloClinica — Receita Médica*`,
           ``,
           `Olá, *${recipientName}*!`,
           ``,
-          `O(a) *${doctor_name}* prescreveu os seguintes medicamentos:`,
+          `O(a) *${doctor_name}* emitiu uma nova receita para você.`,
           ``,
-          medList,
-          diagnosis ? `\n📋 *Diagnóstico:* ${diagnosis}` : "",
-          ``,
+          `Por segurança, os detalhes da prescrição não são enviados por WhatsApp.`,
           `Acesse a plataforma para ver a receita completa e baixar o PDF.`,
           ``,
           `_Receita digital emitida pela AloClinica_`,
