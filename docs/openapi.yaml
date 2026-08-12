@@ -1,0 +1,1777 @@
+openapi: 3.1.0
+info:
+  title: AloClinica Edge Functions
+  version: 1.0.0
+  description: >
+    Inventário OpenAPI gerado a partir de supabase/functions e supabase/config.toml.
+    Os payloads específicos permanecem definidos e validados no arquivo-fonte de cada função.
+servers:
+  - url: https://pwxvvimdtmvziynbspgx.supabase.co/functions/v1
+    description: Supabase Functions em produção
+tags:
+  - name: Edge Functions
+paths:
+  /admin-reset-password:
+    post:
+      operationId: admin_reset_password_post
+      tags: [Edge Functions]
+      summary: "admin-reset-password (POST)"
+      description: "Contrato de transporte da Edge Function admin-reset-password. Payload detalhado no código-fonte supabase/functions/admin-reset-password/index.ts."
+      x-source: supabase/functions/admin-reset-password/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /admin-secret-manager:
+    post:
+      operationId: admin_secret_manager_post
+      tags: [Edge Functions]
+      summary: "admin-secret-manager (POST)"
+      description: "Contrato de transporte da Edge Function admin-secret-manager. Payload detalhado no código-fonte supabase/functions/admin-secret-manager/index.ts."
+      x-source: supabase/functions/admin-secret-manager/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /ai-assistant:
+    post:
+      operationId: ai_assistant_post
+      tags: [Edge Functions]
+      summary: "ai-assistant (POST)"
+      description: "Contrato de transporte da Edge Function ai-assistant. Payload detalhado no código-fonte supabase/functions/ai-assistant/index.ts."
+      x-source: supabase/functions/ai-assistant/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /ai-symptom-triage:
+    post:
+      operationId: ai_symptom_triage_post
+      tags: [Edge Functions]
+      summary: "ai-symptom-triage (POST)"
+      description: "Contrato de transporte da Edge Function ai-symptom-triage. Payload detalhado no código-fonte supabase/functions/ai-symptom-triage/index.ts."
+      x-source: supabase/functions/ai-symptom-triage/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /ai-ticket-triage:
+    post:
+      operationId: ai_ticket_triage_post
+      tags: [Edge Functions]
+      summary: "ai-ticket-triage (POST)"
+      description: "Contrato de transporte da Edge Function ai-ticket-triage. Payload detalhado no código-fonte supabase/functions/ai-ticket-triage/index.ts."
+      x-source: supabase/functions/ai-ticket-triage/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /appointment-confirmed:
+    post:
+      operationId: appointment_confirmed_post
+      tags: [Edge Functions]
+      summary: "appointment-confirmed (POST)"
+      description: "Contrato de transporte da Edge Function appointment-confirmed. Payload detalhado no código-fonte supabase/functions/appointment-confirmed/index.ts."
+      x-source: supabase/functions/appointment-confirmed/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /appointment-reminders:
+    post:
+      operationId: appointment_reminders_post
+      tags: [Edge Functions]
+      summary: "appointment-reminders (POST)"
+      description: "Contrato de transporte da Edge Function appointment-reminders. Payload detalhado no código-fonte supabase/functions/appointment-reminders/index.ts."
+      x-source: supabase/functions/appointment-reminders/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /assign-role:
+    post:
+      operationId: assign_role_post
+      tags: [Edge Functions]
+      summary: "assign-role (POST)"
+      description: "Contrato de transporte da Edge Function assign-role. Payload detalhado no código-fonte supabase/functions/assign-role/index.ts."
+      x-source: supabase/functions/assign-role/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /auto-clinical-summary:
+    post:
+      operationId: auto_clinical_summary_post
+      tags: [Edge Functions]
+      summary: "auto-clinical-summary (POST)"
+      description: "Contrato de transporte da Edge Function auto-clinical-summary. Payload detalhado no código-fonte supabase/functions/auto-clinical-summary/index.ts."
+      x-source: supabase/functions/auto-clinical-summary/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /auto-payout-tick:
+    post:
+      operationId: auto_payout_tick_post
+      tags: [Edge Functions]
+      summary: "auto-payout-tick (POST)"
+      description: "Contrato de transporte da Edge Function auto-payout-tick. Payload detalhado no código-fonte supabase/functions/auto-payout-tick/index.ts."
+      x-source: supabase/functions/auto-payout-tick/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /b2b-lead-notification:
+    post:
+      operationId: b2b_lead_notification_post
+      tags: [Edge Functions]
+      summary: "b2b-lead-notification (POST)"
+      description: "Contrato de transporte da Edge Function b2b-lead-notification. Payload detalhado no código-fonte supabase/functions/b2b-lead-notification/index.ts."
+      x-source: supabase/functions/b2b-lead-notification/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /calculate-shift-price:
+    post:
+      operationId: calculate_shift_price_post
+      tags: [Edge Functions]
+      summary: "calculate-shift-price (POST)"
+      description: "Contrato de transporte da Edge Function calculate-shift-price. Payload detalhado no código-fonte supabase/functions/calculate-shift-price/index.ts."
+      x-source: supabase/functions/calculate-shift-price/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /cart-abandonment:
+    post:
+      operationId: cart_abandonment_post
+      tags: [Edge Functions]
+      summary: "cart-abandonment (POST)"
+      description: "Contrato de transporte da Edge Function cart-abandonment. Payload detalhado no código-fonte supabase/functions/cart-abandonment/index.ts."
+      x-source: supabase/functions/cart-abandonment/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /clinical-ai:
+    post:
+      operationId: clinical_ai_post
+      tags: [Edge Functions]
+      summary: "clinical-ai (POST)"
+      description: "Contrato de transporte da Edge Function clinical-ai. Payload detalhado no código-fonte supabase/functions/clinical-ai/index.ts."
+      x-source: supabase/functions/clinical-ai/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /clinical-summary:
+    post:
+      operationId: clinical_summary_post
+      tags: [Edge Functions]
+      summary: "clinical-summary (POST)"
+      description: "Contrato de transporte da Edge Function clinical-summary. Payload detalhado no código-fonte supabase/functions/clinical-summary/index.ts."
+      x-source: supabase/functions/clinical-summary/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /compreface-proxy:
+    post:
+      operationId: compreface_proxy_post
+      tags: [Edge Functions]
+      summary: "compreface-proxy (POST)"
+      description: "Contrato de transporte da Edge Function compreface-proxy. Payload detalhado no código-fonte supabase/functions/compreface-proxy/index.ts."
+      x-source: supabase/functions/compreface-proxy/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /contrato-checkout:
+    post:
+      operationId: contrato_checkout_post
+      tags: [Edge Functions]
+      summary: "contrato-checkout (POST)"
+      description: "Contrato de transporte da Edge Function contrato-checkout. Payload detalhado no código-fonte supabase/functions/contrato-checkout/index.ts."
+      x-source: supabase/functions/contrato-checkout/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /create-admin-account:
+    post:
+      operationId: create_admin_account_post
+      tags: [Edge Functions]
+      summary: "create-admin-account (POST)"
+      description: "Contrato de transporte da Edge Function create-admin-account. Payload detalhado no código-fonte supabase/functions/create-admin-account/index.ts."
+      x-source: supabase/functions/create-admin-account/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /daily-backup:
+    post:
+      operationId: daily_backup_post
+      tags: [Edge Functions]
+      summary: "daily-backup (POST)"
+      description: "Contrato de transporte da Edge Function daily-backup. Payload detalhado no código-fonte supabase/functions/daily-backup/index.ts."
+      x-source: supabase/functions/daily-backup/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /didit-kyc:
+    post:
+      operationId: didit_kyc_post
+      tags: [Edge Functions]
+      summary: "didit-kyc (POST)"
+      description: "Contrato de transporte da Edge Function didit-kyc. Payload detalhado no código-fonte supabase/functions/didit-kyc/index.ts."
+      x-source: supabase/functions/didit-kyc/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /doctor-ical-feed:
+    get:
+      operationId: doctor_ical_feed_get
+      tags: [Edge Functions]
+      summary: "doctor-ical-feed (GET)"
+      description: "Contrato de transporte da Edge Function doctor-ical-feed. Payload detalhado no código-fonte supabase/functions/doctor-ical-feed/index.ts."
+      x-source: supabase/functions/doctor-ical-feed/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /docuseal-proxy:
+    post:
+      operationId: docuseal_proxy_post
+      tags: [Edge Functions]
+      summary: "docuseal-proxy (POST)"
+      description: "Contrato de transporte da Edge Function docuseal-proxy. Payload detalhado no código-fonte supabase/functions/docuseal-proxy/index.ts."
+      x-source: supabase/functions/docuseal-proxy/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /docuseal-webhook:
+    post:
+      operationId: docuseal_webhook_post
+      tags: [Edge Functions]
+      summary: "docuseal-webhook (POST)"
+      description: "Contrato de transporte da Edge Function docuseal-webhook. Payload detalhado no código-fonte supabase/functions/docuseal-webhook/index.ts."
+      x-source: supabase/functions/docuseal-webhook/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /faq-chat-bot:
+    post:
+      operationId: faq_chat_bot_post
+      tags: [Edge Functions]
+      summary: "faq-chat-bot (POST)"
+      description: "Contrato de transporte da Edge Function faq-chat-bot. Payload detalhado no código-fonte supabase/functions/faq-chat-bot/index.ts."
+      x-source: supabase/functions/faq-chat-bot/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /generate-certificate-pdf:
+    post:
+      operationId: generate_certificate_pdf_post
+      tags: [Edge Functions]
+      summary: "generate-certificate-pdf (POST)"
+      description: "Contrato de transporte da Edge Function generate-certificate-pdf. Payload detalhado no código-fonte supabase/functions/generate-certificate-pdf/index.ts."
+      x-source: supabase/functions/generate-certificate-pdf/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /generate-prescription-pdf:
+    post:
+      operationId: generate_prescription_pdf_post
+      tags: [Edge Functions]
+      summary: "generate-prescription-pdf (POST)"
+      description: "Contrato de transporte da Edge Function generate-prescription-pdf. Payload detalhado no código-fonte supabase/functions/generate-prescription-pdf/index.ts."
+      x-source: supabase/functions/generate-prescription-pdf/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /guest-checkout:
+    post:
+      operationId: guest_checkout_post
+      tags: [Edge Functions]
+      summary: "guest-checkout (POST)"
+      description: "Contrato de transporte da Edge Function guest-checkout. Payload detalhado no código-fonte supabase/functions/guest-checkout/index.ts."
+      x-source: supabase/functions/guest-checkout/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /guest-consultation:
+    post:
+      operationId: guest_consultation_post
+      tags: [Edge Functions]
+      summary: "guest-consultation (POST)"
+      description: "Contrato de transporte da Edge Function guest-consultation. Payload detalhado no código-fonte supabase/functions/guest-consultation/index.ts."
+      x-source: supabase/functions/guest-consultation/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /lembrete-consultas:
+    post:
+      operationId: lembrete_consultas_post
+      tags: [Edge Functions]
+      summary: "lembrete-consultas (POST)"
+      description: "Contrato de transporte da Edge Function lembrete-consultas. Payload detalhado no código-fonte supabase/functions/lembrete-consultas/index.ts."
+      x-source: supabase/functions/lembrete-consultas/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /lgpd-export:
+    post:
+      operationId: lgpd_export_post
+      tags: [Edge Functions]
+      summary: "lgpd-export (POST)"
+      description: "Contrato de transporte da Edge Function lgpd-export. Payload detalhado no código-fonte supabase/functions/lgpd-export/index.ts."
+      x-source: supabase/functions/lgpd-export/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /lgpd-export-user:
+    post:
+      operationId: lgpd_export_user_post
+      tags: [Edge Functions]
+      summary: "lgpd-export-user (POST)"
+      description: "Contrato de transporte da Edge Function lgpd-export-user. Payload detalhado no código-fonte supabase/functions/lgpd-export-user/index.ts."
+      x-source: supabase/functions/lgpd-export-user/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /medical-autocomplete:
+    post:
+      operationId: medical_autocomplete_post
+      tags: [Edge Functions]
+      summary: "medical-autocomplete (POST)"
+      description: "Contrato de transporte da Edge Function medical-autocomplete. Payload detalhado no código-fonte supabase/functions/medical-autocomplete/index.ts."
+      x-source: supabase/functions/medical-autocomplete/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /memed-prescriber:
+    post:
+      operationId: memed_prescriber_post
+      tags: [Edge Functions]
+      summary: "memed-prescriber (POST)"
+      description: "Contrato de transporte da Edge Function memed-prescriber. Payload detalhado no código-fonte supabase/functions/memed-prescriber/index.ts."
+      x-source: supabase/functions/memed-prescriber/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mercadopago-cancel-subscription:
+    post:
+      operationId: mercadopago_cancel_subscription_post
+      tags: [Edge Functions]
+      summary: "mercadopago-cancel-subscription (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-cancel-subscription. Payload detalhado no código-fonte supabase/functions/mercadopago-cancel-subscription/index.ts."
+      x-source: supabase/functions/mercadopago-cancel-subscription/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mercadopago-charge-saved-card:
+    post:
+      operationId: mercadopago_charge_saved_card_post
+      tags: [Edge Functions]
+      summary: "mercadopago-charge-saved-card (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-charge-saved-card. Payload detalhado no código-fonte supabase/functions/mercadopago-charge-saved-card/index.ts."
+      x-source: supabase/functions/mercadopago-charge-saved-card/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mercadopago-create-payment:
+    post:
+      operationId: mercadopago_create_payment_post
+      tags: [Edge Functions]
+      summary: "mercadopago-create-payment (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-create-payment. Payload detalhado no código-fonte supabase/functions/mercadopago-create-payment/index.ts."
+      x-source: supabase/functions/mercadopago-create-payment/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mercadopago-create-subscription:
+    post:
+      operationId: mercadopago_create_subscription_post
+      tags: [Edge Functions]
+      summary: "mercadopago-create-subscription (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-create-subscription. Payload detalhado no código-fonte supabase/functions/mercadopago-create-subscription/index.ts."
+      x-source: supabase/functions/mercadopago-create-subscription/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mercadopago-refund:
+    post:
+      operationId: mercadopago_refund_post
+      tags: [Edge Functions]
+      summary: "mercadopago-refund (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-refund. Payload detalhado no código-fonte supabase/functions/mercadopago-refund/index.ts."
+      x-source: supabase/functions/mercadopago-refund/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mercadopago-save-card:
+    post:
+      operationId: mercadopago_save_card_post
+      tags: [Edge Functions]
+      summary: "mercadopago-save-card (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-save-card. Payload detalhado no código-fonte supabase/functions/mercadopago-save-card/index.ts."
+      x-source: supabase/functions/mercadopago-save-card/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mercadopago-webhook:
+    post:
+      operationId: mercadopago_webhook_post
+      tags: [Edge Functions]
+      summary: "mercadopago-webhook (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-webhook. Payload detalhado no código-fonte supabase/functions/mercadopago-webhook/index.ts."
+      x-source: supabase/functions/mercadopago-webhook/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /mercadopago-withdraw:
+    post:
+      operationId: mercadopago_withdraw_post
+      tags: [Edge Functions]
+      summary: "mercadopago-withdraw (POST)"
+      description: "Contrato de transporte da Edge Function mercadopago-withdraw. Payload detalhado no código-fonte supabase/functions/mercadopago-withdraw/index.ts."
+      x-source: supabase/functions/mercadopago-withdraw/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /metered-room:
+    post:
+      operationId: metered_room_post
+      tags: [Edge Functions]
+      summary: "metered-room (POST)"
+      description: "Contrato de transporte da Edge Function metered-room. Payload detalhado no código-fonte supabase/functions/metered-room/index.ts."
+      x-source: supabase/functions/metered-room/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /mp-oauth-callback:
+    post:
+      operationId: mp_oauth_callback_post
+      tags: [Edge Functions]
+      summary: "mp-oauth-callback (POST)"
+      description: "Contrato de transporte da Edge Function mp-oauth-callback. Payload detalhado no código-fonte supabase/functions/mp-oauth-callback/index.ts."
+      x-source: supabase/functions/mp-oauth-callback/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /no-show-reminder-tick:
+    post:
+      operationId: no_show_reminder_tick_post
+      tags: [Edge Functions]
+      summary: "no-show-reminder-tick (POST)"
+      description: "Contrato de transporte da Edge Function no-show-reminder-tick. Payload detalhado no código-fonte supabase/functions/no-show-reminder-tick/index.ts."
+      x-source: supabase/functions/no-show-reminder-tick/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /pingo-chat:
+    post:
+      operationId: pingo_chat_post
+      tags: [Edge Functions]
+      summary: "pingo-chat (POST)"
+      description: "Contrato de transporte da Edge Function pingo-chat. Payload detalhado no código-fonte supabase/functions/pingo-chat/index.ts."
+      x-source: supabase/functions/pingo-chat/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /post-consultation-survey:
+    post:
+      operationId: post_consultation_survey_post
+      tags: [Edge Functions]
+      summary: "post-consultation-survey (POST)"
+      description: "Contrato de transporte da Edge Function post-consultation-survey. Payload detalhado no código-fonte supabase/functions/post-consultation-survey/index.ts."
+      x-source: supabase/functions/post-consultation-survey/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /process-refund:
+    post:
+      operationId: process_refund_post
+      tags: [Edge Functions]
+      summary: "process-refund (POST)"
+      description: "Contrato de transporte da Edge Function process-refund. Payload detalhado no código-fonte supabase/functions/process-refund/index.ts."
+      x-source: supabase/functions/process-refund/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /public-api:
+    post:
+      operationId: public_api_post
+      tags: [Edge Functions]
+      summary: "public-api (POST)"
+      description: "Contrato de transporte da Edge Function public-api. Payload detalhado no código-fonte supabase/functions/public-api/index.ts."
+      x-source: supabase/functions/public-api/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /rate-limiter:
+    post:
+      operationId: rate_limiter_post
+      tags: [Edge Functions]
+      summary: "rate-limiter (POST)"
+      description: "Contrato de transporte da Edge Function rate-limiter. Payload detalhado no código-fonte supabase/functions/rate-limiter/index.ts."
+      x-source: supabase/functions/rate-limiter/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /register-signature:
+    post:
+      operationId: register_signature_post
+      tags: [Edge Functions]
+      summary: "register-signature (POST)"
+      description: "Contrato de transporte da Edge Function register-signature. Payload detalhado no código-fonte supabase/functions/register-signature/index.ts."
+      x-source: supabase/functions/register-signature/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /robots-txt:
+    get:
+      operationId: robots_txt_get
+      tags: [Edge Functions]
+      summary: "robots-txt (GET)"
+      description: "Contrato de transporte da Edge Function robots-txt. Payload detalhado no código-fonte supabase/functions/robots-txt/index.ts."
+      x-source: supabase/functions/robots-txt/index.ts
+      x-verify-jwt: false
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /scheduled-tasks:
+    post:
+      operationId: scheduled_tasks_post
+      tags: [Edge Functions]
+      summary: "scheduled-tasks (POST)"
+      description: "Contrato de transporte da Edge Function scheduled-tasks. Payload detalhado no código-fonte supabase/functions/scheduled-tasks/index.ts."
+      x-source: supabase/functions/scheduled-tasks/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /seed-test-doctors:
+    post:
+      operationId: seed_test_doctors_post
+      tags: [Edge Functions]
+      summary: "seed-test-doctors (POST)"
+      description: "Contrato de transporte da Edge Function seed-test-doctors. Payload detalhado no código-fonte supabase/functions/seed-test-doctors/index.ts."
+      x-source: supabase/functions/seed-test-doctors/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /seed-test-users:
+    post:
+      operationId: seed_test_users_post
+      tags: [Edge Functions]
+      summary: "seed-test-users (POST)"
+      description: "Contrato de transporte da Edge Function seed-test-users. Payload detalhado no código-fonte supabase/functions/seed-test-users/index.ts."
+      x-source: supabase/functions/seed-test-users/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /send-email:
+    post:
+      operationId: send_email_post
+      tags: [Edge Functions]
+      summary: "send-email (POST)"
+      description: "Contrato de transporte da Edge Function send-email. Payload detalhado no código-fonte supabase/functions/send-email/index.ts."
+      x-source: supabase/functions/send-email/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /send-prescription:
+    post:
+      operationId: send_prescription_post
+      tags: [Edge Functions]
+      summary: "send-prescription (POST)"
+      description: "Contrato de transporte da Edge Function send-prescription. Payload detalhado no código-fonte supabase/functions/send-prescription/index.ts."
+      x-source: supabase/functions/send-prescription/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /send-push-notification:
+    post:
+      operationId: send_push_notification_post
+      tags: [Edge Functions]
+      summary: "send-push-notification (POST)"
+      description: "Contrato de transporte da Edge Function send-push-notification. Payload detalhado no código-fonte supabase/functions/send-push-notification/index.ts."
+      x-source: supabase/functions/send-push-notification/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /send-whatsapp:
+    post:
+      operationId: send_whatsapp_post
+      tags: [Edge Functions]
+      summary: "send-whatsapp (POST)"
+      description: "Contrato de transporte da Edge Function send-whatsapp. Payload detalhado no código-fonte supabase/functions/send-whatsapp/index.ts."
+      x-source: supabase/functions/send-whatsapp/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /sitemap-xml:
+    get:
+      operationId: sitemap_xml_get
+      tags: [Edge Functions]
+      summary: "sitemap-xml (GET)"
+      description: "Contrato de transporte da Edge Function sitemap-xml. Payload detalhado no código-fonte supabase/functions/sitemap-xml/index.ts."
+      x-source: supabase/functions/sitemap-xml/index.ts
+      x-verify-jwt: false
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /suggest-reschedule:
+    post:
+      operationId: suggest_reschedule_post
+      tags: [Edge Functions]
+      summary: "suggest-reschedule (POST)"
+      description: "Contrato de transporte da Edge Function suggest-reschedule. Payload detalhado no código-fonte supabase/functions/suggest-reschedule/index.ts."
+      x-source: supabase/functions/suggest-reschedule/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /symptom-triage:
+    post:
+      operationId: symptom_triage_post
+      tags: [Edge Functions]
+      summary: "symptom-triage (POST)"
+      description: "Contrato de transporte da Edge Function symptom-triage. Payload detalhado no código-fonte supabase/functions/symptom-triage/index.ts."
+      x-source: supabase/functions/symptom-triage/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /turn-credentials:
+    post:
+      operationId: turn_credentials_post
+      tags: [Edge Functions]
+      summary: "turn-credentials (POST)"
+      description: "Contrato de transporte da Edge Function turn-credentials. Payload detalhado no código-fonte supabase/functions/turn-credentials/index.ts."
+      x-source: supabase/functions/turn-credentials/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /validate-council:
+    post:
+      operationId: validate_council_post
+      tags: [Edge Functions]
+      summary: "validate-council (POST)"
+      description: "Contrato de transporte da Edge Function validate-council. Payload detalhado no código-fonte supabase/functions/validate-council/index.ts."
+      x-source: supabase/functions/validate-council/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /validate-invite-code:
+    post:
+      operationId: validate_invite_code_post
+      tags: [Edge Functions]
+      summary: "validate-invite-code (POST)"
+      description: "Contrato de transporte da Edge Function validate-invite-code. Payload detalhado no código-fonte supabase/functions/validate-invite-code/index.ts."
+      x-source: supabase/functions/validate-invite-code/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /validate-voucher:
+    post:
+      operationId: validate_voucher_post
+      tags: [Edge Functions]
+      summary: "validate-voucher (POST)"
+      description: "Contrato de transporte da Edge Function validate-voucher. Payload detalhado no código-fonte supabase/functions/validate-voucher/index.ts."
+      x-source: supabase/functions/validate-voucher/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /verify-crm:
+    post:
+      operationId: verify_crm_post
+      tags: [Edge Functions]
+      summary: "verify-crm (POST)"
+      description: "Contrato de transporte da Edge Function verify-crm. Payload detalhado no código-fonte supabase/functions/verify-crm/index.ts."
+      x-source: supabase/functions/verify-crm/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /vidaas-callback:
+    post:
+      operationId: vidaas_callback_post
+      tags: [Edge Functions]
+      summary: "vidaas-callback (POST)"
+      description: "Contrato de transporte da Edge Function vidaas-callback. Payload detalhado no código-fonte supabase/functions/vidaas-callback/index.ts."
+      x-source: supabase/functions/vidaas-callback/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /vidaas-sign:
+    get:
+      operationId: vidaas_sign_get
+      tags: [Edge Functions]
+      summary: "vidaas-sign (GET)"
+      description: "Contrato de transporte da Edge Function vidaas-sign. Payload detalhado no código-fonte supabase/functions/vidaas-sign/index.ts."
+      x-source: supabase/functions/vidaas-sign/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /weekly-admin-report:
+    post:
+      operationId: weekly_admin_report_post
+      tags: [Edge Functions]
+      summary: "weekly-admin-report (POST)"
+      description: "Contrato de transporte da Edge Function weekly-admin-report. Payload detalhado no código-fonte supabase/functions/weekly-admin-report/index.ts."
+      x-source: supabase/functions/weekly-admin-report/index.ts
+      x-verify-jwt: false
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '500': { description: Erro interno da função }
+  /whatsapp-notify:
+    post:
+      operationId: whatsapp_notify_post
+      tags: [Edge Functions]
+      summary: "whatsapp-notify (POST)"
+      description: "Contrato de transporte da Edge Function whatsapp-notify. Payload detalhado no código-fonte supabase/functions/whatsapp-notify/index.ts."
+      x-source: supabase/functions/whatsapp-notify/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+  /whatsapp-qr:
+    post:
+      operationId: whatsapp_qr_post
+      tags: [Edge Functions]
+      summary: "whatsapp-qr (POST)"
+      description: "Contrato de transporte da Edge Function whatsapp-qr. Payload detalhado no código-fonte supabase/functions/whatsapp-qr/index.ts."
+      x-source: supabase/functions/whatsapp-qr/index.ts
+      x-verify-jwt: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonObject'
+      responses:
+        '200':
+          description: Execução aceita pela função; o corpo depende do contrato da função.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400': { description: Requisição inválida }
+        '401': { description: JWT ausente ou inválido }
+        '500': { description: Erro interno da função }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    JsonObject:
+      type: object
+      additionalProperties: true
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+      additionalProperties: true
+x-generation:
+  source: supabase/functions/*/index.ts
+  policy: supabase/config.toml
+  note: Payloads must be expanded from source before publishing an external SDK.

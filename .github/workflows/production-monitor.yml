@@ -1,0 +1,96 @@
+name: Production Monitoring
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-monitor
+  cancel-in-progress: true
+
+env:
+  PROD_SITE_URL: https://aloclinica.com.br
+  SUPABASE_PROJECT_REF: pwxvvimdtmvziynbspgx
+  VPS_HOST: 72.62.138.208
+  VPS_USER: root
+
+jobs:
+  monitor:
+    name: Monitorar produção
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund --prefer-offline
+
+      - name: Preparar chave SSH temporária
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${VPS_SSH_PRIVATE_KEY:-}" ]]; then
+            umask 077
+            key_path="$RUNNER_TEMP/aloclinica-vps-monitor"
+            printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$key_path"
+            echo "VPS_SSH_KEY=$key_path" >> "$GITHUB_ENV"
+          else
+            echo "VPS_SSH_PRIVATE_KEY não configurado; métricas privadas serão marcadas como indisponíveis."
+          fi
+
+      - name: Executar monitoramento
+        id: monitor
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/production-monitor.mjs --json | tee monitor-report.json
+
+      - name: Publicar relatório
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: production-monitor-${{ github.run_id }}
+          path: monitor-report.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Notificar canal externo
+        if: steps.monitor.outcome == 'failure'
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: node scripts/notify-production-alert.mjs monitor-report.json
+
+      - name: Abrir incidente deduplicado no GitHub
+        if: steps.monitor.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh label create production-alert --color B60205 --description "Falha detectada no monitoramento de produção" --force || true
+          if ! gh issue list --state open --label production-alert --limit 1 --json number --jq 'length > 0' | grep -q true; then
+            gh issue create \
+              --title "Alerta de produção: falha detectada" \
+              --label production-alert \
+              --body "Monitoramento automático detectou falha em ${{ github.run_id }}. Consulte o artifact production-monitor-${{ github.run_id }} e o workflow: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          else
+            echo "Já existe um incidente production-alert aberto; não duplicar."
+          fi
+
+      - name: Falhar workflow se houver incidente
+        if: steps.monitor.outcome == 'failure'
+        run: exit 1

@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 4173;
-const BASE_URL = `http://localhost:${PORT}`;
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
+const externalBaseUrl = Boolean(process.env.PLAYWRIGHT_BASE_URL);
+const executablePath = process.env.PLAYWRIGHT_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./tests",
@@ -16,6 +18,7 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    launchOptions: executablePath ? { executablePath } : undefined,
   },
   projects: [
     {
@@ -23,7 +26,7 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
+  webServer: externalBaseUrl ? undefined : {
     // Em CI, o workflow já fez `npm run build` e baixou o dist/ como artifact;
     // usamos `vite preview` (serve dist/) com porta fixa, MUITO mais rápido
     // do que `npm run dev` que recompila tudo. Também evita o conflito de

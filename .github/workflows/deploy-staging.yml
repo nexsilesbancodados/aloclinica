@@ -18,6 +18,29 @@ jobs:
           node-version: 20
           cache: "npm"
 
+      - name: Validate staging configuration
+        shell: bash
+        env:
+          STAGING_VPS_HOST: ${{ secrets.STAGING_VPS_HOST }}
+          STAGING_VPS_USER: ${{ secrets.STAGING_VPS_USER }}
+          STAGING_VPS_SSH_PRIVATE_KEY: ${{ secrets.STAGING_VPS_SSH_PRIVATE_KEY }}
+          STAGING_SITE_URL: ${{ secrets.STAGING_SITE_URL }}
+          STAGING_SUPABASE_PROJECT_REF: ${{ secrets.STAGING_SUPABASE_PROJECT_REF }}
+          STAGING_VITE_SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          STAGING_VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in STAGING_VPS_HOST STAGING_VPS_USER STAGING_VPS_SSH_PRIVATE_KEY STAGING_SITE_URL STAGING_SUPABASE_PROJECT_REF STAGING_VITE_SUPABASE_URL STAGING_VITE_SUPABASE_PUBLISHABLE_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Secret de staging ausente: ${name}"
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
       - name: Preflight SSH access to staging VPS
         shell: bash
         run: |
@@ -78,10 +101,6 @@ jobs:
 
       - name: Deploy staging Supabase functions
         run: |
-          if [ -z "$STAGING_SUPABASE_PROJECT_REF" ]; then
-            echo "STAGING_SUPABASE_PROJECT_REF not set; skipping Supabase function deploy."
-            exit 0
-          fi
           supabase functions deploy --project-ref "$STAGING_SUPABASE_PROJECT_REF"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -91,3 +110,11 @@ jobs:
         run: npm run health:production -- --target "${{ secrets.STAGING_SITE_URL }}"
         env:
           SUPABASE_PROJECT_REF: ${{ secrets.STAGING_SUPABASE_PROJECT_REF }}
+
+      - name: Instalar Playwright (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Staging E2E smoke
+        run: npm run test:e2e -- tests/ui.spec.ts tests/navigation.spec.ts tests/auth.spec.ts tests/consultation.spec.ts tests/operations.spec.ts
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ secrets.STAGING_SITE_URL }}
