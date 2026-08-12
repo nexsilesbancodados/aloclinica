@@ -113,11 +113,30 @@ Veja `supabase/functions/`. Categorias:
 | `evolution-api` | 8080 | whatsapp.telemedicinaaloclinica.sbs | Gateway WhatsApp (v2.3.7, com Postgres + Redis próprios) |
 | `compreface-fe` | 80 | face.aloclinica.com.br | KYC face matching |
 
-> **coturn NÃO está implantado.** Não há container, pacote nem binário `turnserver`
-> na VPS, e nada escuta em 3478/5349. `turn-credentials` só anuncia o relay próprio
-> quando `COTURN_PASS` está configurado — não configure esse secret antes de
-> provisionar o coturn, sob pena de anunciar um servidor ICE fantasma. Sem TURN,
-> pacientes atrás de NAT simétrico/CGNAT não conseguem estabelecer a chamada.
+| `coturn` | 3478 UDP+TCP (host net) | direto (`72.62.138.208:3478`) | TURN/STUN próprio |
+
+### coturn — provisionado em 2026-08-12
+
+Container `coturn` (`/opt/coturn/turnserver.conf`), rede host, relay na faixa **49160-49200/UDP**.
+Credencial de longo prazo, usuário `mirotalk`, realm `aloclinica.com.br`. Senha em
+`/opt/coturn/credential` (0640, legível pelo uid do container).
+
+Verificado de fora da rede: STUN Binding responde com o IP público correto, e um `Allocate`
+autenticado retorna relay — ou seja, o relay funciona de ponta a ponta e **exige autenticação**
+(não é relay aberto).
+
+Cuidados registrados:
+
+- `listening-ip`/`relay-ip` fixados em `72.62.138.208`. Sem isso o coturn liga também nas
+  bridges Docker e anuncia candidatos de relay `172.16.x.x`, inúteis para o cliente.
+- O arquivo de config **precisa ser legível pelo uid do container** (`nobody`, 65534). Em
+  `0600` de root o coturn sobe silenciosamente com a configuração default — sem credencial e
+  sem os bloqueios de rede privada.
+- `denied-peer-ip` cobre todas as faixas privadas: sem isso o relay público viraria porta de
+  entrada para a rede interna da VPS.
+
+> `turn-credentials` só anuncia o relay quando **`COTURN_PASS`** está configurado nos secrets
+> da Supabase. Enquanto esse secret não for definido, o coturn está no ar mas não é usado.
 
 
 **Traefik routing:** `/etc/easypanel/traefik/config/aloclinica-stack.yaml` — todas as rotas HTTPS via Let's Encrypt automático.

@@ -80,13 +80,19 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
 
 ### "Vídeo não conecta"
 1. MiroTalk respondendo? `curl -I https://meet.telemedicinaaloclinica.sbs`
-2. **Coturn NÃO está implantado hoje** — `nc -zv 72.62.138.208 3478` falha por design,
-   não é o sintoma. Sem TURN, paciente atrás de NAT simétrico/CGNAT não conecta e o
-   Google STUN não resolve. Se o relato for "só alguns pacientes não conectam", esta é
-   a causa mais provável e a correção é provisionar TURN (coturn ou serviço gerenciado).
+2. Coturn no ar? `docker ps | grep coturn` e `ss -lunp | grep 3478`.
+   Se o relato for **"só alguns pacientes não conectam"**, a causa mais provável é TURN:
+   quem está atrás de NAT simétrico/CGNAT/wifi corporativo depende do relay, e o Google
+   STUN não resolve esse caso.
 3. Edge function `turn-credentials` retorna ICE servers válidos? Logs no Supabase.
-   Não configure `COTURN_PASS` sem o relay no ar: isso passa a anunciar um TURN
-   inalcançável e piora a negociação ICE.
+   **O relay só é anunciado se o secret `COTURN_PASS` estiver configurado** e bater com
+   `/opt/coturn/credential` na VPS. Divergência entre os dois = 401 no Allocate e vídeo
+   caindo só para quem precisa de relay.
+4. Testar o relay de fora (não basta o STUN):
+   ```bash
+   # 401 com realm = auth exigida; Allocate OK = relay funcionando
+   docker logs coturn --tail 30 | grep -iE 'allocat|401|error'
+   ```
 4. Containers up no VPS:
    ```bash
    ssh root@72.62.138.208 'docker ps | grep -E "mirotalk|coturn"'
