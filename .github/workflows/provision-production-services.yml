@@ -264,6 +264,26 @@ jobs:
           jq -c '{ok, date, summary}' "$response_file"
           jq -e '.ok == true' "$response_file" >/dev/null
 
+          sql="select column_name, data_type from information_schema.columns where table_schema = 'public' and table_name = 'activity_logs' order by ordinal_position;"
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/activity-schema-query.json"
+          curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/activity-schema-query.json" | jq -c '.'
+
+          sql="select name from storage.objects where bucket_id = 'backups' and name like '$(jq -r '.date' "$response_file")/%' order by name;"
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/backup-objects-query.json"
+          curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/backup-objects-query.json" | jq -c '.'
+
           sql="select max(created_at) as last_backup from public.activity_logs where action = 'daily_backup_run';"
           jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/backup-query.json"
           http_code="$(curl -sS -w '%{http_code}' -o "$RUNNER_TEMP/backup-query-response.json" \
