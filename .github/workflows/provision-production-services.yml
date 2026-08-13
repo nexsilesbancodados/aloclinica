@@ -203,6 +203,13 @@ jobs:
             if ss -lntup 2>/dev/null | grep -E ':(3478)\b'; then
               echo 'A porta 3478 continua ocupada depois de parar o Coturn.'
               ss -lntup 2>/dev/null | grep -E ':(3478)\b' || true
+              for turn_pid in $(pgrep -x turnserver || true); do
+                ps -o pid,ppid,user,stat,cmd -p "$turn_pid" || true
+                if [ -r "/proc/$turn_pid/cgroup" ]; then
+                  cat "/proc/$turn_pid/cgroup" || true
+                fi
+              done
+              grep -RIlE 'turnserver|coturn' /etc/systemd/system /etc/supervisor /etc/init.d /etc/cron.d /etc/cron.daily /etc/rc.local 2>/dev/null | head -40 || true
               exit 1
             fi
             systemctl unmask --runtime "$turn_service"
