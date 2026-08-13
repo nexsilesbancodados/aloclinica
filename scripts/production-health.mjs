@@ -91,6 +91,36 @@ async function checkHttp(endpoint) {
     }
     await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
   }
+  try {
+    const curlCommand = process.platform === "win32" ? "curl.exe" : "curl";
+    const { stdout } = await execFileAsync(
+      curlCommand,
+      [
+        "--silent",
+        "--show-error",
+        "--output",
+        process.platform === "win32" ? "NUL" : "/dev/null",
+        "--write-out",
+        "%{http_code}",
+        "--max-time",
+        String(Math.ceil(timeoutMs / 1000)),
+        endpoint.url,
+      ],
+      { timeout: timeoutMs + 2_000 },
+    );
+    const status = Number.parseInt(stdout.trim(), 10);
+    if (Number.isFinite(status) && status > 0) {
+      return {
+        ...result,
+        status,
+        ok: endpoint.ok.includes(status),
+        error: undefined,
+        transport: "curl-fallback",
+      };
+    }
+  } catch {
+    // Keep the original fetch error when the fallback transport also fails.
+  }
   return result;
 }
 
