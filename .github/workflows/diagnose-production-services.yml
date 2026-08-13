@@ -1,0 +1,62 @@
+name: Diagnóstico — Serviços críticos de produção
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Digite DIAGNOSE para inspecionar Coturn sem alterar a VPS"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  VPS_HOST: 72.62.138.208
+  VPS_USER: root
+
+jobs:
+  diagnose:
+    name: Diagnosticar Coturn e supervisores
+    if: ${{ inputs.confirm == 'DIAGNOSE' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Diagnóstico remoto somente leitura
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: ${{ env.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          timeout: 30s
+          command_timeout: 3m
+          script: |
+            set -u
+            echo '=== host ==='
+            hostnamectl --static 2>/dev/null || hostname || true
+            date -Is || true
+            echo '=== listeners 3478/5349 ==='
+            ss -lntup 2>/dev/null | grep -E ':(3478|5349)\\b' || echo 'none'
+            echo '=== turnserver processes ==='
+            pgrep -a -x turnserver || echo 'none'
+            for turn_pid in $(pgrep -x turnserver || true); do
+              ps -o pid,ppid,user,stat,lstart,cmd -p "$turn_pid" || true
+              echo "--- cgroup $turn_pid ---"
+              cat "/proc/$turn_pid/cgroup" 2>/dev/null || true
+              echo "--- parent $turn_pid ---"
+              parent_pid="$(awk '{print $4}' "/proc/$turn_pid/stat" 2>/dev/null || true)"
+              if [ -n "$parent_pid" ] && [ "$parent_pid" != 0 ]; then
+                ps -o pid,ppid,user,stat,lstart,cmd -p "$parent_pid" || true
+              fi
+            done
+            echo '=== systemd units ==='
+            systemctl list-unit-files 2>/dev/null | grep -Ei 'coturn|turnserver' || echo 'none'
+            systemctl status coturn --no-pager 2>/dev/null || true
+            systemctl status turnserver --no-pager 2>/dev/null || true
+            echo '=== service definitions ==='
+            systemctl cat coturn 2>/dev/null || true
+            systemctl cat turnserver 2>/dev/null || true
+            echo '=== supervisor references (names only) ==='
+            grep -RIlE 'turnserver|coturn' /etc/systemd/system /etc/supervisor /etc/init.d /etc/cron.d /etc/cron.daily /etc/rc.local 2>/dev/null | head -40 || true
+            echo '=== package/config metadata ==='
+            dpkg-query -W -f='${Status} ${Version}\\n' coturn 2>/dev/null || true
+            stat -c '%a %U:%G %s bytes %n' /etc/turnserver.conf 2>/dev/null || true
