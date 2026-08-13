@@ -119,7 +119,7 @@ jobs:
             docker compose up -d --force-recreate aloclinica-web
             docker image prune -f
 
-      - name: Refresh Traefik backend after container replacement
+      - name: Ensure Traefik backend targets the service name
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.VPS_HOST }}
@@ -130,13 +130,19 @@ jobs:
           script: |
             set -e
             route_file="/etc/easypanel/traefik/config/aloclinica-web-frontend.yml"
-            container_ip="$(docker inspect -f '{{(index .NetworkSettings.Networks "easypanel").IPAddress}}' aloclinica-web)"
-            test -n "$container_ip"
             test -f "$route_file"
+            # O backend precisa ser o NOME do serviço, nunca o IP do container.
+            # `docker compose up --force-recreate` troca o IP a cada deploy, então
+            # gravar o IP aqui deixava a rota apontando para um endereço que morre
+            # no deploy seguinte — bastava um restart fora do pipeline para o apex
+            # cair com 502. O Traefik está na mesma rede `easypanel` e resolve
+            # `aloclinica-web` por DNS, então o nome sobrevive a qualquer recriação.
+            # Este passo é idempotente: normaliza a rota e falha se não bater.
             tmp_route="${route_file}.tmp"
-            sed -E "s#url: \"http://[^\"]+:80\"#url: \"http://${container_ip}:80\"#" "$route_file" > "$tmp_route"
+            sed -E "s#url: \"http://[^\"]+:80\"#url: \"http://aloclinica-web:80\"#" "$route_file" > "$tmp_route"
             mv "$tmp_route" "$route_file"
-            echo "Traefik backend refreshed for aloclinica-web (${container_ip})."
+            grep -q 'url: "http://aloclinica-web:80"' "$route_file"
+            echo "Traefik backend = aloclinica-web (nome do serviço)."
 
       - name: Health check
         uses: appleboy/ssh-action@v1.0.3

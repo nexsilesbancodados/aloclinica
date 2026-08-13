@@ -30,6 +30,8 @@ import useNotificationTitle from "@/hooks/use-notification-title";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useSessionSecurity } from "@/hooks/use-session-security";
 
+import { useNavOverrides, applyNavOverrides } from "@/hooks/use-nav-overrides";
+
 interface NavItem {
   label: string; href: string; icon: ReactNode;
   active?: boolean; group?: string; badge?: number;
@@ -221,7 +223,17 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
   const fullName = profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : "Usuário";
   const handleSignOut = async () => { await signOut(); navigate("/"); };
 
+  // §5 — Construtor de Navegação: os ajustes salvos no painel são aplicados
+  // aqui, num único ponto, sobre QUALQUER menu que chegue por props. Sem
+  // ajustes (ou sem a migration) `applyNavOverrides` devolve a lista intacta.
+  const navOverrides = useNavOverrides(role);
+  const effectiveNav = useMemo(
+    () => (nav ? applyNavOverrides(nav, navOverrides) : nav),
+    [nav, navOverrides],
+  );
+
   const navGroups = useMemo(() => {
+    const nav = effectiveNav;
     if (!nav) return [];
     const groups: { label: string; items: NavItem[] }[] = [];
     let cur: { label: string; items: NavItem[] } = { label: "", items: [] };
@@ -233,7 +245,7 @@ const DashboardLayout = ({ children, title, nav, role: propsRole }: DashboardLay
     });
     if (cur.items.length) groups.push(cur);
     return groups;
-  }, [nav]);
+  }, [effectiveNav]);
 
    // Mobile-Specific Bottom Nav Resolution
    const bottomNav = useMemo(() => {

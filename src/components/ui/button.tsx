@@ -65,7 +65,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         children?: React.ReactNode;
       };
 
-      return React.cloneElement(child, {
+      // `React.Children.only` devolve ReactElement<unknown>, então o cloneElement
+      // resolve para a sobrecarga genérica e recusa className/style/data-*.
+      // O elemento é validado logo acima; estreitamos o tipo para as props que
+      // de fato injetamos aqui.
+      const typedChild = child as React.ReactElement<Record<string, unknown>>;
+
+      return React.cloneElement(typedChild, {
         ...props,
         className: cn(rainbowClasses, childProps.className),
         style: {
