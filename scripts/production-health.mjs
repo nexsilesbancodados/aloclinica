@@ -20,6 +20,7 @@ for (let i = 2; i < process.argv.length; i += 1) {
 const firstNonEmpty = (...values) =>
   values.find((value) => value !== undefined && value !== null && String(value).trim() !== "");
 const timeoutMs = Number(firstNonEmpty(args.get("timeout"), process.env.HEALTH_TIMEOUT_MS, 12000));
+const maxAttempts = Math.max(1, Number(firstNonEmpty(args.get("attempts"), process.env.HEALTH_ATTEMPTS, 2)) || 2);
 const baseUrl = String(firstNonEmpty(args.get("target"), process.env.PROD_SITE_URL, "https://aloclinica.com.br")).replace(/\/$/, "");
 const supabaseRef = String(firstNonEmpty(args.get("supabase-ref"), process.env.SUPABASE_PROJECT_REF, "pwxvvimdtmvziynbspgx"));
 const json = args.has("json");
@@ -50,40 +51,47 @@ function withTimeout(ms) {
 }
 
 async function checkHttp(endpoint) {
-  const startedAt = performance.now();
-  const timer = withTimeout(timeoutMs);
-  try {
-    const response = await fetch(endpoint.url, {
-      method: "GET",
-      redirect: "manual",
-      signal: timer.signal,
-      headers: { "User-Agent": "aloclinica-production-health/1.0" },
-    });
-    const latencyMs = Math.round(performance.now() - startedAt);
-    const ok = endpoint.ok.includes(response.status);
-    return {
-      type: "http",
-      name: endpoint.name,
-      url: endpoint.url,
-      status: response.status,
-      latencyMs,
-      ok,
-      critical: endpoint.critical,
-    };
-  } catch (error) {
-    return {
-      type: "http",
-      name: endpoint.name,
-      url: endpoint.url,
-      status: "ERR",
-      latencyMs: Math.round(performance.now() - startedAt),
-      ok: false,
-      critical: endpoint.critical,
-      error: error?.message ?? String(error),
-    };
-  } finally {
-    timer.clear();
+  let result;
+  for (let attempt = 1; attempt <= Math.max(1, maxAttempts); attempt += 1) {
+    const startedAt = performance.now();
+    const timer = withTimeout(timeoutMs);
+    try {
+      const response = await fetch(endpoint.url, {
+        method: "GET",
+        redirect: "manual",
+        signal: timer.signal,
+        headers: { "User-Agent": "aloclinica-production-health/1.0" },
+      });
+      const latencyMs = Math.round(performance.now() - startedAt);
+      result = {
+        type: "http",
+        name: endpoint.name,
+        url: endpoint.url,
+        status: response.status,
+        latencyMs,
+        ok: endpoint.ok.includes(response.status),
+        critical: endpoint.critical,
+        attempts: attempt,
+      };
+      if (result.ok || attempt === Math.max(1, maxAttempts)) return result;
+    } catch (error) {
+      result = {
+        type: "http",
+        name: endpoint.name,
+        url: endpoint.url,
+        status: "ERR",
+        latencyMs: Math.round(performance.now() - startedAt),
+        ok: false,
+        critical: endpoint.critical,
+        error: error?.message ?? String(error),
+        attempts: attempt,
+      };
+    } finally {
+      timer.clear();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
   }
+  return result;
 }
 
 async function checkDns(hostname) {
