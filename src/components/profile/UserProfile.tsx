@@ -184,7 +184,11 @@ const UserProfile = () => {
     if (isDoctor) {
       if (priceMin !== null && consultationPrice < priceMin) { toast.error(`Preço mínimo: R$ ${priceMin.toFixed(0)}`); setSaving(false); return; }
       if (priceMax !== null && consultationPrice > priceMax) { toast.error(`Preço máximo: R$ ${priceMax.toFixed(0)}`); setSaving(false); return; }
-      await db.from("doctor_profiles").update({ bio, education, experience_years: experienceYears, consultation_price: consultationPrice, display_name: displayName.trim() || null } as any).eq("user_id", user.id);
+      // `price` é o nome na TABELA; `consultation_price` só existe na view
+      // `doctor_profiles_public`. Gravar o nome da view aqui fazia o UPDATE
+      // inteiro falhar (42703) — o médico salvava o perfil e o preço não mudava.
+      const { error: docError } = await db.from("doctor_profiles").update({ bio, education, experience_years: experienceYears, price: consultationPrice, display_name: displayName.trim() || null } as any).eq("user_id", user.id);
+      if (docError) { toast.error("Erro ao salvar dados do médico", { description: docError.message }); setSaving(false); return; }
     }
     setSaving(false);
     if (error) toast.error("Erro ao salvar", { description: error.message });
