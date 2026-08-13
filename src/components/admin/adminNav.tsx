@@ -45,6 +45,7 @@ export const getAdminNav = (active: string) => [
    { label: "Segurança",     href: "/dashboard/admin/security?role=admin", icon: <NavIcon icon={<Shield size={16} weight="fill" />}            color="rose"  />, active: active === "security", group: "Sistema" },
    { label: "Saúde Sistema", href: "/dashboard/admin/health?role=admin",   icon: <NavIcon icon={<Pulse size={16} weight="fill" />}             color="emerald" />, active: active === "health",   group: "Sistema" },
    { label: "Centro de Manutenção", href: "/dashboard/admin/maintenance?role=admin", icon: <NavIcon icon={<Key size={16} weight="fill" />} color="cyan" />, active: active === "maintenance", group: "Sistema" },
+   { label: "Construtor de Menu", href: "/dashboard/admin/nav-builder?role=admin", icon: <NavIcon icon={<Layout size={16} weight="fill" />} color="blue" />, active: active === "nav-builder", group: "Sistema" },
    { label: "Feature Flags", href: "/dashboard/admin/feature-flags?role=admin", icon: <NavIcon icon={<TestTube size={16} weight="fill" />} color="purple" />, active: active === "feature-flags", group: "Sistema" },
    { label: "Configuração da Plataforma", href: "/dashboard/admin/platform-settings?role=admin", icon: <NavIcon icon={<Sliders size={16} weight="fill" />} color="slate" />, active: active === "platform-settings", group: "Sistema" },
    { label: "Configuração",  href: "/dashboard/settings?role=admin",       icon: <NavIcon icon={<Sliders size={16} weight="fill" />}               color="slate" />, active: active === "settings", group: "Sistema" },

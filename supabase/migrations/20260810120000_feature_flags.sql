@@ -293,6 +293,53 @@ GRANT EXECUTE ON FUNCTION public.set_feature_flag(text, text, integer, text) TO 
 COMMENT ON FUNCTION public.set_feature_flag(text, text, integer, text) IS
   'Altera uma feature flag registrando o motivo na auditoria. Admin-only.';
 
+-- Regras de escopo seguem o MESMO caminho: RPC para que o motivo entre na
+-- auditoria. Um INSERT/DELETE direto na tabela continua funcionando (a policy
+-- de admin permite) e continua auditado pelo gatilho — só perde o motivo.
+CREATE OR REPLACE FUNCTION public.set_feature_flag_rule(
+  p_flag_key    text,
+  p_scope_type  text,
+  p_scope_value text,
+  p_enabled     boolean,
+  p_reason      text DEFAULT NULL
+)
+RETURNS public.feature_flag_rules
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_row public.feature_flag_rules;
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Acesso restrito a administradores' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_scope_type NOT IN ('user', 'role') THEN
+    RAISE EXCEPTION 'Escopo inválido: %', p_scope_type USING ERRCODE = '22023';
+  END IF;
+
+  IF COALESCE(btrim(p_scope_value), '') = '' THEN
+    RAISE EXCEPTION 'Valor de escopo obrigatório' USING ERRCODE = '22023';
+  END IF;
+
+  PERFORM set_config('app.flag_change_reason', COALESCE(p_reason, ''), true);
+
+  -- Reconfigurar o mesmo escopo ATUALIZA em vez de estourar a UNIQUE: o admin
+  -- muda "libera" para "bloqueia" sem precisar remover a regra antes.
+  INSERT INTO public.feature_flag_rules (flag_key, scope_type, scope_value, enabled)
+  VALUES (p_flag_key, p_scope_type, btrim(p_scope_value), p_enabled)
+  ON CONFLICT (flag_key, scope_type, scope_value)
+  DO UPDATE SET enabled = EXCLUDED.enabled
+  RETURNING * INTO v_row;
+
+  RETURN v_row;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.set_feature_flag_rule(text, text, text, boolean, text) FROM public;
+GRANT EXECUTE ON FUNCTION public.set_feature_flag_rule(text, text, text, boolean, text) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.set_feature_flag_rule(
   p_flag_key    text,
   p_scope_type  text,

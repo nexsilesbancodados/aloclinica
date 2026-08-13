@@ -91,7 +91,10 @@ vi.mock("framer-motion", () => {
   const passthrough = (Tag: string) =>
     function Wrapped({ children, ...p }: Record<string, unknown> & { children?: React.ReactNode }) {
       const { initial, animate, exit, transition, variants, whileHover, whileTap, layout, layoutId, ...rest } = p;
-      return <Tag {...rest}>{children}</Tag>;
+      // `Tag` é uma string vinda do Proxy; em JSX uma variável capitalizada é
+      // tratada como componente, então precisa ser tipada como ElementType.
+      const Component = Tag as unknown as React.ElementType;
+      return <Component {...rest}>{children}</Component>;
     };
   return {
     motion: new Proxy({}, { get: (_t, tag: string) => passthrough(tag) }),
