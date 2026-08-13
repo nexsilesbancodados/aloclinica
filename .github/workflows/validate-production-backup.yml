@@ -44,6 +44,14 @@ jobs:
             INTERNAL_FUNCTION_SECRET="$INTERNAL_FUNCTION_SECRET" \
             --project-ref "$SUPABASE_PROJECT_REF"
 
+      - name: Publicar daily-backup
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy daily-backup --project-ref "$SUPABASE_PROJECT_REF"
+
       - name: Aplicar compatibilidade da auditoria
         env:
           SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -73,13 +81,21 @@ jobs:
           set -euo pipefail
           function_url="https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/daily-backup"
           response_file="$RUNNER_TEMP/backup-response.json"
-          http_code="$(curl -sS -w '%{http_code}' -o "$response_file" \
-            -X POST "$function_url" \
-            -H "Authorization: Bearer $ANON_KEY" \
-            -H "apikey: $ANON_KEY" \
-            -H "x-internal-secret: $INTERNAL_FUNCTION_SECRET" \
-            -H 'Content-Type: application/json' \
-            --data '{"source":"production-backup-validation"}')"
+          http_code=000
+          for attempt in $(seq 1 6); do
+            http_code="$(curl -sS -w '%{http_code}' -o "$response_file" \
+              -X POST "$function_url" \
+              -H "Authorization: Bearer $ANON_KEY" \
+              -H "apikey: $ANON_KEY" \
+              -H "x-internal-secret: $INTERNAL_FUNCTION_SECRET" \
+              -H 'Content-Type: application/json' \
+              --data '{"source":"production-backup-validation"}')"
+            if [[ "$http_code" == "200" ]]; then
+              break
+            fi
+            echo "Tentativa $attempt retornou HTTP $http_code; aguardando propagação do segredo."
+            sleep 10
+          done
           if [[ "$http_code" != "200" ]]; then
             echo "Backup não foi concluído (HTTP $http_code)."
             jq -c '{ok, error, date, summary, failures}' "$response_file" || true
