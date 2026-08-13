@@ -128,6 +128,15 @@ jobs:
             --data-binary @"$RUNNER_TEMP/hash-query.json" | jq -r '.[0].vault_hash // "missing"')"
           echo "local_secret_hash=$local_hash"
           echo "vault_secret_hash=$vault_hash"
+          rpc_response="$(curl -sS -w '\n%{http_code}' -o "$RUNNER_TEMP/rpc-response.json" \
+            -X POST \
+            -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+            -H "apikey: $SERVICE_ROLE_KEY" \
+            -H 'Content-Type: application/json' \
+            "https://$SUPABASE_PROJECT_REF.supabase.co/rest/v1/rpc/verify_internal_function_secret" \
+            --data "{\"candidate_secret\":\"$INTERNAL_FUNCTION_SECRET\"}")"
+          echo "vault_rpc_http=$(tail -1 <<< "$rpc_response")"
+          echo "vault_rpc_result=$(jq -c '.' "$RUNNER_TEMP/rpc-response.json")"
 
       - name: Publicar daily-backup
         env:
