@@ -26,7 +26,7 @@ interface DbStats {
   prescriptions: number;
   activeSubscriptions: number;
   queueWaiting: number;
-  storageBuckets: number;
+  storageBuckets: number | null;
 }
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
@@ -39,13 +39,14 @@ const SystemHealth = () => {
   const [running, setRunning] = useState(false);
 
   const fetchDbStats = useCallback(async () => {
-    const [patients, doctors, appts, prescriptions, subs, queue] = await Promise.all([
+    const [patients, doctors, appts, prescriptions, subs, queue, buckets] = await Promise.all([
       db.from("user_roles").select("id", { count: "exact", head: true }).eq("role", "patient"),
       db.from("doctor_profiles").select("id", { count: "exact", head: true }),
       db.from("appointments").select("id", { count: "exact", head: true }),
       db.from("prescriptions").select("id", { count: "exact", head: true }),
       db.from("subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
       db.from("on_demand_queue").select("id", { count: "exact", head: true }).eq("status", "waiting"),
+      db.storage.listBuckets(),
     ]);
     setDbStats({
       patients: patients.count ?? 0,
@@ -54,7 +55,7 @@ const SystemHealth = () => {
       prescriptions: prescriptions.count ?? 0,
       activeSubscriptions: subs.count ?? 0,
       queueWaiting: queue.count ?? 0,
-      storageBuckets: 7,
+      storageBuckets: buckets.error ? null : buckets.data?.length ?? 0,
     });
   }, []);
 
@@ -270,7 +271,7 @@ const SystemHealth = () => {
     { label: "Receitas", value: dbStats.prescriptions, icon: FileText, color: "text-success" },
     { label: "Assinaturas", value: dbStats.activeSubscriptions, icon: Server, color: "text-success" },
     { label: "Fila Urgência", value: dbStats.queueWaiting, icon: Clock, color: dbStats.queueWaiting > 0 ? "text-destructive" : "text-muted-foreground" },
-    { label: "Buckets", value: dbStats.storageBuckets, icon: HardDrive, color: "text-muted-foreground" },
+    { label: "Buckets", value: dbStats.storageBuckets ?? "—", icon: HardDrive, color: "text-muted-foreground" },
   ] : [];
 
   return (
