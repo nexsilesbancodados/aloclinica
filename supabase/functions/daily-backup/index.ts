@@ -4,11 +4,21 @@ import { getCaller, isInternalOrService } from '../_shared/auth.ts'
 
 const TABLES = ['profiles','doctor_profiles','appointments','prescriptions','exam_requests','exam_reports','medical_records','subscriptions','doctor_payouts']
 
+async function verifyVaultSecret(req: Request): Promise<boolean> {
+  const candidate = req.headers.get('x-internal-secret')
+  if (!candidate) return false
+
+  const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  const { data, error } = await service.rpc('verify_internal_function_secret', { candidate_secret: candidate })
+  if (error) console.error('[daily-backup] Vault authentication fallback failed', error.message)
+  return data === true
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
     const caller = await getCaller(req)
-    const trustedInternal = isInternalOrService(req)
+    const trustedInternal = isInternalOrService(req) || await verifyVaultSecret(req)
     if (!trustedInternal && !caller.user) {
       console.error('[daily-backup] authentication rejected', {
         internalHeaderPresent: Boolean(req.headers.get('x-internal-secret')),

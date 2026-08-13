@@ -44,6 +44,52 @@ jobs:
             INTERNAL_FUNCTION_SECRET="$INTERNAL_FUNCTION_SECRET" \
             --project-ref "$SUPABASE_PROJECT_REF"
 
+      - name: Sincronizar segredo interno no Vault
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          INTERNAL_FUNCTION_SECRET: ${{ secrets.INTERNAL_FUNCTION_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql="select id from vault.secrets where name = 'internal_function_secret' limit 1;"
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/vault-query.json"
+          curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/vault-query.json" > "$RUNNER_TEMP/vault-query-response.json"
+          secret_id="$(jq -r '.[0].id // empty' "$RUNNER_TEMP/vault-query-response.json")"
+          if [[ -n "$secret_id" ]]; then
+            sql="select vault.update_secret('$secret_id'::uuid, '$INTERNAL_FUNCTION_SECRET', 'internal_function_secret', 'Shared secret for internal Edge Function calls');"
+          else
+            sql="select vault.create_secret('$INTERNAL_FUNCTION_SECRET', 'internal_function_secret', 'Shared secret for internal Edge Function calls');"
+          fi
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/vault-update-query.json"
+          curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/vault-update-query.json" >/dev/null
+
+      - name: Aplicar compatibilidade antes do deploy
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query: .}' supabase/migrations/20260813100000_activity_logs_compatibility.sql > "$RUNNER_TEMP/activity-logs-migration-before-deploy.json"
+          curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/activity-logs-migration-before-deploy.json" >/dev/null
+
       - name: Publicar daily-backup
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
