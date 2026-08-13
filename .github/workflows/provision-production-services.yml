@@ -190,8 +190,14 @@ jobs:
             fi
             systemctl unmask --runtime "$turn_service" || true
             systemctl enable "$turn_service"
+            if [ -x /etc/init.d/coturn ]; then
+              /etc/init.d/coturn stop || true
+            fi
             systemctl mask --runtime --now "$turn_service" || true
             systemctl kill --kill-who=all --signal=SIGKILL "$turn_service" || true
+            if command -v fuser >/dev/null 2>&1; then
+              fuser -k -9 3478/tcp 3478/udp || true
+            fi
             pkill -9 -x turnserver || true
             sleep 2
             if ss -lntup 2>/dev/null | grep -E ':(3478)\b'; then
