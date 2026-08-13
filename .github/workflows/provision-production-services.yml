@@ -188,14 +188,15 @@ jobs:
               echo 'Serviço systemd do Coturn não foi encontrado.'
               exit 1
             fi
+            systemctl unmask --runtime "$turn_service" || true
             systemctl enable "$turn_service"
             systemctl mask --runtime --now "$turn_service" || true
+            systemctl kill --kill-who=all --signal=SIGKILL "$turn_service" || true
             pkill -9 -x turnserver || true
-            sleep 1
+            sleep 2
             if ss -lntup 2>/dev/null | grep -E ':(3478)\b'; then
               echo 'A porta 3478 continua ocupada depois de parar o Coturn.'
               ss -lntup 2>/dev/null | grep -E ':(3478)\b' || true
-              systemctl unmask --runtime "$turn_service" || true
               exit 1
             fi
             systemctl unmask --runtime "$turn_service"
