@@ -137,9 +137,9 @@ const AdminFinancial = () => {
     const doctorIds = [...new Set(appts.map(a => a.doctor_id))];
     const { data: docProfiles } = await db
       .from("doctor_profiles")
-      .select("id, user_id, consultation_price")
+      .select("id, user_id, price")
       .in("id", doctorIds);
-    const docPriceMap = new Map(docProfiles?.map(d => [d.id, Number(d.consultation_price) || 89]) ?? []);
+    const docPriceMap = new Map(docProfiles?.map(d => [d.id, Number(d.price) || 89]) ?? []);
 
     const userIds = [...new Set([
       ...(docProfiles?.map(d => d.user_id) ?? []),

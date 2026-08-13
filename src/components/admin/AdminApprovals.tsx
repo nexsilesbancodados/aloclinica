@@ -75,7 +75,7 @@ const AdminApprovals = () => {
 
   const fetchDoctors = useCallback(async () => {
     const { data } = await db.from("doctor_profiles")
-      .select("id, user_id, crm, crm_state, is_approved, crm_verified, crm_verified_at, bio, consultation_price, experience_years, education, created_at")
+      .select("id, user_id, crm, crm_state, is_approved, crm_verified, crm_verified_at, bio, price, experience_years, education, created_at")
       .order("created_at", { ascending: false });
     if (!data) return;
     const userIds = data.map(d => d.user_id);
@@ -227,7 +227,7 @@ const AdminApprovals = () => {
       { key: "crm_state", header: "UF" },
       { key: "cpf", header: "CPF" },
       { key: "phone", header: "Telefone" },
-      { key: "consultation_price", header: "Preço Consulta" },
+      { key: "price", header: "Preço Consulta" },
       { key: "experience_years", header: "Anos Experiência" },
       { key: "specialties", header: "Especialidades", format: (v: string[]) => (v ?? []).join(", ") },
       { key: "kyc_status", header: "Status KYC" },

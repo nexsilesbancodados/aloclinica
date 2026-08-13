@@ -43,7 +43,7 @@ const DoctorInfoPanel = ({ doctorId, appointmentId }: DoctorInfoPanelProps) => {
   const fetchData = useCallback(async () => {
     const [docRes, specRes] = await Promise.all([
       db.from("doctor_profiles")
-        .select("crm, crm_state, bio, education, experience_years, rating, total_reviews, consultation_price, user_id")
+        .select("crm, crm_state, bio, education, experience_years, rating_avg, rating_count, price, user_id")
         .eq("id", doctorId)
         .single(),
       db.from("doctor_specialties")
@@ -62,6 +62,11 @@ const DoctorInfoPanel = ({ doctorId, appointmentId }: DoctorInfoPanelProps) => {
 
       setDoctor({
         ...docRes.data,
+        // O painel já usa `rating`/`total_reviews`/`consultation_price`; só a
+        // origem no banco mudou para os nomes reais da tabela.
+        rating: (docRes.data as { rating_avg?: number | null }).rating_avg ?? null,
+        total_reviews: (docRes.data as { rating_count?: number | null }).rating_count ?? null,
+        consultation_price: (docRes.data as { price?: number | null }).price ?? null,
         first_name: profile?.first_name ?? "",
         last_name: profile?.last_name ?? "",
         specialties,

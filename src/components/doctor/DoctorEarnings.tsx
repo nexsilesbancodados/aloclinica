@@ -70,7 +70,7 @@ const DoctorEarnings = () => {
   };
 
   const fetchEarnings = async () => {
-    const { data: docProfile } = await db.from("doctor_profiles").select("id, consultation_price").eq("user_id", user!.id).single();
+    const { data: docProfile } = await db.from("doctor_profiles").select("id, price").eq("user_id", user!.id).single();
     if (!docProfile) { setLoading(false); return; }
 
     // Check clinic affiliation for commission percent (issue #16)
@@ -126,7 +126,7 @@ const DoctorEarnings = () => {
     setWithdrawals(withdrawList);
     setWithdrawalsHasMore(withdrawList.length === 20);
 
-    const defaultPrice = Number(docProfile.consultation_price) || 89;
+    const defaultPrice = Number(docProfile.price) || 89;
 
     // Use price_at_booking if available, otherwise fallback (issue #13)
     const getPrice = (appt: { price_at_booking?: number | null }) => Number(appt.price_at_booking) || defaultPrice;

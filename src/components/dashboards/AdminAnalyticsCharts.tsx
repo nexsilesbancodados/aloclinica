@@ -237,7 +237,7 @@ const AdminAnalyticsCharts = () => {
       db.from("doctor_specialties").select("doctor_id, specialty_id"),
       db.from("specialties").select("id, name, consultation_price"),
       db.from("satisfaction_surveys").select("doctor_id, nps_score, quality_score, ease_score"),
-      db.from("doctor_profiles").select("id, user_id, consultation_price, rating, total_reviews"),
+      db.from("doctor_profiles").select("id, user_id, price, rating_avg, rating_count"),
       db.from("profiles").select("user_id, first_name, last_name"),
     ]);
 
@@ -293,8 +293,8 @@ const AdminAnalyticsCharts = () => {
     const docPerf = docs.map(d => ({
       name: nameMap.get(d.user_id) ?? "Dr(a).",
       consultas: docAppts[d.id] ?? 0,
-      rating: Number(d.rating ?? 0),
-      reviews: d.total_reviews ?? 0,
+      rating: Number(d.rating_avg ?? 0),
+      reviews: d.rating_count ?? 0,
     })).sort((a, b) => b.consultas - a.consultas).slice(0, 10);
     setDoctorPerformanceData(docPerf);
   };

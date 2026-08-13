@@ -122,16 +122,20 @@ const AdminReports = () => {
 
     // Top doctors
     const { data: docProfiles } = await db.from("doctor_profiles")
-      .select("id, user_id, rating, total_reviews, consultation_price")
-      .gt("total_reviews", 0)
-      .order("rating", { ascending: false })
+      .select("id, user_id, rating_avg, rating_count, price")
+      .gt("rating_count", 0)
+      .order("rating_avg", { ascending: false })
       .limit(5);
     if (docProfiles && docProfiles.length > 0) {
       const userIds = docProfiles.map(d => d.user_id);
       const { data: profiles } = await db.from("profiles").select("user_id, first_name, last_name").in("user_id", userIds);
       const pMap = new Map(profiles?.map(p => [p.user_id, `Dr(a). ${p.first_name} ${p.last_name}`]) ?? []);
       setTopDoctors(docProfiles.map(d => ({
-        ...d, name: pMap.get(d.user_id) ?? "—",
+        ...d,
+        // A tela e o PDF já usam `rating`/`total_reviews`; só a origem mudou.
+        rating: (d as { rating_avg?: number | null }).rating_avg ?? 0,
+        total_reviews: (d as { rating_count?: number | null }).rating_count ?? 0,
+        name: pMap.get(d.user_id) ?? "—",
       })));
     }
 

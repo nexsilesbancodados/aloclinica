@@ -47,10 +47,10 @@ const DoctorAnalyticsCharts = () => {
 
   const fetchData = async () => {
     const { data: docProfile } = await db
-      .from("doctor_profiles").select("id, consultation_price").eq("user_id", user!.id).single();
+      .from("doctor_profiles").select("id, price").eq("user_id", user!.id).single();
     if (!docProfile) { setLoading(false); return; }
 
-    const price = Number(docProfile.consultation_price) || 89;
+    const price = Number(docProfile.price) || 89;
     const days = 7;
     const startDate = startOfDay(subDays(new Date(), days));
 

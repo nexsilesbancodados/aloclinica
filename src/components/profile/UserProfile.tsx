@@ -130,14 +130,14 @@ const UserProfile = () => {
   }, [user]);
 
   const fetchDoctorProfile = async () => {
-    const { data } = await db.from("doctor_profiles").select("id, bio, education, experience_years, consultation_price, display_name, mp_user_id, mp_connected_at").eq("user_id", user!.id).single();
+    const { data } = await db.from("doctor_profiles").select("id, bio, education, experience_years, price, display_name, mp_user_id, mp_connected_at").eq("user_id", user!.id).single();
     if (data) {
       setDoctorProfileId(data.id);
       setMpUserId((data as any).mp_user_id ?? null);
       setMpConnectedAt((data as any).mp_connected_at ?? null);
       setBio(data.bio || ""); setEducation(data.education || "");
       setDisplayName((data as any).display_name || "");
-      setExperienceYears(data.experience_years || 0); setConsultationPrice(Number(data.consultation_price) || 89);
+      setExperienceYears(data.experience_years || 0); setConsultationPrice(Number(data.price) || 89);
       const [specRes, careRes] = await Promise.all([
         db.from("doctor_specialties").select("specialty_id").eq("doctor_id", data.id),
         db.from("doctor_care_areas" as any).select("area_name").eq("doctor_id", data.id),
