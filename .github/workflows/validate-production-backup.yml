@@ -38,6 +38,7 @@ jobs:
             -H "Authorization: Bearer $SBP_TOKEN" \
             -A 'aloclinica-maintenance/1.0' \
             "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys" > "$RUNNER_TEMP/api-keys.json"
+          jq -r '.[] | [.name, .type, .prefix] | @tsv' "$RUNNER_TEMP/api-keys.json"
           service_role_key="$(jq -r '.[] | select(.name == "service_role" or .type == "service_role") | .api_key // empty' "$RUNNER_TEMP/api-keys.json" | head -1)"
           if [[ -z "$service_role_key" ]]; then
             echo 'A chave service_role não foi retornada pela Management API.'
