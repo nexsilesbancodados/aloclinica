@@ -33,12 +33,15 @@ jobs:
             exit 1
           fi
 
-      - name: Gerar segredos efêmeros e mascarados
+      - name: Preparar segredos persistentes e mascarados
+        env:
+          EXISTING_COTURN_PASS: ${{ secrets.COTURN_PASS }}
+          EXISTING_INTERNAL_FUNCTION_SECRET: ${{ secrets.INTERNAL_FUNCTION_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
-          coturn_pass="$(openssl rand -hex 32)"
-          internal_secret="$(openssl rand -hex 32)"
+          coturn_pass="${EXISTING_COTURN_PASS:-$(openssl rand -hex 32)}"
+          internal_secret="${EXISTING_INTERNAL_FUNCTION_SECRET:-$(openssl rand -hex 32)}"
           echo "::add-mask::$coturn_pass"
           echo "::add-mask::$internal_secret"
           {
@@ -149,15 +152,21 @@ jobs:
           script: |
             set -euo pipefail
             export DEBIAN_FRONTEND=noninteractive
-            apt-get update -qq
-            apt-get install -y -qq coturn
+            if ! command -v turnserver >/dev/null 2>&1; then
+              apt-get update -qq
+              apt-get install -y -qq coturn
+            fi
 
-            install -d -m 0750 /var/log/turnserver
-            chown turnserver:turnserver /var/log/turnserver
-            cat > /etc/turnserver.conf <<EOF
+            write_coturn_config() {
+              local target="$1"
+              local temporary="${target}.aloclinica.tmp"
+              install -d -m 0750 "$(dirname "$target")"
+              umask 077
+              cat > "$temporary" <<EOF
             listening-port=3478
-            listening-ip=0.0.0.0
+            listening-ip=${VPS_HOST}
             external-ip=${VPS_HOST}
+            relay-ip=${VPS_HOST}
             fingerprint
             lt-cred-mech
             user=mirotalk:${COTURN_PASS}
@@ -165,62 +174,56 @@ jobs:
             server-name=aloclinica.com.br
             min-port=49152
             max-port=65535
-            no-cli
-            no-loopback-peers
+            no-tls
+            no-dtls
             no-multicast-peers
+            denied-peer-ip=0.0.0.0-0.255.255.255
+            denied-peer-ip=10.0.0.0-10.255.255.255
+            denied-peer-ip=127.0.0.0-127.255.255.255
+            denied-peer-ip=169.254.0.0-169.254.255.255
+            denied-peer-ip=172.16.0.0-172.31.255.255
+            denied-peer-ip=192.168.0.0-192.168.255.255
+            denied-peer-ip=224.0.0.0-255.255.255.255
             stale-nonce
             simple-log
-            log-file=/var/log/turnserver/turnserver.log
+            log-file=stdout
             EOF
-            chmod 600 /etc/turnserver.conf
+              chmod 600 "$temporary"
+              chown root:root "$temporary"
+              mv -f "$temporary" "$target"
+            }
 
             if [ -f /etc/default/coturn ]; then
               sed -i '/^TURNSERVER_ENABLED=/d' /etc/default/coturn
               echo 'TURNSERVER_ENABLED=1' >> /etc/default/coturn
             fi
 
-            systemctl daemon-reload || true
-            if [ -f /usr/lib/systemd/system/coturn.service ] || [ -f /etc/systemd/system/coturn.service ]; then
-              turn_service=coturn
-            elif [ -f /usr/lib/systemd/system/turnserver.service ] || [ -f /etc/systemd/system/turnserver.service ]; then
-              turn_service=turnserver
+            if command -v docker >/dev/null 2>&1 && docker inspect coturn >/dev/null 2>&1; then
+              systemctl mask --runtime --now coturn.service || true
+              config_target="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/etc/coturn/turnserver.conf"}}{{.Source}}{{end}}{{end}}' coturn)"
+              if [ -z "$config_target" ] || [ "${config_target#/}" = "$config_target" ]; then
+                echo 'O container Coturn não possui uma configuração montada em caminho absoluto.'
+                exit 1
+              fi
+              write_coturn_config "$config_target"
+              docker update --restart unless-stopped coturn >/dev/null
+              docker restart coturn >/dev/null
             else
-              echo 'Serviço systemd do Coturn não foi encontrado.'
-              exit 1
+              systemctl daemon-reload || true
+              if [ -f /usr/lib/systemd/system/coturn.service ] || [ -f /etc/systemd/system/coturn.service ]; then
+                turn_service=coturn
+              elif [ -f /usr/lib/systemd/system/turnserver.service ] || [ -f /etc/systemd/system/turnserver.service ]; then
+                turn_service=turnserver
+              else
+                echo 'Serviço systemd do Coturn não foi encontrado.'
+                exit 1
+              fi
+              systemctl unmask --runtime "$turn_service" || true
+              systemctl disable "$turn_service" || true
+              systemctl reset-failed "$turn_service" || true
+              systemctl enable "$turn_service"
+              systemctl start "$turn_service"
             fi
-            systemctl unmask --runtime "$turn_service" || true
-            systemctl disable "$turn_service" || true
-            if [ -x /etc/init.d/coturn ]; then
-              /etc/init.d/coturn stop || true
-            fi
-            systemctl mask --runtime --now "$turn_service" || true
-            systemctl kill --kill-who=all --signal=SIGKILL "$turn_service" || true
-            if command -v fuser >/dev/null 2>&1; then
-              fuser -k -9 3478/tcp 3478/udp || true
-            fi
-            pkill -9 -x turnserver || true
-            sleep 2
-            if ss -lntup 2>/dev/null | grep -E ':(3478)\b'; then
-              echo 'A porta 3478 continua ocupada depois de parar o Coturn.'
-              ss -lntup 2>/dev/null | grep -E ':(3478)\b' || true
-              for turn_pid in $(pgrep -x turnserver || true); do
-                ps -o pid,ppid,user,stat,cmd -p "$turn_pid" || true
-                if [ -r "/proc/$turn_pid/cgroup" ]; then
-                  cat "/proc/$turn_pid/cgroup" || true
-                fi
-              done
-              grep -RIlE 'turnserver|coturn' /etc/systemd/system /etc/supervisor /etc/init.d /etc/cron.d /etc/cron.daily /etc/rc.local 2>/dev/null | head -40 || true
-              exit 1
-            fi
-            systemctl unmask --runtime "$turn_service"
-            systemctl reset-failed "$turn_service" || true
-            systemctl enable "$turn_service"
-            if ! systemctl start "$turn_service"; then
-              systemctl status "$turn_service" --no-pager || true
-              journalctl -u "$turn_service" -n 80 --no-pager || true
-              exit 1
-            fi
-            systemctl is-active --quiet "$turn_service"
 
             if command -v ufw >/dev/null 2>&1 && ufw status | grep -q 'Status: active'; then
               ufw allow 3478/tcp
@@ -228,6 +231,12 @@ jobs:
               ufw allow 49152:65535/udp
             fi
 
+            for attempt in $(seq 1 20); do
+              if ss -lntup 2>/dev/null | grep -E ':(3478)\b'; then
+                break
+              fi
+              sleep 1
+            done
             ss -lntup | grep -E ':(3478)\b'
             echo 'Coturn ativo.'
 
