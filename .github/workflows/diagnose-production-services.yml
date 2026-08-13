@@ -68,5 +68,11 @@ jobs:
             docker logs --tail 80 coturn 2>&1 | sed -E 's/(password|secret|credential|user=)[^[:space:]]+/\\1=[REDACTED]/Ig' || true
             echo '=== coturn container listeners ==='
             docker exec coturn sh -c "ss -lntup 2>/dev/null | grep -E ':(3478|5349)\\b' || true" 2>/dev/null || true
+            echo '=== host address and coturn process sockets ==='
+            ip -brief address 2>/dev/null | grep -E '72\\.62\\.138\\.208|UP' || true
+            turn_pid="$(pgrep -x turnserver | head -1 || true)"
+            if [ -n "$turn_pid" ]; then
+              lsof -Pan -p "$turn_pid" -i 2>/dev/null | head -30 || true
+            fi
             echo '=== mounted coturn config (credentials redacted) ==='
             sed -E 's/^(user|static-auth-secret|cli-password|password)[=:].*/\\1=[REDACTED]/I' /opt/coturn/turnserver.conf 2>/dev/null || true
