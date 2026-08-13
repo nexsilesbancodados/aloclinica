@@ -5,7 +5,7 @@ import { getCaller, isInternalOrService } from '../_shared/auth.ts'
 const TABLES = ['profiles','doctor_profiles','appointments','prescriptions','exam_requests','exam_reports','medical_records','subscriptions','doctor_payouts']
 
 async function verifyVaultSecret(req: Request): Promise<boolean> {
-  const candidate = req.headers.get('x-internal-secret')
+  const candidate = req.headers.get('x-internal-secret') ?? req.headers.get('x-aloclinica-internal-secret')
   if (!candidate) return false
 
   const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)

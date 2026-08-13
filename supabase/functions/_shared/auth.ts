@@ -73,7 +73,8 @@ export function safeEqual(a: string | null | undefined, b: string | null | undef
  */
 export function isInternalOrService(req: Request): boolean {
   const internal = Deno.env.get("INTERNAL_FUNCTION_SECRET");
-  if (internal && safeEqual(req.headers.get("x-internal-secret"), internal)) return true;
+  const internalHeader = req.headers.get("x-internal-secret") ?? req.headers.get("x-aloclinica-internal-secret");
+  if (internal && safeEqual(internalHeader, internal)) return true;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   return !!serviceKey && safeEqual(bearer, serviceKey);

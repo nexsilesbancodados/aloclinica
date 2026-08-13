@@ -22,7 +22,8 @@ BEGIN
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || anon_key,
-      'x-internal-secret', COALESCE(internal_secret, '')
+      'x-internal-secret', COALESCE(internal_secret, ''),
+      'x-aloclinica-internal-secret', COALESCE(internal_secret, '')
     ),
     body := payload,
     timeout_milliseconds := 30000

@@ -108,6 +108,14 @@ jobs:
             -A 'aloclinica-maintenance/1.0' \
             "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
             --data-binary @"$RUNNER_TEMP/activity-logs-migration-before-deploy.json" >/dev/null
+          jq -Rs '{query: .}' supabase/migrations/20260812150000_internal_function_secret_vault.sql > "$RUNNER_TEMP/internal-function-migration-before-deploy.json"
+          curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/internal-function-migration-before-deploy.json" >/dev/null
 
       - name: Verificar sincronização sem revelar segredos
         env:
@@ -183,6 +191,7 @@ jobs:
               -H "Authorization: Bearer $authorization_key" \
               -H "apikey: $authorization_key" \
               -H "x-internal-secret: $INTERNAL_FUNCTION_SECRET" \
+              -H "x-aloclinica-internal-secret: $INTERNAL_FUNCTION_SECRET" \
               -H 'Content-Type: application/json' \
               --data '{"source":"production-backup-validation"}')"
             if [[ "$http_code" == "200" ]]; then
