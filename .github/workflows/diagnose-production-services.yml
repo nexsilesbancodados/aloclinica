@@ -60,3 +60,6 @@ jobs:
             echo '=== package/config metadata ==='
             dpkg-query -W -f='${Status} ${Version}\\n' coturn 2>/dev/null || true
             stat -c '%a %U:%G %s bytes %n' /etc/turnserver.conf 2>/dev/null || true
+            echo '=== docker owner metadata ==='
+            docker ps --no-trunc --format '{{.ID}}\\t{{.Names}}\\t{{.Image}}\\t{{.Status}}' 2>/dev/null | grep -E '8fb1677b774e|coturn|turnserver|mirotalk' || true
+            docker inspect --format='{{.Name}}\\t{{.Config.Image}}\\t{{.State.Status}}\\t{{.HostConfig.RestartPolicy.Name}}\\t{{json .HostConfig.PortBindings}}' 8fb1677b774e556881274bec5d5f6b51dfc23e35fdb66c0f522cf9d846b408b9 2>/dev/null || true
