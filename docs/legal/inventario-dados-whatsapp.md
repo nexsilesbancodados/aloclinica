@@ -30,7 +30,7 @@ transmitidos pelo WhatsApp; o titular acessa a plataforma autenticada para obtê
 | `post-consultation-survey` | Profissional | Metadado de agenda |
 | `scheduled-tasks` (não comparecimento) | Profissional, data/hora, valor da taxa | Metadado + financeiro |
 | `cart-abandonment` | Profissional, data/hora | Metadado de agenda |
-| `whatsapp-notify` | Texto livre (limitado a 500 caracteres) | **Variável — ver §5** |
+| `whatsapp-notify` | Profissional, data/hora (templates fixos) | Metadado de agenda — §5 |
 
 Metadado de agenda revela a existência de relação assistencial e o profissional envolvido.
 É o mínimo necessário para a finalidade (lembrar de uma consulta exige dizer qual e quando),
@@ -77,19 +77,27 @@ O critério aplicado foi **utilidade para o titular versus sensibilidade**:
 O critério está registrado em comentário no código, em `send-prescription/index.ts`, para
 que uma alteração futura seja uma decisão consciente e não um descuido.
 
-## 5. Risco aberto: `whatsapp-notify`
+## 5. `whatsapp-notify` — verificado, sem risco de conteúdo livre
 
-`whatsapp-notify` encaminha **texto livre** (truncado em 500 caracteres) para o WhatsApp do
-titular. Não há filtro de conteúdo: se um chamador passar conteúdo clínico, ele trafega e é
-persistido. A proteção do §4 é específica de `send-prescription` e **não** cobre este fluxo.
+O chamador **não** controla o texto. A função aceita apenas `tipo` de um enum fechado
+(`consulta_agendada`, `lembrete_1h`, `nova_consulta`) e monta a mensagem a partir de
+**templates fixos** no próprio código. O campo `dados` só preenche marcadores de agenda —
+`nome_paciente`, `nome_medico`, `data`, `hora`, `appointment_id`. Não há campo clínico, e
+`tipo` desconhecido retorna 400.
 
-> **Pendência:** mapear os chamadores de `whatsapp-notify` e decidir entre restringir o uso,
-> validar o conteúdo, ou documentar a responsabilidade de quem chama.
+Controles adicionais já presentes:
+
+- Exige `isInternalOrService`; não é invocável a partir do navegador.
+- Os dois chamadores (`lembrete-consultas`, `no-show-reminder-tick`) enviam payload
+  estruturado com `x-internal-secret`, nunca texto.
+
+Portanto o conteúdo deste fluxo é **metadado de agenda**, do mesmo nível dos demais em §2.
+Não é necessária nenhuma restrição adicional.
 
 ## 6. Itens em aberto
 
 - [ ] Definir retenção/expurgo do Postgres da Evolution, ou desligar a persistência (§3)
-- [ ] Tratar o texto livre de `whatsapp-notify` (§5)
+- [x] ~~Tratar o texto livre de `whatsapp-notify`~~ — verificado: não existe texto livre (§5)
 - [ ] Incluir o banco da Evolution no registro de operações de tratamento do DPO
 - [ ] Confirmar a base legal do envio por WhatsApp e refleti-la no termo de consentimento
       (ver [`termo-consentimento-telemedicina.md`](./termo-consentimento-telemedicina.md))
