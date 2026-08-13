@@ -51,6 +51,11 @@ GRANT EXECUTE ON FUNCTION public.is_approved_doctor(uuid) TO authenticated;
 --      o rebuild de 20260415 havia alargado para a fila inteira — inclusive
 --      atendimentos em andamento/concluídos de OUTROS médicos, com sintomas.
 DROP POLICY IF EXISTS "Doctors view queue" ON public.on_demand_queue;
+-- A policy nova tem nome diferente da antiga, então o DROP acima não a cobre.
+-- Sem este segundo DROP a migration não é idempotente: reexecutar aborta com
+-- 42710 (policy already exists). Isso importa porque o runbook recomenda
+-- aplicar arquivo a arquivo, e retry após falha parcial é caminho realista.
+DROP POLICY IF EXISTS "Approved doctors view waiting queue" ON public.on_demand_queue;
 CREATE POLICY "Approved doctors view waiting queue"
   ON public.on_demand_queue FOR SELECT
   TO authenticated

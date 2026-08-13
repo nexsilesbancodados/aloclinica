@@ -1,5 +1,41 @@
 # Aplicar as migrations pendentes
 
+> # ⛔ NÃO APLIQUE `20260809100300` — REVISÃO DE 2026-08-13
+>
+> A migration `20260809100300_on_demand_queue_integrity.sql` escreve em **oito
+> colunas que não existem** em `on_demand_queue`: `paid_at`, `price`,
+> `payment_id`, `shift`, `assigned_at`, `started_at`, `completed_at` e
+> `appointment_id`.
+>
+> **Como foi verificado:** nenhum `CREATE TABLE on_demand_queue` do repositório
+> as declara, não há nenhum `ALTER TABLE ... ADD COLUMN`, e
+> `src/integrations/supabase/types.ts` — gerado a partir do banco em produção —
+> lista apenas: `id, patient_id, specialty_id, status, priority,
+> assigned_doctor_id, symptoms, created_at, updated_at`.
+>
+> **Por que é perigoso:** o corpo de uma função PL/pgSQL não é validado no
+> `CREATE FUNCTION`. A migration **aplica limpa** e o erro só aparece na
+> primeira escrita: `ERROR: record "new" has no field "paid_at"` (SQLSTATE
+> 42703). Como o early-return de `service_role`/admin acontece antes de tocar
+> qualquer campo, os writers do servidor continuam passando e o monitoramento
+> não acusa nada — mas **nenhum paciente entra na fila e nenhum médico assume
+> atendimento**. O plantão 24h para por completo.
+>
+> **O preflight não protege:** `scripts/verify_pending_migrations.sql` testa
+> apenas `on_demand_queue.appointment_id`. As outras sete colunas não são
+> verificadas, então o script passa e a migration destrói a fila mesmo assim.
+>
+> Esta migration também está **omitida** do loop de aplicação da seção 4 abaixo
+> e do cabeçalho do script de verificação, embora o script cheque o trigger
+> `zzz_protect_on_demand_queue` que só ela cria. Reconcilie antes de qualquer
+> janela de manutenção.
+>
+> **As outras três não foram liberadas** — foram revisadas e têm achados
+> próprios (teto de preço ancorado em `doctor_profiles.price` enquanto o app usa
+> `consultation_price`; `20260809100200` não é idempotente e aborta se
+> reexecutada). Veja `NIGHTLY_REPORT.md` para a lista completa antes de aplicar
+> qualquer uma.
+
 Quatro migrations estão no repositório e **não foram aplicadas**. Três fecham
 falhas de segurança já exploráveis; a quarta habilita as Feature Flags.
 
