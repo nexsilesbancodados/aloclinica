@@ -90,6 +90,26 @@ jobs:
             "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
             --data-binary @"$RUNNER_TEMP/activity-logs-migration-before-deploy.json" >/dev/null
 
+      - name: Verificar sincronização sem revelar segredos
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          INTERNAL_FUNCTION_SECRET: ${{ secrets.INTERNAL_FUNCTION_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          local_hash="$(printf '%s' "$INTERNAL_FUNCTION_SECRET" | md5sum | awk '{print $1}')"
+          sql="select md5(decrypted_secret) as vault_hash from vault.decrypted_secrets where name = 'internal_function_secret' limit 1;"
+          jq -n --arg query "$sql" '{query: $query}' > "$RUNNER_TEMP/hash-query.json"
+          vault_hash="$(curl -sS -f \
+            -X POST \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+            --data-binary @"$RUNNER_TEMP/hash-query.json" | jq -r '.[0].vault_hash // "missing"')"
+          echo "local_secret_hash=$local_hash"
+          echo "vault_secret_hash=$vault_hash"
+
       - name: Publicar daily-backup
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
