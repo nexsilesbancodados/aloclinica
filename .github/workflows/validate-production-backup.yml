@@ -61,6 +61,7 @@ jobs:
             COTURN_USER=mirotalk \
             COTURN_PASS="$COTURN_PASS" \
             INTERNAL_FUNCTION_SECRET="$INTERNAL_FUNCTION_SECRET" \
+            SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
             --project-ref "$SUPABASE_PROJECT_REF"
 
       - name: Sincronizar segredo interno no Vault
