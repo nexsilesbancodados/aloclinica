@@ -14,6 +14,7 @@ permissions:
 env:
   VPS_HOST: 72.62.138.208
   VPS_USER: root
+  SUPABASE_PROJECT_REF: pwxvvimdtmvziynbspgx
 
 jobs:
   diagnose:
@@ -76,3 +77,28 @@ jobs:
             fi
             echo '=== mounted coturn config (credentials redacted) ==='
             sed -E 's/^(user|static-auth-secret|cli-password|password)[=:].*/\\1=[REDACTED]/I' /opt/coturn/turnserver.conf 2>/dev/null || true
+
+      - name: Verificar persistência do backup no Supabase
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_query() {
+            local sql="$1"
+            local payload="$RUNNER_TEMP/query.json"
+            jq -n --arg query "$sql" '{query: $query}' > "$payload"
+            curl -sS -f \
+              -X POST \
+              -H "Authorization: Bearer $SBP_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -A 'aloclinica-maintenance/1.0' \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              --data-binary @"$payload"
+          }
+          echo '=== activity_logs schema ==='
+          run_query "select column_name, data_type from information_schema.columns where table_schema = 'public' and table_name = 'activity_logs' order by ordinal_position;" | jq -c '.'
+          echo '=== recent backup activity ==='
+          run_query "select action, created_at, details from public.activity_logs where action like 'daily_backup%' order by created_at desc limit 10;" | jq -c '.'
+          echo '=== today backup objects ==='
+          run_query "select name, created_at, updated_at from storage.objects where bucket_id = 'backups' and name like '$(date -u +%F)/%' order by name;" | jq -c '.'
