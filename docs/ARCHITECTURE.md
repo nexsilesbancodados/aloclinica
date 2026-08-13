@@ -115,6 +115,39 @@ Veja `supabase/functions/`. Categorias:
 
 | `coturn` | 3478 UDP+TCP (host net) | direto (`72.62.138.208:3478`) | TURN/STUN próprio |
 
+### ⚠️ `aloclinica_web` (swarm) precisa continuar em 0 réplicas
+
+O frontend existe **duas vezes** na VPS:
+
+| | Quem serve produção | Origem |
+|---|---|---|
+| `aloclinica-web` | **sim** | container do `docker compose` (`/opt/aloclinica`), atualizado pelo `deploy.yml` |
+| `aloclinica_web` | não | serviço swarm do Easypanel — **escalado para 0 em 2026-08-13** |
+
+O serviço swarm declara o **alias de rede `aloclinica-web`** — exatamente o mesmo nome do
+container do compose. Com os dois no ar, o DNS do Docker registra o nome duas vezes (VIP do
+serviço + IP do container) e faz **round-robin**: parte das requisições vai para o container
+certo e parte para o obsoleto.
+
+Foi o que aconteceu no deploy de 13/08: cerca de 2 em cada 3 requisições recebiam um
+`index.html` antigo, apontando para um CSS que não existia mais no build novo — site no ar,
+respondendo 200, **e sem estilo**. O health check do deploy pegou (`asset não alcançável,
+HTTP 404`), mas a causa não é óbvia: o log do Traefik mostra o backend correto
+(`http://aloclinica-web:80`), porque o nome está certo — quem está errado é a resolução.
+
+Sintoma-chave para diagnosticar rápido: `Content-Length` da resposta oscilando entre dois
+valores, e `getent hosts aloclinica-web` de dentro do Traefik devolvendo **mais de um IP**.
+
+```bash
+# Deve devolver SEMPRE o mesmo IP. Mais de um = colisão de nome de volta.
+docker exec $(docker ps --format '{{.Names}}' | grep easypanel-traefik) \
+  sh -c 'for i in 1 2 3 4 5 6; do getent hosts aloclinica-web; done' | sort -u
+```
+
+> Antes de reescalar `aloclinica_web`, remova o alias `aloclinica-web` do serviço — senão a
+> produção volta a quebrar de forma intermitente. Reverter o escalonamento:
+> `docker service scale aloclinica_web=1`.
+
 ### coturn — provisionado em 2026-08-12
 
 Container `coturn` (`/opt/coturn/turnserver.conf`), rede host, relay na faixa **49160-49200/UDP**.

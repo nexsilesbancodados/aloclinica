@@ -118,7 +118,26 @@ curl -X POST -H "Authorization: Bearer $PAT" -H "Content-Type: application/json"
 3. Container nginx rodando? `ssh root@72.62.138.208 'docker ps | grep aloclinica-web'`
 4. Traefik forwarding? Logs: `docker logs easypanel-traefik.* --tail 20`
 
-### "Domínio mostra uma versão antiga"
+### "Site sem estilo" / "assets 404 depois do deploy" / versão antiga INTERMITENTE
+
+Se o conteúdo **alterna** entre novo e antigo a cada F5, não é cache — é colisão de nome no
+DNS do Docker. O serviço swarm `aloclinica_web` declara o alias `aloclinica-web`, o mesmo nome
+do container do compose; com os dois no ar o nome resolve para dois IPs e o Traefik alterna.
+
+```bash
+# Diagnóstico (deve devolver UM único IP):
+docker exec $(docker ps --format '{{.Names}}' | grep easypanel-traefik) \
+  sh -c 'for i in 1 2 3 4 5 6; do getent hosts aloclinica-web; done' | sort -u
+
+# Correção:
+docker service scale aloclinica_web=0
+```
+
+Pistas: `Content-Length` da home oscilando entre dois valores, e o log do Traefik mostrando o
+backend **correto** (`http://aloclinica-web:80`) mesmo assim — o nome está certo, a resolução
+é que não. Ver o bloco de aviso em `ARCHITECTURE.md`.
+
+### "Domínio mostra uma versão antiga" (constante, não intermitente)
 Compare a origem da VPS com o domínio passando pelo Cloudflare:
 
 ```bash
