@@ -189,7 +189,7 @@ jobs:
               exit 1
             fi
             systemctl unmask --runtime "$turn_service" || true
-            systemctl enable "$turn_service"
+            systemctl disable "$turn_service" || true
             if [ -x /etc/init.d/coturn ]; then
               /etc/init.d/coturn stop || true
             fi
@@ -207,6 +207,7 @@ jobs:
             fi
             systemctl unmask --runtime "$turn_service"
             systemctl reset-failed "$turn_service" || true
+            systemctl enable "$turn_service"
             if ! systemctl start "$turn_service"; then
               systemctl status "$turn_service" --no-pager || true
               journalctl -u "$turn_service" -n 80 --no-pager || true
