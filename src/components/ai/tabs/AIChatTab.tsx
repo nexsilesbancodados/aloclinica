@@ -151,16 +151,6 @@ const AIChatTab = ({ primaryRole }: Props) => {
     setIsListening(true);
   };
 
-  const regenerate = useCallback(() => {
-    if (messages.length < 2) return;
-    const lastUserIdx = [...messages].reverse().findIndex(m => m.role === "user");
-    if (lastUserIdx === -1) return;
-    const idx = messages.length - 1 - lastUserIdx;
-    const lastUserMsg = messages[idx].content;
-    setMessages(prev => prev.slice(0, idx));
-    setTimeout(() => send(lastUserMsg), 100);
-  }, [messages]);
-
   const saveConversation = async () => {
     if (!user || messages.length === 0) return;
     const title = messages[0]?.content.slice(0, 60) || "Nova conversa";
@@ -255,6 +245,16 @@ const AIChatTab = ({ primaryRole }: Props) => {
     }
     setIsLoading(false);
   }, [input, isLoading, messages, userContext, primaryRole]);
+
+  const regenerate = useCallback(() => {
+    if (messages.length < 2) return;
+    const lastUserIdx = [...messages].reverse().findIndex(m => m.role === "user");
+    if (lastUserIdx === -1) return;
+    const idx = messages.length - 1 - lastUserIdx;
+    const lastUserMsg = messages[idx].content;
+    setMessages(prev => prev.slice(0, idx));
+    setTimeout(() => send(lastUserMsg), 100);
+  }, [messages, send]);
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 260px)" }}>

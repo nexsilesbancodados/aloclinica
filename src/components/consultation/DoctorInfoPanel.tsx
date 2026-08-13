@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/integrations/supabase/untyped";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -40,12 +40,7 @@ const DoctorInfoPanel = ({ doctorId, appointmentId }: DoctorInfoPanelProps) => {
   const [prescriptions, setPrescriptions] = useState<PrescriptionInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!doctorId) return;
-    fetchData();
-  }, [doctorId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const [docRes, specRes] = await Promise.all([
       db.from("doctor_profiles")
         .select("crm, crm_state, bio, education, experience_years, rating, total_reviews, consultation_price, user_id")
@@ -82,7 +77,12 @@ const DoctorInfoPanel = ({ doctorId, appointmentId }: DoctorInfoPanelProps) => {
 
     if (prescData) setPrescriptions(prescData as unknown as PrescriptionInfo[]);
     setLoading(false);
-  };
+  }, [doctorId, appointmentId]);
+
+  useEffect(() => {
+    if (!doctorId) return;
+    void fetchData();
+  }, [doctorId, fetchData]);
 
   if (loading) {
     return (

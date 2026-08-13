@@ -70,7 +70,7 @@ export default function DrugInteractionAlert({ medications, patientContext }: Pr
       }
     }, 1500);
     return () => clearTimeout(handle);
-  }, [JSON.stringify(meds), patientContext]);
+  }, [meds, patientContext]);
 
   if (meds.length < 2) return null;
   if (loading && !result) {

@@ -161,7 +161,7 @@ export function PingoAssistantChat() {
 
     await performRequest();
     setIsLoading(false);
-  }, [input, isLoading, messages]);
+  }, [input, isLoading, messages, hasError]);
 
   const copyMessage = (idx: number) => {
     navigator.clipboard.writeText(messages[idx]?.content ?? "");

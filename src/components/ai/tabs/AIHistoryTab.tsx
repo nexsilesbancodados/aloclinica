@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/integrations/supabase/untyped";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,7 +40,7 @@ const AIHistoryTab = ({ primaryRole }: Props) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState("all");
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const { data, error } = await db
@@ -61,11 +61,11 @@ const AIHistoryTab = ({ primaryRole }: Props) => {
       })));
     }
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchConversations();
-  }, [user]);
+  }, [user, fetchConversations]);
 
   const deleteConversation = async (id: string) => {
     const { error } = await db.from("ai_conversations" as any).delete().eq("id", id);

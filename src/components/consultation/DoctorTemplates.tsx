@@ -4,9 +4,9 @@
  * Hooks com lista + insert/delete. UI minimalista: dropdown de inserção +
  * "Salvar como template" abaixo de um campo. Usa doctor_text_templates.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { db } from "@/integrations/supabase/untyped";
-import { useAuth } from "@/contexts/AuthContext";
+import { useMemo, useState } from "react";
+import { useDoctorTemplates, type TemplateType } from "./useDoctorTemplates";
+export type { TemplateType } from "./useDoctorTemplates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,68 +14,6 @@ import {
 } from "@/components/ui/popover";
 import { Plus, Save, Bookmark, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { logError } from "@/lib/logger";
-
-export type TemplateType =
-  | "soap_subjective" | "soap_objective" | "soap_assessment" | "soap_plan"
-  | "prescription" | "generic";
-
-interface Template {
-  id: string;
-  type: TemplateType;
-  title: string;
-  body: string;
-}
-
-export function useDoctorTemplates(type?: TemplateType) {
-  const { user } = useAuth();
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      let q = db.from("doctor_text_templates").select("id, type, title, body").eq("doctor_user_id", user.id);
-      if (type) q = q.eq("type", type);
-      const { data } = await q.order("created_at", { ascending: false }).limit(40);
-      setTemplates((data ?? []) as Template[]);
-    } catch (e) {
-      logError("useDoctorTemplates load", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, type]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const save = useCallback(async (title: string, body: string, t: TemplateType) => {
-    if (!user) return;
-    try {
-      const { data, error } = await db.from("doctor_text_templates")
-        .insert({ doctor_user_id: user.id, title, body, type: t } as any)
-        .select("id, type, title, body")
-        .single();
-      if (error) throw error;
-      setTemplates((prev) => [data as Template, ...prev]);
-      toast.success("Template salvo");
-    } catch (e: any) {
-      toast.error("Não foi possível salvar", { description: e?.message });
-    }
-  }, [user?.id]);
-
-  const remove = useCallback(async (id: string) => {
-    try {
-      const { error } = await db.from("doctor_text_templates").delete().eq("id", id);
-      if (error) throw error;
-      setTemplates((prev) => prev.filter((t) => t.id !== id));
-    } catch (e: any) {
-      toast.error("Erro ao remover", { description: e?.message });
-    }
-  }, []);
-
-  return { templates, loading, save, remove, reload: load };
-}
 
 /**
  * Inline controls: ao lado do campo, dropdown "Inserir template" + ação

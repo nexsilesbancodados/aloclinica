@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/integrations/supabase/untyped";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -17,18 +17,7 @@ const TermsReconsentDialog = () => {
   const [saving, setSaving] = useState(false);
   const [requiredVersion, setRequiredVersion] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      setOpen(false);
-      setAccepted(false);
-      setRequiredVersion(null);
-      return;
-    }
-
-    void checkConsent();
-  }, [user]);
-
-  const checkConsent = async () => {
+  const checkConsent = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -76,7 +65,18 @@ const TermsReconsentDialog = () => {
     } catch (error) {
       warn("[terms] Erro inesperado ao verificar termos", error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setOpen(false);
+      setAccepted(false);
+      setRequiredVersion(null);
+      return;
+    }
+
+    void checkConsent();
+  }, [user, checkConsent]);
 
   const handleAccept = async () => {
     if (!accepted || !user || !requiredVersion) return;
