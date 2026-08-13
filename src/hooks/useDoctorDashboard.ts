@@ -10,13 +10,15 @@ export const useDoctorStats = () => {
       if (!user) return null;
       const { data: docProfile } = await db
         .from("doctor_profiles")
-        .select("id, consultation_price, rating, total_reviews, crm, crm_state, crm_verified, is_approved, kyc_status, created_at, approved_at, cfm_verified_at, kyc_verified_at, rejection_reason")
+        // Nomes da TABELA (price/rating_avg/rating_count). Os nomes antigos só
+        // existem na view e fazem o PostgREST rejeitar a query inteira.
+        .select("id, price, rating_avg, rating_count, crm, crm_state, crm_verified, is_approved, kyc_status, created_at, approved_at, cfm_verified_at, kyc_verified_at, rejection_reason")
         .eq("user_id", user.id)
         .single();
       if (!docProfile) return null;
 
       const doctorId = docProfile.id;
-      const price = Number(docProfile.consultation_price) || 89;
+      const price = Number(docProfile.price) || 89;
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -94,8 +96,8 @@ export const useDoctorStats = () => {
 
       return {
         doctorId,
-        rating: Number(docProfile.rating) || 0,
-        totalReviews: Number(docProfile.total_reviews) || 0,
+        rating: Number(docProfile.rating_avg) || 0,
+        totalReviews: Number(docProfile.rating_count) || 0,
         crm: docProfile.crm,
         crmState: docProfile.crm_state,
         crmVerified: docProfile.crm_verified,
