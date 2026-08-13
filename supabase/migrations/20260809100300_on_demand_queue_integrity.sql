@@ -223,8 +223,14 @@ BEGIN
     NEW.status := OLD.status;
     NEW.payment_id := OLD.payment_id;
     RETURN NEW;
-  ELSIF NEW.status NOT IN ('pending_payment', 'cancelled', 'waiting') THEN
+  ELSIF NEW.status NOT IN ('pending_payment', 'cancelled', 'waiting', 'refunded') THEN
     -- Doctors/service_role own assigned/in-progress/completed transitions.
+    --
+    -- 'refunded' precisa estar na lista: `UrgentCareQueue.handleRequestRefund`
+    -- grava esse status a partir do paciente. Sem ele, o gatilho revertia o
+    -- UPDATE em silêncio enquanto a tela exibia "Reembolso solicitado com
+    -- sucesso" e limpava a entrada — o paciente recarregava a página e estava
+    -- de volta na fila, sem nenhum reembolso registrado.
     NEW.status := OLD.status;
     NEW.payment_id := OLD.payment_id;
     RETURN NEW;

@@ -1,5 +1,35 @@
 # Aplicar as migrations pendentes
 
+> # ✅ DESBLOQUEADA EM 2026-08-13 — leia a ordem antes de aplicar
+>
+> O bloqueio abaixo **foi resolvido**. Duas correções entraram:
+>
+> 1. **`20260813120000_on_demand_queue_restore_columns.sql`** (nova) restaura as
+>    oito colunas ausentes. Elas não eram invenção da migration: existiam no
+>    `CREATE TABLE` original de `20260225132502` e se perderam quando
+>    `20260415020135` recriou a tabela sem elas. Os tipos são os do original;
+>    apenas `paid_at`, sem precedente, adota o `timestamptz` declarado na própria
+>    `20260809100300`.
+> 2. **`20260809100300`** passou a aceitar o status `refunded`, que o
+>    `UrgentCareQueue` grava no pedido de reembolso. Sem isso o gatilho revertia
+>    o UPDATE em silêncio enquanto a tela dizia "Reembolso solicitado com
+>    sucesso".
+>
+> **Ordem obrigatória:** aplique `20260813120000` **antes** de `20260809100300`.
+> Invertido, o gatilho volta a escrever em colunas que ainda não existem.
+>
+> **Correção ao registro anterior:** a revisão inicial afirmou que
+> `payment_transactions` e `discount_cards` haviam sido derrubadas — conclusão
+> tirada de um `DROP TABLE` no repositório. **Consultei o banco de produção e as
+> duas existem.** Os achados que dependiam da ausência delas não se aplicam.
+>
+> **Ainda em aberto, verificar antes de confiar no plantão:** o gatilho exige
+> `assigned_doctor_id` preenchido para autorizar consulta nascendo `approved`,
+> mas `DoctorOnDutyPanel` insere a consulta *antes* de gravar esse campo. Esse
+> caminho precisa ser exercitado em staging.
+>
+> <details><summary>Registro do bloqueio original (histórico)</summary>
+>
 > # ⛔ NÃO APLIQUE `20260809100300` — REVISÃO DE 2026-08-13
 >
 > A migration `20260809100300_on_demand_queue_integrity.sql` escreve em **oito
@@ -35,6 +65,8 @@
 > `consultation_price`; `20260809100200` não é idempotente e aborta se
 > reexecutada). Veja `NIGHTLY_REPORT.md` para a lista completa antes de aplicar
 > qualquer uma.
+>
+> </details>
 
 Quatro migrations estão no repositório e **não foram aplicadas**. Três fecham
 falhas de segurança já exploráveis; a quarta habilita as Feature Flags.
