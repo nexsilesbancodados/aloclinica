@@ -14,11 +14,13 @@ const TABLES = [
   "doctor_payouts",
 ];
 
-async function verifyVaultSecret(req: Request): Promise<boolean> {
+async function verifyVaultSecret(
+  req: Request,
+): Promise<{ ok: boolean; errorCode?: string }> {
   const candidate =
     req.headers.get("x-internal-secret") ??
     req.headers.get("x-aloclinica-internal-secret");
-  if (!candidate) return false;
+  if (!candidate) return { ok: false };
 
   const service = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -27,12 +29,13 @@ async function verifyVaultSecret(req: Request): Promise<boolean> {
   const { data, error } = await service.rpc("verify_internal_function_secret", {
     candidate_secret: candidate,
   });
-  if (error)
+  if (error) {
     console.error(
       "[daily-backup] Vault authentication fallback failed",
       error.message,
     );
-  return data === true;
+  }
+  return { ok: data === true, errorCode: error?.code };
 }
 
 Deno.serve(async (req) => {
@@ -41,8 +44,8 @@ Deno.serve(async (req) => {
   try {
     const caller = await getCaller(req);
     const serviceAuth = isInternalOrService(req);
-    const vaultAuth = await verifyVaultSecret(req);
-    const trustedInternal = serviceAuth || vaultAuth;
+    const vaultResult = await verifyVaultSecret(req);
+    const trustedInternal = serviceAuth || vaultResult.ok;
     if (!trustedInternal && !caller.user) {
       console.error("[daily-backup] authentication rejected", {
         internalHeaderPresent: Boolean(
@@ -74,7 +77,16 @@ Deno.serve(async (req) => {
           ),
           bearerPresent: req.headers.has("Authorization"),
           serviceAuth,
-          vaultAuth,
+          vaultAuth: vaultResult.ok,
+          vaultErrorCode: vaultResult.errorCode ?? null,
+          internalHeaderLength: (
+            req.headers.get("x-internal-secret") ??
+            req.headers.get("x-aloclinica-internal-secret") ??
+            ""
+          ).length,
+          configuredSecretLength: (
+            Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? ""
+          ).length,
         };
       }
       return new Response(JSON.stringify(body), {
