@@ -28,6 +28,24 @@ jobs:
         with:
           version: 2.113.0
 
+      - name: Obter chave service_role somente em memória
+        env:
+          SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS -f \
+            -H "Authorization: Bearer $SBP_TOKEN" \
+            -A 'aloclinica-maintenance/1.0' \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys" > "$RUNNER_TEMP/api-keys.json"
+          service_role_key="$(jq -r '.[] | select(.name == "service_role" or .type == "service_role") | .api_key // empty' "$RUNNER_TEMP/api-keys.json" | head -1)"
+          if [[ -z "$service_role_key" ]]; then
+            echo 'A chave service_role não foi retornada pela Management API.'
+            exit 1
+          fi
+          echo "::add-mask::$service_role_key"
+          echo "SERVICE_ROLE_KEY=$service_role_key" >> "$GITHUB_ENV"
+
       - name: Sincronizar segredos persistentes
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -147,12 +165,13 @@ jobs:
           set -euo pipefail
           function_url="https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/daily-backup"
           response_file="$RUNNER_TEMP/backup-response.json"
+          authorization_key="${SERVICE_ROLE_KEY:-$ANON_KEY}"
           http_code=000
-          for attempt in $(seq 1 6); do
+          for attempt in $(seq 1 3); do
             http_code="$(curl -sS -w '%{http_code}' -o "$response_file" \
               -X POST "$function_url" \
-              -H "Authorization: Bearer $ANON_KEY" \
-              -H "apikey: $ANON_KEY" \
+              -H "Authorization: Bearer $authorization_key" \
+              -H "apikey: $authorization_key" \
               -H "x-internal-secret: $INTERNAL_FUNCTION_SECRET" \
               -H 'Content-Type: application/json' \
               --data '{"source":"production-backup-validation"}')"
