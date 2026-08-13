@@ -14,13 +14,11 @@ const TABLES = [
   "doctor_payouts",
 ];
 
-async function verifyVaultSecret(
-  req: Request,
-): Promise<{ ok: boolean; errorCode?: string }> {
+async function verifyVaultSecret(req: Request): Promise<boolean> {
   const candidate =
     req.headers.get("x-internal-secret") ??
     req.headers.get("x-aloclinica-internal-secret");
-  if (!candidate) return { ok: false };
+  if (!candidate) return false;
 
   const service = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -35,7 +33,7 @@ async function verifyVaultSecret(
       error.message,
     );
   }
-  return { ok: data === true, errorCode: error?.code };
+  return data === true;
 }
 
 Deno.serve(async (req) => {
@@ -44,8 +42,7 @@ Deno.serve(async (req) => {
   try {
     const caller = await getCaller(req);
     const serviceAuth = isInternalOrService(req);
-    const vaultResult = await verifyVaultSecret(req);
-    const trustedInternal = serviceAuth || vaultResult.ok;
+    const trustedInternal = serviceAuth || (await verifyVaultSecret(req));
     if (!trustedInternal && !caller.user) {
       console.error("[daily-backup] authentication rejected", {
         internalHeaderPresent: Boolean(
@@ -57,39 +54,7 @@ Deno.serve(async (req) => {
         ),
         bearerPresent: req.headers.has("Authorization"),
       });
-      const body: { error: string; debug?: Record<string, unknown> } = {
-        error: "Não autenticado",
-      };
-      if (req.headers.get("x-aloclinica-debug-auth") === "1") {
-        body.debug = {
-          headerNames: [...req.headers.keys()]
-            .filter((name) => name.toLowerCase() !== "cookie")
-            .sort(),
-          internalHeaderPresent: Boolean(
-            req.headers.get("x-internal-secret") ??
-            req.headers.get("x-aloclinica-internal-secret"),
-          ),
-          internalSecretConfigured: Boolean(
-            Deno.env.get("INTERNAL_FUNCTION_SECRET"),
-          ),
-          serviceRoleConfigured: Boolean(
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-          ),
-          bearerPresent: req.headers.has("Authorization"),
-          serviceAuth,
-          vaultAuth: vaultResult.ok,
-          vaultErrorCode: vaultResult.errorCode ?? null,
-          internalHeaderLength: (
-            req.headers.get("x-internal-secret") ??
-            req.headers.get("x-aloclinica-internal-secret") ??
-            ""
-          ).length,
-          configuredSecretLength: (
-            Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? ""
-          ).length,
-        };
-      }
-      return new Response(JSON.stringify(body), {
+      return new Response(JSON.stringify({ error: "Não autenticado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
