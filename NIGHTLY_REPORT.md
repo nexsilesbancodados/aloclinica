@@ -4,12 +4,15 @@ Branch: `deploy-production-target` · Tudo pushado · **Nada foi deployado em pr
 
 ---
 
-## Resumo em três linhas
+## Resumo
 
-1. O achado mais importante da noite: **uma das migrations pendentes derrubaria o plantão 24h
-   inteiro** se aplicada — e aplicaria "com sucesso", sem erro nenhum na hora.
-2. Corrigi um vazamento de memória e cortei **7,5 MB** do carregamento inicial da PWA.
-3. Descobri que o painel admin deixava configurar o DocuSeal sem que isso tivesse efeito algum.
+1. **18 consultas do app usam nomes de coluna que não existem** — a página de Médicos do admin
+   não lista nada, a avaliação do paciente não é salva e o médico não consegue mudar o próprio
+   preço. Falha 100% silenciosa. Corrigi 3, mapeei as 15 restantes. **É o item mais grave.**
+2. Uma das migrations pendentes **derrubaria o plantão 24h inteiro** se aplicada — e aplicaria
+   "com sucesso", sem erro nenhum na hora.
+3. Corrigi um vazamento de memória e cortei **7,5 MB** do carregamento inicial da PWA.
+4. O painel admin deixava configurar o DocuSeal sem que isso tivesse efeito algum.
 
 ---
 
@@ -82,6 +85,76 @@ Exigem decisão de schema/produto, não conserto mecânico:
 Os outros quatro blocos do mesmo arquivo já dropavam e criavam o mesmo nome; este ficou fora do
 padrão. Importa porque o runbook manda aplicar arquivo a arquivo, e retry após falha parcial é
 caminho realista.
+
+---
+
+## 1-B. ⛔ 18 consultas quebradas por nome de coluna — bug de lançamento
+
+**Descoberto depois da primeira versão deste relatório. Provavelmente o item mais grave do
+repositório.**
+
+A **tabela** `doctor_profiles` tem `price`, `rating_avg`, `rating_count`.
+A **view** `doctor_profiles_public` apelida `price AS consultation_price`.
+
+18 pontos do app consultam a **tabela** usando os nomes da **view**. Confirmado contra o banco de
+produção — inventei uma coluna falsa como controle e a resposta foi idêntica:
+
+```
+consultation_price         → 42703 "column doctor_profiles.consultation_price does not exist"
+coluna_que_nao_existe_xyz  → 42703 "column ... does not exist"        ← controle
+price / rating_avg / rating_count → 200
+```
+
+**Por que passou despercebido:** o PostgREST rejeita a query **inteira** quando um nome não
+existe. Não é campo vazio — é a lista inteira sumindo. E quase todo chamador faz
+`const { data } = await ...`, descartando o `error`. Falha silenciosa, sem log e sem toast.
+
+A raiz é `src/types/domain.ts`: o tipo `DoctorProfileRow`, escrito à mão, declarava os nomes da
+view. Por isso os 18 chamadores compilam sem reclamação enquanto quebram em runtime.
+
+### Corrigido nesta sessão
+
+| Local | Efeito antes |
+|---|---|
+| `AdminDoctors.tsx` | Página de Médicos do admin renderizava **lista vazia**, em silêncio |
+| `RateConsultation.tsx` | Paciente avaliava, via a tela de agradecimento, e a nota **não era salva** |
+| `UserProfile.tsx` | Médico editava o preço, via "Perfil atualizado!" e **o preço não mudava** |
+
+As duas últimas são escritas — piores que leituras, porque o usuário recebe confirmação de
+sucesso e o dado não persiste.
+
+### Restam 15, incluindo fluxos centrais do paciente
+
+| Arquivo:linha | Colunas erradas |
+|---|---|
+| `patient/BookAppointment.tsx:248` | `consultation_price`, `rating` |
+| `patient/DoctorSearch.tsx:150` e `:158` | `rating`, `consultation_price`, `total_reviews` |
+| `patient/AppointmentDetail.tsx:65` | `rating` |
+| `hooks/usePatientDashboard.ts:256` | `consultation_price`, `rating` |
+| `hooks/useDoctorDashboard.ts:12` | `consultation_price`, `rating`, `total_reviews` |
+| `doctor/DoctorEarnings.tsx:73` | `consultation_price` |
+| `doctor/DoctorOnboarding.tsx:83` | `consultation_price` |
+| `consultation/DoctorInfoPanel.tsx:45` | `consultation_price`, `rating`, `total_reviews` |
+| `admin/AdminApprovals.tsx:77` | `consultation_price` |
+| `admin/AdminFinancial.tsx:139` | `consultation_price` |
+| `admin/AdminReports.tsx:124` | `consultation_price`, `rating`, `total_reviews` |
+| `dashboards/AdminAnalyticsCharts.tsx:240` | `consultation_price`, `rating`, `total_reviews` |
+| `dashboards/AdminDashboard.tsx:125` | `rating` |
+| `dashboards/DoctorAnalyticsCharts.tsx:50` | `consultation_price` |
+| `profile/UserProfile.tsx:133` (leitura) | `consultation_price` |
+
+**Correspondência:** `consultation_price` → `price` · `rating` → `rating_avg` ·
+`total_reviews` → `rating_count`.
+
+**Cuidado ao corrigir:** `experience_years` e `education` **existem** (o banco responde 42501
+*permission denied*, não 42703 — só faltam grants para a chave anônima). Eu cheguei a removê-las
+por engano lendo o `types.ts`, que está incompleto quanto a essas duas. Não as remova.
+
+Parei em 3 de 18 conscientemente: cada correção exige ajustar também as referências de UI no
+mesmo arquivo, e como o tipo aceita ambos os conjuntos, o `tsc` **não** aponta o que ficou para
+trás. Fazer as 15 restantes às pressas, sem conseguir exercitar os fluxos autenticados, trocaria
+um bug conhecido por um desconhecido. O caminho certo é separar `DoctorProfileRow` em dois tipos
+— tabela e view — e deixar o compilador apontar cada chamador.
 
 ---
 
