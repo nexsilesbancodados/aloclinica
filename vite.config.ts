@@ -32,7 +32,13 @@ export default defineConfig(({ mode }) => ({
         // The navigation fallback must be precached together with the shell
         // and its hashed bundles. Without index.html here, Workbox throws
         // `non-precached-url` and a stale PWA can render a blank page.
-        globPatterns: ["**/*.{html,js,css,ico,png,svg,woff2}"],
+        // `png` fica FORA do precache de propósito. Havia 38 PNGs somando
+        // ~7,5 MB — mais da metade do precache — baixados à força na primeira
+        // visita, num app usado majoritariamente por celular. Eles já são
+        // cobertos pela regra CacheFirst de `images-cache` em runtimeCaching,
+        // então continuam cacheados; a diferença é que agora entram no cache
+        // quando a imagem é de fato usada, em vez de tudo de uma vez.
+        globPatterns: ["**/*.{html,js,css,ico,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         skipWaiting: true,
         clientsClaim: true,
