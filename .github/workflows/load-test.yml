@@ -1,0 +1,116 @@
+name: Teste de carga controlado
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Digite LOAD para iniciar o teste controlado"
+        required: true
+        type: string
+      target:
+        description: "Ambiente do teste"
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - staging
+      concurrency:
+        description: "Canais simultâneos (1-150)"
+        required: true
+        default: "25"
+        type: string
+      duration:
+        description: "Duração em segundos (5-300)"
+        required: true
+        default: "30"
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PROD_SITE_URL: https://aloclinica.com.br
+  PROD_SUPABASE_URL: https://pwxvvimdtmvziynbspgx.supabase.co
+
+jobs:
+  load:
+    name: Carga HTTP e Realtime
+    if: ${{ inputs.confirm == 'LOAD' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund --prefer-offline
+
+      - name: Validar parâmetros
+        env:
+          TARGET: ${{ inputs.target }}
+          CONCURRENCY: ${{ inputs.concurrency }}
+          DURATION: ${{ inputs.duration }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CONCURRENCY" =~ ^[0-9]+$ ]] && (( CONCURRENCY >= 1 && CONCURRENCY <= 150 ))
+          [[ "$DURATION" =~ ^[0-9]+$ ]] && (( DURATION >= 5 && DURATION <= 300 ))
+          [[ "$TARGET" == production || "$TARGET" == staging ]]
+
+      - name: Selecionar destino sem exibir chaves
+        env:
+          TARGET: ${{ inputs.target }}
+          STAGING_SITE_URL: ${{ secrets.STAGING_SITE_URL }}
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          PROD_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$TARGET" == production ]]; then
+            site_url="$PROD_SITE_URL"
+            supabase_url="$PROD_SUPABASE_URL"
+            supabase_key="$PROD_SUPABASE_PUBLISHABLE_KEY"
+          else
+            site_url="${STAGING_SITE_URL:-}"
+            supabase_url="${STAGING_SUPABASE_URL:-}"
+            supabase_key="${STAGING_SUPABASE_PUBLISHABLE_KEY:-}"
+          fi
+          if [[ -z "$site_url" || -z "$supabase_url" || -z "$supabase_key" ]]; then
+            echo "Configuração completa do ambiente $TARGET não está disponível."
+            exit 1
+          fi
+          {
+            echo "LOAD_TARGET=$site_url"
+            echo "SUPABASE_URL=$supabase_url"
+            echo "SUPABASE_ANON_KEY=$supabase_key"
+          } >> "$GITHUB_ENV"
+
+      - name: Carga HTTP do health endpoint
+        env:
+          LOAD_CONCURRENCY: ${{ inputs.concurrency }}
+          LOAD_DURATION_SECONDS: ${{ inputs.duration }}
+        run: npm run load:baseline -- --target "$LOAD_TARGET/health" --concurrency "$LOAD_CONCURRENCY" --duration "$LOAD_DURATION_SECONDS"
+
+      - name: Carga Realtime de consultas
+        env:
+          LOAD_CONCURRENCY: ${{ inputs.concurrency }}
+          LOAD_DURATION_SECONDS: ${{ inputs.duration }}
+        run: npm run load:consultation -- --concurrency "$LOAD_CONCURRENCY" --duration "$LOAD_DURATION_SECONDS"
+
+      - name: Resumo
+        run: |
+          {
+            echo '## Teste de carga concluído'
+            echo ''
+            echo "- Ambiente: ${{ inputs.target }}"
+            echo "- Canais simultâneos: ${{ inputs.concurrency }}"
+            echo "- Duração: ${{ inputs.duration }} segundos"
+            echo '- O teste Realtime usa canais temporários e não altera dados clínicos.'
+          } >> "$GITHUB_STEP_SUMMARY"
