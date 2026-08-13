@@ -189,9 +189,8 @@ jobs:
               exit 1
             fi
             systemctl enable "$turn_service"
-            systemctl stop "$turn_service" || true
-            systemctl mask --runtime "$turn_service"
-            pkill -x turnserver || true
+            systemctl mask --runtime --now "$turn_service" || true
+            pkill -9 -x turnserver || true
             sleep 1
             if ss -lntup 2>/dev/null | grep -E ':(3478)\b'; then
               echo 'A porta 3478 continua ocupada depois de parar o Coturn.'
