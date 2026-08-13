@@ -6,7 +6,10 @@
  * (optionally) that they hold the admin role, via the SECURITY DEFINER
  * `is_admin()` / `has_role()` functions in the database.
  */
-import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  createClient,
+  type SupabaseClient,
+} from "https://esm.sh/@supabase/supabase-js@2";
 
 export interface Caller {
   user: { id: string; email?: string } | null;
@@ -55,7 +58,10 @@ export async function getCaller(req: Request): Promise<Caller> {
  * Timing-safe comparison of two secrets to avoid leaking length/prefix via
  * early-exit string comparison.
  */
-export function safeEqual(a: string | null | undefined, b: string | null | undefined): boolean {
+export function safeEqual(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
   if (!a || !b) return false;
   const enc = new TextEncoder();
   const ba = enc.encode(a);
@@ -73,10 +79,15 @@ export function safeEqual(a: string | null | undefined, b: string | null | undef
  */
 export function isInternalOrService(req: Request): boolean {
   const internal = Deno.env.get("INTERNAL_FUNCTION_SECRET");
-  const internalHeader = req.headers.get("x-internal-secret") ?? req.headers.get("x-aloclinica-internal-secret");
+  const internalHeader =
+    req.headers.get("x-internal-secret") ??
+    req.headers.get("x-aloclinica-internal-secret");
   if (internal && safeEqual(internalHeader, internal)) return true;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const bearer = (req.headers.get("Authorization") ?? "").replace(
+    /^Bearer\s+/i,
+    "",
+  );
   return !!serviceKey && safeEqual(bearer, serviceKey);
 }
 
@@ -103,7 +114,9 @@ export async function checkRateLimit(
       .eq("endpoint", endpoint)
       .gte("window_start", since);
     if ((count ?? 0) >= max) return false;
-    await sb.from("rate_limits").insert({ identifier, endpoint, window_start: new Date().toISOString() });
+    await sb
+      .from("rate_limits")
+      .insert({ identifier, endpoint, window_start: new Date().toISOString() });
     return true;
   } catch {
     return true;

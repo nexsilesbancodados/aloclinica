@@ -206,6 +206,7 @@ jobs:
               -H "apikey: $authorization_key" \
               -H "x-internal-secret: $INTERNAL_FUNCTION_SECRET" \
               -H "x-aloclinica-internal-secret: $INTERNAL_FUNCTION_SECRET" \
+              -H 'x-aloclinica-debug-auth: 1' \
               -H 'Content-Type: application/json' \
               --data '{"source":"production-backup-validation"}')"
             if [[ "$http_code" == "200" ]]; then
@@ -216,7 +217,7 @@ jobs:
           done
           if [[ "$http_code" != "200" ]]; then
             echo "Backup não foi concluído (HTTP $http_code)."
-            jq -c '{ok, error, date, summary, failures}' "$response_file" || true
+            jq -c '{ok, error, date, summary, failures, debug}' "$response_file" || true
             exit 1
           fi
           jq -c '{ok, date, summary}' "$response_file"
