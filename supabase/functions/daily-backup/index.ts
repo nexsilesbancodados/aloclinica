@@ -10,6 +10,11 @@ Deno.serve(async (req) => {
     const caller = await getCaller(req)
     const trustedInternal = isInternalOrService(req)
     if (!trustedInternal && !caller.user) {
+      console.error('[daily-backup] authentication rejected', {
+        internalHeaderPresent: Boolean(req.headers.get('x-internal-secret')),
+        internalSecretConfigured: Boolean(Deno.env.get('INTERNAL_FUNCTION_SECRET')),
+        bearerPresent: req.headers.has('Authorization'),
+      })
       return new Response(JSON.stringify({ error: 'Não autenticado' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

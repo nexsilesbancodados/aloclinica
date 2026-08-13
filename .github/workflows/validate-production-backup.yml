@@ -104,6 +104,17 @@ jobs:
           jq -c '{ok, date, summary}' "$response_file"
           jq -e '.ok == true' "$response_file" >/dev/null
 
+      - name: Diagnóstico seguro do runtime
+        if: always()
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set +e
+          supabase functions logs daily-backup --project-ref "$SUPABASE_PROJECT_REF" --limit 20 2>&1 \
+            | sed -E 's/(internalHeaderPresent|internalSecretConfigured|bearerPresent|status|code)[=:][[:space:]]*[^,} ]+/\\1=[REDACTED]/g' \
+            | tail -80
+
       - name: Validar Storage e auditoria
         env:
           SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
