@@ -36,9 +36,10 @@ import { warn } from "@/lib/logger";
 import { invalidateSiteConfig } from "@/lib/site-config";
 
 import {
-  ConfigField, JsonField, MotionCard, SaveBtn, SectionSkeleton, cardAnim,
+  ConfigField, JsonField, MotionCard, SaveBtn, SectionSkeleton,
   type ConfigMap, type ConfigRow, type Plan, type Testimonial, type FaqItem, type DeleteTarget,
 } from "./site-config/shared";
+import { cardAnim } from "./site-config/animation";
 import { PlansManager } from "./site-config/PlansManager";
 import { TestimonialsManager } from "./site-config/TestimonialsManager";
 import { FaqManager } from "./site-config/FaqManager";

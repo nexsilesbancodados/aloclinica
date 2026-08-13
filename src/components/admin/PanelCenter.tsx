@@ -17,13 +17,14 @@ import {
 } from "lucide-react";
 import { SquaresFour, WhatsappLogo, ShieldStar, Tag, Graph } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
-import { format, formatDistanceToNow } from "date-fns";
+import { addDays, format, formatDistanceToNow, startOfDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import pingoAdmin from "@/assets/pingo-admin.png";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartTooltip, Cell, AreaChart, Area } from "recharts";
 
 interface RecentUser { name: string; page: string; lastSeen: string }
+interface RevenuePoint { day: string; revenue: number }
 interface PanelInfo {
   id: string;
   label: string;
@@ -63,20 +64,62 @@ const PanelCenter = () => {
   );
   const [totalOnline, setTotalOnline] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [appointmentsToday, setAppointmentsToday] = useState<number | null>(null);
+  const [leadsToday, setLeadsToday] = useState<number | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenuePoint[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const fetchPresence = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
-      const { data: onlineUsers } = await db
-        .from("user_presence")
-        .select("user_id, current_page, last_seen_at, is_online")
-        .eq("is_online", true)
-        .gte("last_seen_at", new Date(Date.now() - 5 * 60 * 1000).toISOString());
+      const todayStart = startOfDay(new Date());
+      const tomorrowStart = addDays(todayStart, 1);
+      const weekStart = startOfDay(subDays(todayStart, 6));
+      const [presenceResult, rolesResult, accountsResult, appointmentsResult, leadsResult, revenueResult] = await Promise.all([
+        db
+          .from("user_presence")
+          .select("user_id, current_page, last_seen_at, is_online")
+          .eq("is_online", true)
+          .gte("last_seen_at", new Date(Date.now() - 5 * 60 * 1000).toISOString()),
+        db.from("user_roles").select("user_id, role"),
+        db.from("profiles").select("user_id", { count: "exact", head: true }),
+        db.from("appointments")
+          .select("id", { count: "exact", head: true })
+          .gte("scheduled_at", todayStart.toISOString())
+          .lt("scheduled_at", tomorrowStart.toISOString())
+          .not("status", "in", "(cancelled,no_show)"),
+        db.from("contract_leads")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", todayStart.toISOString())
+          .lt("created_at", tomorrowStart.toISOString()),
+        db.from("appointments")
+          .select("scheduled_at, price_at_booking, payment_status")
+          .gte("scheduled_at", weekStart.toISOString())
+          .lt("scheduled_at", tomorrowStart.toISOString()),
+      ]);
 
-      const { data: allRoles } = await db.from("user_roles").select("user_id, role");
+      const onlineUsers = presenceResult.data;
+      const allRoles = rolesResult.data;
       const onlineUserIds = [...new Set((onlineUsers ?? []).map(u => u.user_id))];
+
+      setAppointmentsToday(appointmentsResult.error ? null : appointmentsResult.count ?? 0);
+      setLeadsToday(leadsResult.error ? null : leadsResult.count ?? 0);
+
+      if (revenueResult.error) {
+        setRevenueData(null);
+      } else {
+        const paidStatuses = new Set(["approved", "confirmed", "received"]);
+        setRevenueData(Array.from({ length: 7 }, (_, index) => {
+          const day = addDays(weekStart, index);
+          const dayKey = format(day, "yyyy-MM-dd");
+          const revenue = (revenueResult.data ?? [])
+            .filter(appointment => format(new Date(appointment.scheduled_at), "yyyy-MM-dd") === dayKey)
+            .filter(appointment => paidStatuses.has(appointment.payment_status ?? ""))
+            .reduce((total, appointment) => total + Number(appointment.price_at_booking ?? 0), 0);
+          return { day: format(day, "EEE", { locale: ptBR }), revenue };
+        }));
+      }
 
       const profilesMap: Map<string, string> = new Map();
 
@@ -90,8 +133,14 @@ const PanelCenter = () => {
         });
       }
 
-      const roleTotals: Record<string, number> = {};
-      (allRoles ?? []).forEach(r => { roleTotals[r.role] = (roleTotals[r.role] ?? 0) + 1; });
+      const usersByRole: Record<string, Set<string>> = {};
+      (allRoles ?? []).forEach(r => {
+        if (!usersByRole[r.role]) usersByRole[r.role] = new Set();
+        usersByRole[r.role].add(r.user_id);
+      });
+      const roleTotals: Record<string, number> = Object.fromEntries(
+        Object.entries(usersByRole).map(([role, userIds]) => [role, userIds.size]),
+      );
 
       const panelOnlineMap: Record<string, RecentUser[]> = {};
       (onlineUsers ?? []).forEach(u => {
@@ -117,10 +166,14 @@ const PanelCenter = () => {
         });
       });
 
-       const uniqueUserCount = new Set((allRoles ?? []).map(r => r.user_id)).size;
+       const uniqueRoleUserCount = new Set((allRoles ?? []).map(r => r.user_id)).size;
+       const accountCount = accountsResult.error || typeof accountsResult.count !== "number"
+         ? uniqueRoleUserCount
+         : accountsResult.count;
        const panelTotals: Record<string, number> = {
-         "all-users": uniqueUserCount,
+         "all-users": accountCount,
          "approval-scope": (roleTotals.doctor ?? 0) + (roleTotals.clinic ?? 0),
+         patient: appointmentsResult.error ? 0 : appointmentsResult.count ?? 0,
        };
        setPanels(PANELS.map(p => ({
          ...p,
@@ -129,7 +182,7 @@ const PanelCenter = () => {
          recentUsers: (panelOnlineMap[p.id] ?? []).slice(0, 5),
        })));
       setTotalOnline(onlineUserIds.length);
-      setTotalUsers(new Set((allRoles ?? []).map(r => r.user_id)).size);
+      setTotalUsers(accountCount);
     } catch (e) {
       logError("PanelCenter fetch error", e);
     }
@@ -176,7 +229,7 @@ const PanelCenter = () => {
       {
         label: "Leads",
         sublabel: "Novos contatos",
-        value: "18",
+        value: leadsToday ?? "—",
         icon: UserPlus,
         gradient: "from-blue-400 via-blue-500 to-indigo-600",
         ring: "ring-blue-500/30",
@@ -187,7 +240,7 @@ const PanelCenter = () => {
       {
         label: "WhatsApp API",
         sublabel: "Automações & Bots",
-        value: "Ativo",
+        value: "Verificar",
         icon: WhatsappLogo,
         gradient: "from-green-400 via-green-500 to-emerald-600",
         ring: "ring-green-500/30",
@@ -209,7 +262,7 @@ const PanelCenter = () => {
       {
         label: "Consultas",
         sublabel: "Agendadas hoje",
-        value: "42",
+        value: appointmentsToday ?? "—",
         icon: ClipboardList,
         gradient: "from-violet-400 via-violet-500 to-purple-600",
         ring: "ring-violet-500/30",
@@ -236,17 +289,6 @@ const PanelCenter = () => {
       { label: "Segurança", icon: ShieldCheck, route: "/dashboard/admin/security?role=admin", color: "text-rose-500", bg: "bg-rose-500/10" },
       { label: "Contratos", icon: Handshake, route: "/dashboard/admin/contratos?role=admin", color: "text-emerald-500", bg: "bg-emerald-500/10" },
     ];
-
-   // Simulated revenue data for the chart
-   const revenueData = [
-     { day: "Seg", revenue: 1200 },
-     { day: "Ter", revenue: 1800 },
-     { day: "Qua", revenue: 1400 },
-     { day: "Qui", revenue: 2200 },
-     { day: "Sex", revenue: 2800 },
-     { day: "Sáb", revenue: 2100 },
-     { day: "Dom", revenue: 1900 },
-   ];
 
   return (
     <DashboardLayout title="Centro de Painéis" nav={getAdminNav("panel-center")}>
@@ -351,12 +393,13 @@ const PanelCenter = () => {
                 <Activity className="w-4 h-4 text-primary" />
                 <h3 className="text-sm font-bold text-foreground">Status do Ecossistema</h3>
               </div>
-              <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> WhatsApp API</span>
-                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Mercado Pago</span>
-                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Jitsi Video</span>
-                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Database</span>
-              </div>
+              <button
+                type="button"
+                className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => navigate("/dashboard/admin/maintenance?role=admin")}
+              >
+                Verificar serviços na Manutenção →
+              </button>
             </div>
           </Card>
 
@@ -364,14 +407,15 @@ const PanelCenter = () => {
             <div className="p-5 border-b border-border/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-500" />
-                <h3 className="text-sm font-bold text-foreground">Faturamento Estimado (7d)</h3>
+                <h3 className="text-sm font-bold text-foreground">Receita confirmada (7d)</h3>
               </div>
-              <Badge variant="outline" className="font-mono text-[10px] text-emerald-600 border-emerald-500/20 bg-emerald-500/5">
-                +12% vs última semana
+              <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">
+                Pagamentos confirmados
               </Badge>
             </div>
             <div className="h-[250px] p-4">
-              <ResponsiveContainer width="100%" height="100%">
+              {revenueData ? (
+                <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={revenueData}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -381,10 +425,15 @@ const PanelCenter = () => {
                   </defs>
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10}} />
                   <YAxis hide />
-                  <RechartTooltip />
+                  <RechartTooltip formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Receita"]} />
                   <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                 </AreaChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  Dados financeiros indisponíveis
+                </div>
+              )}
             </div>
           </Card>
 
