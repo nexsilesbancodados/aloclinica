@@ -165,7 +165,7 @@ jobs:
           cd "$download_workdir"
           supabase functions download daily-backup \
             --project-ref "$SUPABASE_PROJECT_REF"
-          rg -n "verifyVaultSecret|x-aloclinica-internal-secret|verify_internal_function_secret" "$download_workdir" \
+          grep -RInE "verifyVaultSecret|x-aloclinica-internal-secret|verify_internal_function_secret" "$download_workdir" \
             | sed -E 's/(INTERNAL_FUNCTION_SECRET|x-internal-secret|x-aloclinica-internal-secret)/[REDACTED]/g'
 
       - name: Aplicar compatibilidade da auditoria
