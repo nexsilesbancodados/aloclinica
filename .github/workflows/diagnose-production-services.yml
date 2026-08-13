@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Diagnóstico remoto somente leitura
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.VPS_HOST }}
