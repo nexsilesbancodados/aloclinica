@@ -47,17 +47,18 @@ Deno.serve(async (req) => {
       summary[t] = (data || []).length
     }
     if (Object.keys(failures).length > 0) {
-      await supabase.from('activity_logs').insert({
+      const { error: failureAuditError } = await supabase.from('activity_logs').insert({
         user_id: caller.user?.id ?? null,
         performed_by: caller.user?.id ?? null,
         action: 'daily_backup_failed', entity_type: 'system', details: { date, summary, failures },
       })
+      if (failureAuditError) console.error('[daily-backup] failure audit log failed', failureAuditError.message)
       return new Response(JSON.stringify({ ok: false, error: 'Backup incompleto: uma ou mais tabelas não foram copiadas.', date, summary, failures }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    await supabase.from('activity_logs').insert({
+    const { error: auditError } = await supabase.from('activity_logs').insert({
       user_id: caller.user?.id ?? null,
       performed_by: caller.user?.id ?? null,
       action: 'daily_backup_run', entity_type: 'system', details: {
@@ -66,6 +67,13 @@ Deno.serve(async (req) => {
         source: trustedInternal ? 'scheduled-job' : 'admin-maintenance',
       },
     })
+    if (auditError) {
+      console.error('[daily-backup] audit log failed', auditError.message)
+      return new Response(JSON.stringify({ error: 'Backup concluído, mas o registro de auditoria falhou.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
     return new Response(JSON.stringify({ ok: true, date, summary }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
