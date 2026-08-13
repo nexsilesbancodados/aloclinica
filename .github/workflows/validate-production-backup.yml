@@ -55,6 +55,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "github_internal_secret_length=$(printf '%s' "$INTERNAL_FUNCTION_SECRET" | wc -c)"
           supabase secrets set \
             COTURN_HOST=72.62.138.208 \
             COTURN_PORT=3478 \
