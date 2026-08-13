@@ -63,3 +63,8 @@ jobs:
             echo '=== docker owner metadata ==='
             docker ps --no-trunc --format '{{.ID}}\\t{{.Names}}\\t{{.Image}}\\t{{.Status}}' 2>/dev/null | grep -E '8fb1677b774e|coturn|turnserver|mirotalk' || true
             docker inspect --format='{{.Name}}\\t{{.Config.Image}}\\t{{.State.Status}}\\t{{.HostConfig.RestartPolicy.Name}}\\t{{json .HostConfig.PortBindings}}' 8fb1677b774e556881274bec5d5f6b51dfc23e35fdb66c0f522cf9d846b408b9 2>/dev/null || true
+            docker inspect --format='network={{.HostConfig.NetworkMode}}\\nentrypoint={{json .Config.Entrypoint}}\\ncommand={{json .Config.Cmd}}\\nexposed={{json .Config.ExposedPorts}}\\nports={{json .NetworkSettings.Ports}}\\nbinds={{json .HostConfig.Binds}}' coturn 2>/dev/null || true
+            echo '=== coturn container logs ==='
+            docker logs --tail 80 coturn 2>&1 | sed -E 's/(password|secret|credential|user=)[^[:space:]]+/\\1=[REDACTED]/Ig' || true
+            echo '=== coturn container listeners ==='
+            docker exec coturn sh -c "ss -lntup 2>/dev/null | grep -E ':(3478|5349)\\b' || true" 2>/dev/null || true
