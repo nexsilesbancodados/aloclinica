@@ -23,6 +23,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.113.0
+
+      - name: Sincronizar segredos persistentes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          COTURN_PASS: ${{ secrets.COTURN_PASS }}
+          INTERNAL_FUNCTION_SECRET: ${{ secrets.INTERNAL_FUNCTION_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets set \
+            COTURN_HOST=72.62.138.208 \
+            COTURN_PORT=3478 \
+            COTURN_USER=mirotalk \
+            COTURN_PASS="$COTURN_PASS" \
+            INTERNAL_FUNCTION_SECRET="$INTERNAL_FUNCTION_SECRET" \
+            --project-ref "$SUPABASE_PROJECT_REF"
+
       - name: Aplicar compatibilidade da auditoria
         env:
           SBP_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
