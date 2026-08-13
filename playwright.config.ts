@@ -3,6 +3,19 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 4173;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
 const externalBaseUrl = Boolean(process.env.PLAYWRIGHT_BASE_URL);
+// Escape hatch para descompasso entre o manifesto e os browsers baixados.
+// `playwright-core/browsers.json` fixa uma revisão do chromium (ex.: 1208); se o
+// `playwright install` baixar outra (ex.: 1234), os testes falham todos com
+// "Executable doesn't exist at .../chromium_headless_shell-<rev>" — o que parece
+// suíte quebrada, mas é só o browser errado no disco.
+//
+// Diagnóstico rápido:
+//   node -e "require('./node_modules/playwright-core/browsers.json').browsers
+//     .filter(b=>b.name.startsWith('chromium')).forEach(b=>console.log(b.name,b.revision))"
+//   ls ~/AppData/Local/ms-playwright   # (Windows)
+//
+// Contorno: aponte para um chrome.exe existente —
+//   PLAYWRIGHT_EXECUTABLE_PATH=".../ms-playwright/chromium-<rev>/chrome-win64/chrome.exe"
 const executablePath = process.env.PLAYWRIGHT_EXECUTABLE_PATH;
 
 export default defineConfig({
