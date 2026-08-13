@@ -6,6 +6,7 @@
  * Falhas são silenciadas para não bloquear o fluxo do usuário.
  */
 import { db } from "@/integrations/supabase/untyped";
+import { logError } from "@/lib/logger";
 
 export type ConsentType =
   | "terms_of_use"
@@ -25,6 +26,11 @@ export interface LogConsentInput {
   version?: string;
   documentUrl?: string;
   metadata?: Record<string, unknown>;
+  /**
+   * @deprecated Ignorado. O `user_id` gravado vem do JWT validado no servidor —
+   * aceitar o id pelo corpo da requisição permitiria registrar aceite em nome
+   * de terceiro. Mantido apenas para não quebrar `registerConsent(userId)`.
+   */
   userId?: string | null;
 }
 
@@ -36,42 +42,37 @@ const DOC_VERSIONS: Partial<Record<ConsentType, string>> = {
   tcle_telemedicine: "2026-02",
 };
 
-async function getClientIp(): Promise<string | null> {
-  try {
-    const r = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
-    if (!r.ok) return null;
-    const j = await r.json();
-    return typeof j?.ip === "string" ? j.ip : null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Registra um consentimento. Funciona para usuários autenticados (user_id
- * preenchido automaticamente) e para visitantes anônimos no caso de cookies.
+ * preenchido no servidor a partir do JWT) e para visitantes anônimos no caso
+ * de cookies.
+ *
+ * O registro passa pela edge function `record-consent` porque o IP precisa ser
+ * capturado no SERVIDOR. A versão anterior consultava `api.ipify.org` do
+ * navegador, o que nunca funcionou em produção: esse host não está no
+ * `connect-src` de nenhum CSP (nginx.conf, vercel.json, public/_headers),
+ * então a chamada era bloqueada, o `catch` devolvia null e todo aceite era
+ * gravado com `ip_address: null`. Mesmo liberado, um IP informado pelo cliente
+ * é falsificável e não serve como prova de aceite.
  */
 export async function logConsent(input: LogConsentInput): Promise<void> {
   try {
-    let userId = input.userId;
-    if (userId === undefined) {
-      const { data } = await db.auth.getUser();
-      userId = data?.user?.id ?? null;
-    }
-    const ip = await getClientIp();
-    await db.from("consent_logs").insert({
-      user_id: userId,
-      consent_type: input.type,
-      version: input.version ?? DOC_VERSIONS[input.type] ?? "1.0",
-      accepted: input.accepted ?? true,
-      document_url: input.documentUrl ?? null,
-      ip_address: ip,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      metadata: input.metadata ?? {},
+    const { error } = await db.functions.invoke("record-consent", {
+      body: {
+        consent_type: input.type,
+        version: input.version ?? DOC_VERSIONS[input.type] ?? "1.0",
+        accepted: input.accepted ?? true,
+        document_url: input.documentUrl ?? null,
+        metadata: input.metadata ?? {},
+      },
     });
+    if (error) throw error;
   } catch (e) {
-    // Audit best-effort: never block UX on logging failures.
-    if (import.meta.env.DEV) console.warn("[consent] log failed", e);
+    // Não bloqueia o fluxo do usuário, mas TAMBÉM não fica invisível: um aceite
+    // que não foi gravado é ausência de prova de consentimento. Antes isso só
+    // aparecia em DEV, então uma falha em produção sumia sem ninguém saber.
+    // `showToast = false` para não interromper o cadastro por causa do log.
+    logError("[consent] falha ao registrar consentimento", e, { type: input.type }, false);
   }
 }
 
