@@ -61,13 +61,13 @@ const DoctorAvailability = () => {
   const fetchDoctorProfile = async () => {
     const { data } = await db
       .from("doctor_profiles")
-      .select("id, available_now")
+      .select("id, is_on_duty")
       .eq("user_id", user!.id)
       .single();
 
     if (data) {
       setDoctorProfileId(data.id);
-      setAvailableNow(data.available_now ?? false);
+      setAvailableNow(data.is_on_duty ?? false);
       fetchSlots(data.id);
       fetchAbsences(data.id);
     }
@@ -83,8 +83,7 @@ const DoctorAvailability = () => {
     try {
       const newVal = !availableNow;
       const { error } = await db.from("doctor_profiles").update({
-        available_now: newVal,
-        available_now_since: newVal ? new Date().toISOString() : null,
+        is_on_duty: newVal,
       } as any).eq("id", doctorProfileId);
       if (error) {
         toast.error("Erro ao atualizar disponibilidade");

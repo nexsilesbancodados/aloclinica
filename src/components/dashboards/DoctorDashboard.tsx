@@ -80,7 +80,7 @@ const DoctorDashboard = () => {
     try {
       const { data, error } = await db
         .from("doctor_profiles")
-        .select("available_for_on_demand")
+        .select("is_on_duty")
         .eq("user_id", user!.id)
         .single();
 
@@ -89,7 +89,7 @@ const DoctorDashboard = () => {
         return;
       }
 
-      setIsOnline((data as any)?.available_for_on_demand ?? true);
+      setIsOnline((data as any)?.is_on_duty ?? true);
     } catch (error) {
       logError("Error loading online status:", error);
     }
@@ -102,7 +102,7 @@ const DoctorDashboard = () => {
     try {
       const { error } = await db
         .from("doctor_profiles")
-        .update({ available_for_on_demand: newStatus } as any)
+        .update({ is_on_duty: newStatus } as any)
         .eq("user_id", user!.id);
 
       if (error) {

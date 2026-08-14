@@ -114,7 +114,7 @@ const AdminDashboard = () => {
       db.from("appointments").select("id", { count: "exact", head: true })
         .gte("scheduled_at", periodStart.toISOString()),
       db.from("doctor_profiles").select("id, user_id, crm, crm_state").eq("is_approved", false).limit(5),
-      db.from("subscriptions").select("id, user_id, plan_id, status, starts_at, expires_at, created_at")
+      db.from("subscriptions").select("id, user_id, plan_id, status, started_at, expires_at, created_at")
         .order("created_at", { ascending: false }).limit(10),
       db.from("appointments").select("id", { count: "exact", head: true })
         .eq("status", "cancelled").gte("scheduled_at", periodStart.toISOString()),
