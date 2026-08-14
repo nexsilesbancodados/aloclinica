@@ -478,13 +478,12 @@ const BookAppointment = () => {
     let errorOccurred = false;
 
     for (const dt of datesToBook) {
-      // Use doctor_type as appointment_type if available (telemedicina),
-      // otherwise use appointmentType (first_visit/return)
-      const apptType = firstApptId
-        ? "return"
-        : (doctor.doctor_type && ["telemedicina"].includes(doctor.doctor_type))
-          ? doctor.doctor_type
-          : appointmentType;
+      // `appointment_type` e `doctor_type` são dimensões diferentes e não podem
+      // ser misturadas. O enum appointment_type só aceita first_visit | return |
+      // urgency; gravar "telemedicina" (o default de doctor_type) fazia o INSERT
+      // falhar com 22P02 — ou seja, a primeira consulta de qualquer paciente não
+      // era criada. A modalidade do médico não pertence a este campo.
+      const apptType = firstApptId ? "return" : appointmentType;
 
       const { data: insertedAppt, error } = await db.from("appointments").insert({
         patient_id: patientUserIdForAppt,

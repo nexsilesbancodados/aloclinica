@@ -86,7 +86,7 @@ const DoctorConsultations = () => {
     setDoctorIdLocal(docProfile.id);
 
     const { data } = await db.from("appointments")
-      .select("id, scheduled_at, status, patient_id, duration_minutes, notes, guest_patient_id, payment_status, created_at")
+      .select("id, scheduled_at, status, patient_id, duration_minutes, notes, payment_status, created_at")
       .eq("doctor_id", docProfile.id)
       .order("scheduled_at", { ascending: false })
       .limit(300);

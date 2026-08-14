@@ -120,7 +120,7 @@ const AdminFinancial = () => {
     const FINANCIAL_FETCH_LIMIT = 5000;
     const { data: appts, count: totalAppts } = await db
       .from("appointments")
-      .select("id, status, payment_status, scheduled_at, created_at, payment_confirmed_at, cancel_reason, doctor_id, patient_id, guest_patient_id", { count: "exact" })
+      .select("id, status, payment_status, scheduled_at, created_at, payment_confirmed_at, cancel_reason, doctor_id, patient_id", { count: "exact" })
       .gte("created_at", daysAgo.toISOString())
       .order("created_at", { ascending: false })
       .limit(FINANCIAL_FETCH_LIMIT);

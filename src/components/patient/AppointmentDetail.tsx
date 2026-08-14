@@ -122,7 +122,7 @@ const AppointmentDetail = () => {
     try {
       const { error } = await db
         .from("appointments")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancelled_by: user?.id ?? null } as any)
+        .update({ status: "cancelled", cancel_reason: "Cancelado pelo paciente", cancelled_by: user?.id ?? null })
         .eq("id", appointmentId);
       if (error) throw error;
       toast.success("Consulta cancelada", { description: "Você receberá confirmação por email." });

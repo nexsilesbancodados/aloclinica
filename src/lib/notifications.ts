@@ -147,7 +147,7 @@ export const notifyAppointmentCancelled = async (
   try {
     const { data: appt } = await db
       .from("appointments")
-      .select("id, scheduled_at, patient_id, doctor_id, guest_patient_id")
+      .select("id, scheduled_at, patient_id, doctor_id")
       .eq("id", appointmentId)
       .single();
     if (!appt) return;
@@ -282,7 +282,7 @@ export const notifyConsultationStarted = async (
   try {
     const { data: appt } = await db
       .from("appointments")
-      .select("patient_id, guest_patient_id")
+      .select("patient_id")
       .eq("id", appointmentId)
       .single();
     if (!appt) return;
@@ -383,7 +383,7 @@ export const notifyAppointmentRescheduled = async (
   try {
     const { data: appt } = await db
       .from("appointments")
-      .select("patient_id, doctor_id, guest_patient_id, scheduled_at")
+      .select("patient_id, doctor_id, scheduled_at")
       .eq("id", appointmentId)
       .single();
     if (!appt) return;
@@ -525,7 +525,7 @@ export const notifyConsultationCompleted = async (
   try {
     const { data: appt } = await db
       .from("appointments")
-      .select("patient_id, guest_patient_id")
+      .select("patient_id")
       .eq("id", appointmentId)
       .single();
     if (!appt?.patient_id) return;

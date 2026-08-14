@@ -74,7 +74,7 @@ const DoctorOnDutyPanel = () => {
       scheduled_at: new Date().toISOString(),
       status: "in_progress",
       payment_status: "approved",
-      appointment_type: "urgent_care",
+      appointment_type: "urgency",
     }).select("id").single();
 
     if (apptError || !appt) {

@@ -100,7 +100,7 @@ const DoctorCalendar = () => {
 
     const [apptRes, absRes] = await Promise.all([
       db.from("appointments")
-        .select("id, scheduled_at, status, patient_id, duration_minutes, appointment_type, guest_patient_id, notes")
+        .select("id, scheduled_at, status, patient_id, duration_minutes, appointment_type, notes")
         .eq("doctor_id", doc.id)
         .gte("scheduled_at", dateRange.start.toISOString())
         .lte("scheduled_at", dateRange.end.toISOString())
