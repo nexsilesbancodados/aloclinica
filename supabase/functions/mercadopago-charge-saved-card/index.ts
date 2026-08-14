@@ -135,10 +135,8 @@ Deno.serve(async (req) => {
       currency: "BRL",
       payment_method: "SAVED_CARD",
       status,
-      saved_card_id,
       resource_id: extractResourceId(reference_id),
       resource_type: extractResourceType(reference_id),
-      paid_at: status === "approved" ? new Date().toISOString() : null,
       raw_response: payment.data,
     } as any, { onConflict: "mp_payment_id" });
 

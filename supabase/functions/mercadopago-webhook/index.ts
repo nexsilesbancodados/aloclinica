@@ -97,7 +97,6 @@ async function handlePayment(admin: any, paymentId: string) {
     .from("payment_transactions")
     .update({
       status: internalStatus,
-      paid_at: internalStatus === "approved" ? now : null,
       raw_response: res.data,
     } as any)
     .eq("mp_payment_id", paymentId);
@@ -146,16 +145,6 @@ async function handlePayment(admin: any, paymentId: string) {
       .from("prescription_renewals")
       .update({ status: internalStatus === "approved" ? "paid" : internalStatus, paid_at: internalStatus === "approved" ? now : null } as any)
       .eq("id", rId);
-  } else if (externalRef.startsWith("sub_")) {
-    const sId = externalRef.replace("sub_", "");
-    await admin
-      .from("subscriptions")
-      .update({
-        last_charge_at: now,
-        last_charge_status: internalStatus,
-        retry_count: internalStatus === "approved" ? 0 : undefined,
-      } as any)
-      .eq("id", sId);
   }
 }
 
@@ -174,7 +163,6 @@ async function handlePreapproval(admin: any, preapprovalId: string) {
     .from("subscriptions")
     .update({
       status: internalStatus,
-      metadata: res.data,
     } as any)
     .eq("mp_preapproval_id", preapprovalId);
 }
@@ -193,7 +181,7 @@ async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
   // Busca sub
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("id, user_id, amount_cents")
+    .select("id, user_id")
     .eq("mp_preapproval_id", preapprovalId)
     .single();
 
@@ -215,13 +203,6 @@ async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
     raw_response: res.data,
   } as any, { onConflict: "mp_payment_id" });
 
-  await admin
-    .from("subscriptions")
-    .update({
-      last_charge_at: new Date().toISOString(),
-      last_charge_status: internalStatus,
-    } as any)
-    .eq("id", sub.id);
 }
 
 async function getUserIdFromAppointment(admin: any, apptId: string): Promise<string | null> {

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getCaller } from "../_shared/auth.ts";
+import { checkRateLimit, getCaller } from "../_shared/auth.ts";
 
 /**
  * Registro de consentimento com IP capturado no SERVIDOR.
@@ -77,6 +77,21 @@ serve(async (req) => {
     if (typeof version !== "string" || !version.trim()) {
       return json({ error: "version é obrigatória" }, 400);
     }
+    if (version.trim().length > 100) {
+      return json({ error: "version muito longa" }, 400);
+    }
+    if (typeof accepted !== "boolean") {
+      return json({ error: "accepted deve ser booleano" }, 400);
+    }
+    if (document_url != null && (typeof document_url !== "string" || document_url.length > 2048)) {
+      return json({ error: "document_url inválida" }, 400);
+    }
+    if (metadata != null && (typeof metadata !== "object" || Array.isArray(metadata))) {
+      return json({ error: "metadata inválida" }, 400);
+    }
+    if (metadata != null && JSON.stringify(metadata).length > 4096) {
+      return json({ error: "metadata muito grande" }, 400);
+    }
 
     // Aceite de cookies pode ocorrer antes do login; os demais exigem sessão,
     // senão qualquer visitante poderia gravar aceite em nome de terceiro.
@@ -85,6 +100,17 @@ serve(async (req) => {
     if (!caller.user && !isCookieConsent) {
       return json({ error: "Não autenticado" }, 401);
     }
+
+    const identifier = caller.user?.id
+      ? `user:${caller.user.id}`
+      : `ip:${clientIp(req) ?? "unknown"}`;
+    const rateLimit = await checkRateLimit(
+      identifier,
+      "record-consent",
+      caller.user ? 20 : 10,
+      1,
+    );
+    if (!rateLimit) return json({ error: "Muitas tentativas. Tente novamente em instantes." }, 429);
 
     // Escrita com service_role: `consent_logs` é append-only e o titular não
     // deve poder alterar o próprio registro de aceite depois de gravado.

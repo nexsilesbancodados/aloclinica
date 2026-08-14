@@ -30,8 +30,7 @@ const AdminReports = () => {
    
   const [summaryStats, setSummaryStats] = useState({
     totalRevenue: 0, totalAppts: 0, totalCancelled: 0, totalNoShow: 0, avgTicket: 0, avgNps: 0,
-    mrr: 0,                  // Monthly Recurring Revenue (Pingo Card + subscriptions)
-    activeCards: 0,          // Pingo Cards ativos
+    mrr: 0,                  // Monthly Recurring Revenue from subscriptions
     churnRate: 0,            // % cancelados nos últimos 30d / ativos no início
   });
   const [loading, setLoading] = useState(true);
@@ -44,7 +43,7 @@ const AdminReports = () => {
     const now = new Date();
 
     // Revenue by month
-    const { data: subs } = await db.from("subscriptions").select("plan_id, created_at, status");
+    const { data: subs } = await db.from("subscriptions").select("plan_id, created_at, status, started_at, expires_at, cancelled_at");
     const { data: plans } = await db.from("plans").select("id, price");
     const planPriceMap = new Map(plans?.map(p => [p.id, Number(p.price)]) ?? []);
 
@@ -152,8 +151,18 @@ const AdminReports = () => {
 
     // ─── Métricas SaaS — MRR de assinaturas genéricas ───
     const mrr = activeSubs.reduce((acc, s) => acc + (planPriceMap.get(s.plan_id) ?? 0), 0);
-    const activeCards = 0;
-    const churnRate = 0;
+    const churnSince = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const activeAtChurnStart = (subs ?? []).filter(s => {
+      const startedAt = new Date(s.started_at ?? s.created_at);
+      const expiresAt = s.expires_at ? new Date(s.expires_at) : null;
+      const cancelledAt = s.cancelled_at ? new Date(s.cancelled_at) : null;
+      return startedAt <= churnSince && (!expiresAt || expiresAt > churnSince) && (!cancelledAt || cancelledAt > churnSince);
+    }).length;
+    const cancelledLast30 = (subs ?? []).filter(s => {
+      if (s.status !== "cancelled" || !s.cancelled_at) return false;
+      return new Date(s.cancelled_at) >= churnSince;
+    }).length;
+    const churnRate = activeAtChurnStart > 0 ? (cancelledLast30 / activeAtChurnStart) * 100 : 0;
 
     setSummaryStats({
       totalRevenue: totalRevAll,
@@ -163,7 +172,6 @@ const AdminReports = () => {
       avgTicket,
       avgNps,
       mrr,
-      activeCards,
       churnRate,
     });
 
@@ -214,7 +222,6 @@ const AdminReports = () => {
     doc.setFontSize(10);
     const kpis = [
       `MRR (Receita Recorrente Mensal): R$ ${summaryStats.mrr.toFixed(2)}`,
-      `Cartões Pingo Ativos: ${summaryStats.activeCards}`,
       `Churn Rate (30d): ${summaryStats.churnRate.toFixed(1)}%`,
       `Receita Total: R$ ${summaryStats.totalRevenue.toFixed(2)}`,
       `Total de Consultas: ${summaryStats.totalAppts}`,

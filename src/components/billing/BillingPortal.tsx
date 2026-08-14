@@ -29,13 +29,11 @@ type Subscription = {
   id: string;
   plan_id: string;
   status: string;
-  starts_at: string | null;
-  next_charge_at: string | null;
-  last_charge_at: string | null;
-  last_charge_status: string | null;
-  amount_cents: number | null;
-  saved_card_id: string | null;
+  started_at: string | null;
+  expires_at: string | null;
   cancelled_at: string | null;
+  plan_price: number | null;
+  plan_interval: string | null;
   // joined
   plan_name?: string;
 };
@@ -44,13 +42,9 @@ type Transaction = {
   id: string;
   resource_type: string;
   resource_id: string;
-  amount_cents: number;
-  payment_method: string;
+  amount_cents: number | null;
+  payment_method: string | null;
   status: string;
-  description: string | null;
-  paid_at: string | null;
-  refunded_at: string | null;
-  refund_amount_cents: number | null;
   created_at: string;
 };
 
@@ -95,18 +89,30 @@ export function BillingPortal() {
     if (!userId) return;
     setLoading(true);
 
-    const [subsRes] = await Promise.all([
+    const [subsRes, txRes] = await Promise.all([
       (db as any)
         .from("subscriptions")
-        .select("*, plans(name)")
+        .select("id, plan_id, status, started_at, expires_at, created_at, gateway, mp_preapproval_id, mp_payer_id, cancelled_at, plans(name, price, interval)")
         .eq("user_id", userId)
         .order("created_at", { ascending: false }),
+      (db as any)
+        .from("payment_transactions")
+        .select("id, resource_type, resource_id, amount_cents, payment_method, status, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100),
     ]);
 
     if (subsRes.error) warn("[BillingPortal] subs error", subsRes.error);
+    if (txRes.error) warn("[BillingPortal] transactions error", txRes.error);
 
-    setSubs(((subsRes.data ?? []) as any[]).map(s => ({ ...s, plan_name: s.plans?.name })));
-    setTxs([]); // payment_transactions table was removed
+    setSubs(((subsRes.data ?? []) as any[]).map(s => ({
+      ...s,
+      plan_name: s.plans?.name,
+      plan_price: s.plans?.price == null ? null : Number(s.plans.price),
+      plan_interval: s.plans?.interval ?? null,
+    })));
+    setTxs((txRes.data ?? []) as Transaction[]);
     setLoading(false);
   }, [userId]);
 
@@ -185,7 +191,8 @@ export function BillingPortal() {
                         {statusBadge(s.status)}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {fmtBRL(s.amount_cents)} / mês
+                        {fmtBRL(s.plan_price == null ? null : Math.round(s.plan_price * 100))}
+                        {s.plan_interval ? ` / ${s.plan_interval === "yearly" ? "ano" : "mês"}` : ""}
                       </CardDescription>
                     </div>
                     {s.status === "active" && (
@@ -201,21 +208,16 @@ export function BillingPortal() {
                   </div>
                 </CardHeader>
                 <CardContent className="grid sm:grid-cols-2 gap-3 text-sm">
-                  {s.next_charge_at && s.status === "active" && (
+                  {s.started_at && (
                     <div>
-                      <div className="text-muted-foreground text-xs">Próxima cobrança</div>
-                      <div className="font-medium">{format(new Date(s.next_charge_at), "dd 'de' MMM, yyyy", { locale: ptBR })}</div>
+                      <div className="text-muted-foreground text-xs">Iniciada em</div>
+                      <div className="font-medium">{format(new Date(s.started_at), "dd 'de' MMM, yyyy", { locale: ptBR })}</div>
                     </div>
                   )}
-                  {s.last_charge_at && (
+                  {s.expires_at && (
                     <div>
-                      <div className="text-muted-foreground text-xs">Última cobrança</div>
-                      <div className="font-medium">
-                        {format(new Date(s.last_charge_at), "dd/MM/yy", { locale: ptBR })}
-                        {s.last_charge_status && (
-                          <span className="ml-2">{statusBadge(s.last_charge_status)}</span>
-                        )}
-                      </div>
+                      <div className="text-muted-foreground text-xs">Válida até</div>
+                      <div className="font-medium">{format(new Date(s.expires_at), "dd/MM/yy", { locale: ptBR })}</div>
                     </div>
                   )}
                   {s.cancelled_at && (
@@ -273,15 +275,10 @@ export function BillingPortal() {
                           <TableCell className="text-xs whitespace-nowrap">
                             {format(new Date(t.created_at), "dd/MM/yy HH:mm")}
                           </TableCell>
-                          <TableCell className="text-sm">{t.description || t.resource_type}</TableCell>
-                          <TableCell className="text-xs">{t.payment_method}</TableCell>
+                          <TableCell className="text-sm">{t.resource_type}</TableCell>
+                          <TableCell className="text-xs">{t.payment_method || "—"}</TableCell>
                           <TableCell className="text-right tabular-nums font-medium">
                             {fmtBRL(t.amount_cents)}
-                            {t.refund_amount_cents != null && (
-                              <div className="text-[10px] text-purple-600">
-                                Estorno: {fmtBRL(t.refund_amount_cents)}
-                              </div>
-                            )}
                           </TableCell>
                           <TableCell>{statusBadge(t.status)}</TableCell>
                         </TableRow>

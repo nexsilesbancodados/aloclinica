@@ -37,4 +37,32 @@ describe("internal edge-function guardrails", () => {
     expect(source).not.toContain("oaixgmuocuwhsabidpei.supabase.co");
     expect(source).toContain("eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3eHZ2aW1kdG12eml5bmJzcGd4");
   });
+
+  it("keeps payment flows aligned with the production ledger schema", () => {
+    const billing = read("src/components/billing/BillingPortal.tsx");
+    const webhook = read("supabase/functions/mercadopago-webhook/index.ts");
+    const createSubscription = read("supabase/functions/mercadopago-create-subscription/index.ts");
+    const refund = read("supabase/functions/mercadopago-refund/index.ts");
+    const consent = read("supabase/functions/record-consent/index.ts");
+    const doctorSearch = read("src/components/patient/DoctorSearch.tsx");
+    const reports = read("src/components/admin/AdminReports.tsx");
+
+    expect(billing).not.toContain("next_charge_at");
+    expect(billing).not.toContain("refund_amount_cents");
+    expect(webhook).not.toContain("last_charge_at");
+    expect(webhook).not.toContain("last_charge_status");
+    expect(webhook).not.toContain("retry_count");
+    expect(createSubscription).not.toContain("amount_cents");
+    expect(createSubscription).not.toContain("next_charge_at");
+    expect(createSubscription).not.toContain("metadata: {");
+    expect(refund).not.toContain("tx.paid_at");
+    expect(refund).not.toContain("refunded_at:");
+    expect(consent).toContain("checkRateLimit");
+    expect(consent).toContain('"record-consent"');
+    expect(consent).toContain("accepted deve ser booleano");
+    expect(doctorSearch).toContain("is_on_duty");
+    expect(doctorSearch).not.toContain("available_now, available_now_since");
+    expect(reports).not.toContain("const activeCards = 0");
+    expect(reports).not.toContain("const churnRate = 0");
+  });
 });

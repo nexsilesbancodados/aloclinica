@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Star, Calendar, Zap, AlertTriangle, SlidersHorizontal, X, Heart, ChevronRight, Clock, Stethoscope, Brain, Eye as EyeIcon, Bone, Baby, Activity, BadgeCheck, ShieldCheck, Languages as LanguagesIcon, ExternalLink } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { Search, Star, Calendar, Zap, AlertTriangle, SlidersHorizontal, X, Heart, ChevronRight, Clock, Stethoscope, Brain, Eye as EyeIcon, Bone, Baby, Activity, BadgeCheck, ExternalLink } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,18 +31,13 @@ interface DoctorResult {
   total_reviews: number | null;
   experience_years: number | null;
   available_now?: boolean;
-  available_now_since?: string | null;
   display_name?: string | null;
   crm_verified?: boolean;
   kyc_status?: string | null;
-  accepts_insurance?: boolean | null;
-  languages?: string[] | null;
   profile: { first_name: string; last_name: string; avatar_url: string | null } | null;
   specialties: string[];
   careAreas: string[];
 }
-
-const LANG_LABEL: Record<string, string> = { pt: "PT", "pt-BR": "PT", en: "EN", es: "ES", fr: "FR", it: "IT", de: "DE" };
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -96,7 +90,6 @@ const DoctorSearch = () => {
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("rating");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [insuranceOnly, setInsuranceOnly] = useState(false);
   const [totalDoctors, setTotalDoctors] = useState<number>(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const PAGE_SIZE = 50;
@@ -144,7 +137,7 @@ const DoctorSearch = () => {
     else setLoading(true);
 
     const offset = loadMore ? doctors.length : 0;
-    const richCols = "id, user_id, crm, crm_state, bio, short_description, price, consultation_duration, rating_avg, rating_count, experience_years, available_now, available_now_since, display_name, crm_verified, accepts_insurance, languages";
+    const richCols = "id, user_id, crm, crm_state, bio, price, consultation_duration, rating_avg, rating_count, experience_years, is_on_duty, display_name, crm_verified";
 
     let resp: any = await db
       .from("doctor_profiles")
@@ -156,7 +149,7 @@ const DoctorSearch = () => {
     if (resp.error) {
       resp = await db
         .from("doctor_profiles")
-        .select("id, user_id, crm, crm_state, bio, price, rating_avg, rating_count, experience_years, available_now, available_now_since, display_name, crm_verified", { count: "exact" })
+        .select("id, user_id, crm, crm_state, bio, price, rating_avg, rating_count, experience_years, is_on_duty, display_name, crm_verified", { count: "exact" })
         .eq("is_approved", true)
         .eq("doctor_type" as any, "telemedicina")
         .order("rating_avg", { ascending: false })
@@ -211,7 +204,7 @@ const DoctorSearch = () => {
       ...d,
       consultation_price: Number(d.price),
       rating: Number(d.rating_avg),
-      languages: Array.isArray(d.languages) ? d.languages : (typeof d.languages === "string" && d.languages ? [d.languages] : null),
+      available_now: Boolean(d.is_on_duty),
       profile: profilesMap.get(d.user_id) ?? null,
       specialties: specsMap.get(d.id) ?? [],
       careAreas: careAreasMap.get(d.id) ?? [],
@@ -245,8 +238,7 @@ const DoctorSearch = () => {
       const availMatch = availabilityFilter === "all" ||
         (availabilityFilter === "today" && availableNowIds.has(d.id)) ||
         (availabilityFilter === "on_duty" && Boolean(d.available_now));
-      const insuranceMatch = !insuranceOnly || Boolean(d.accepts_insurance);
-      return nameMatch && specMatch && urgencyMatch && priceMatch && ratingMatch && availMatch && insuranceMatch;
+      return nameMatch && specMatch && urgencyMatch && priceMatch && ratingMatch && availMatch;
     })
     .sort((a, b) => {
       const aFav = favoriteIds.has(a.id) ? 1 : 0;
@@ -262,14 +254,13 @@ const DoctorSearch = () => {
       return 0;
     });
 
-  const activeFilters = (minRating > 0 ? 1 : 0) + (availabilityFilter !== "all" ? 1 : 0) + (sortBy !== "rating" ? 1 : 0) + (insuranceOnly ? 1 : 0);
+  const activeFilters = (minRating > 0 ? 1 : 0) + (availabilityFilter !== "all" ? 1 : 0) + (sortBy !== "rating" ? 1 : 0);
 
   const clearFilters = () => {
     setMinRating(0);
     setAvailabilityFilter("all");
     setSortBy("rating");
     setPriceRange([0, 500]);
-    setInsuranceOnly(false);
   };
 
   const FiltersContent = () => (
@@ -298,13 +289,6 @@ const DoctorSearch = () => {
             <SelectItem value="on_duty">🟢 De plantão agora</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-      <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/40">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-[hsl(var(--p-primary))]" />
-          <p className="text-sm font-medium text-foreground">Aceita convênio</p>
-        </div>
-        <Switch checked={insuranceOnly} onCheckedChange={setInsuranceOnly} />
       </div>
       <div>
         <p className="text-sm font-medium text-foreground mb-3">🔄 Ordenar por</p>
@@ -561,15 +545,6 @@ const DoctorSearch = () => {
                               <span className="flex items-center gap-1 text-xs text-muted-foreground"><Star className="w-3.5 h-3.5 text-warning fill-warning" />{doctor.rating.toFixed(1)}<span className="text-muted-foreground/60">({doctor.total_reviews ?? 0})</span></span>
                             ) : (
                               <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground font-medium">Novo</span>
-                            )}
-                            {doctor.accepts_insurance && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[hsl(var(--p-primary))]/10 text-[hsl(var(--p-primary))] font-semibold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Convênio</span>
-                            )}
-                            {doctor.languages && doctor.languages.length > 0 && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground font-medium flex items-center gap-1">
-                                <LanguagesIcon className="w-3 h-3" />
-                                {doctor.languages.slice(0, 3).map(l => LANG_LABEL[l] || l.slice(0, 2).toUpperCase()).join(" · ")}
-                              </span>
                             )}
                           </div>
                         </div>
