@@ -8,10 +8,30 @@ Deno.serve(async (req) => {
     const { appointment_id, days_off, cid_code, reason } = await req.json()
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
+    // ── Autorização ──────────────────────────────────────────────────────────
+    // Sem esta checagem, qualquer um emitia atestado assinado sob o CRM de um
+    // médico real, com CID e dias de afastamento à escolha. O emissor precisa
+    // ser o MÉDICO do próprio atendimento. verify_jwt não basta: a anon key é um
+    // JWT válido publicado no bundle.
+    const authHeader = req.headers.get('Authorization') ?? ''
+    if (!authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const authed = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authHeader } } })
+    const { data: { user: caller } } = await authed.auth.getUser()
+    if (!caller) {
+      return new Response(JSON.stringify({ error: 'Sessão inválida' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     const { data: appt } = await supabase.from('appointments').select('*').eq('id', appointment_id).maybeSingle()
     if (!appt) throw new Error('Appointment not found')
     const { data: patient } = await supabase.from('profiles').select('first_name,last_name,cpf').eq('user_id', appt.patient_id).maybeSingle()
     const { data: doctor } = await supabase.from('doctor_profiles').select('crm,crm_state,user_id').eq('id', appt.doctor_id).maybeSingle()
+
+    // O chamador tem de ser o médico deste atendimento.
+    if (!doctor || doctor.user_id !== caller.id) {
+      return new Response(JSON.stringify({ error: 'Apenas o médico do atendimento pode emitir este documento.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     const { data: dProf } = doctor ? await supabase.from('profiles').select('first_name,last_name').eq('user_id', doctor.user_id).maybeSingle() : { data: null }
 
     const code = crypto.randomUUID().slice(0, 8).toUpperCase()

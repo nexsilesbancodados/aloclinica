@@ -56,9 +56,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Papéis operacionais (support, clinic, receptionist, partner, affiliate) dão
+    // acesso a dados de terceiros e NUNCA podem ser auto-atribuídos: exigem admin.
+    // Sem esta barreira, qualquer usuário autenticado se tornava "suporte" e lia
+    // profiles/tickets/verificações de todos. `patient` é o único papel que um
+    // não-admin pode conceder a si mesmo; `doctor` segue pela via de convite.
+    const selfAssignableRoles = ["patient"];
+    const doctorTypeRoles = ["doctor"];
+    if (!caller.isAdmin && !selfAssignableRoles.includes(role) && !doctorTypeRoles.includes(role)) {
+      return new Response(JSON.stringify({ error: "Este papel só pode ser concedido por um administrador." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Doctor-type roles grant access to patient medical data — a non-admin must
     // present a valid, unused invite code (validated here, not trusted from client).
-    const doctorTypeRoles = ["doctor"];
     if (!caller.isAdmin && doctorTypeRoles.includes(role)) {
       const inviteId = profile_data?.invite_code_id;
       let validInvite = false;
