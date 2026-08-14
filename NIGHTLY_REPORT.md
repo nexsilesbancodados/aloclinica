@@ -6,13 +6,20 @@ Branch: `deploy-production-target` · Tudo pushado · **Nada foi deployado em pr
 
 ## Resumo
 
-1. **18 consultas do app usam nomes de coluna que não existem** — a página de Médicos do admin
-   não lista nada, a avaliação do paciente não é salva e o médico não consegue mudar o próprio
-   preço. Falha 100% silenciosa. Corrigi 3, mapeei as 15 restantes. **É o item mais grave.**
-2. Uma das migrations pendentes **derrubaria o plantão 24h inteiro** se aplicada — e aplicaria
-   "com sucesso", sem erro nenhum na hora.
-3. Corrigi um vazamento de memória e cortei **7,5 MB** do carregamento inicial da PWA.
-4. O painel admin deixava configurar o DocuSeal sem que isso tivesse efeito algum.
+1. **20 consultas do app usavam nomes de coluna que não existem** — a página de Médicos do admin
+   não listava nada, a avaliação do paciente não era salva, o médico não conseguia mudar o
+   próprio preço e a receita da clínica caía no valor padrão em toda consulta. Falha 100%
+   silenciosa. **Todas corrigidas.**
+2. Uma das migrations pendentes derrubaria o plantão 24h inteiro. **Desbloqueada:** as colunas
+   ausentes foram restauradas e o status `refunded` foi aceito no gatilho.
+3. **Todo aceite de termos em produção está sem IP.** O código pedia o IP a um serviço externo
+   que o CSP bloqueia. Nova edge function captura no servidor.
+4. Corrigi um vazamento de memória e cortei **7,5 MB** do carregamento inicial da PWA.
+5. O painel admin deixava configurar o DocuSeal sem que isso tivesse efeito algum.
+
+> **Correção a um achado meu:** a revisão inicial concluiu que `payment_transactions` e
+> `discount_cards` estavam derrubadas, lendo um `DROP TABLE` no repositório. Consultei o banco de
+> produção e **as duas existem**. Os achados que dependiam da ausência delas não se aplicam.
 
 ---
 
@@ -32,9 +39,17 @@ configuração, performance e no banco.
 
 ---
 
-## 1. ⛔ Migration que quebraria produção em silêncio
+## 1. ✅ Migration que quebraria produção em silêncio — resolvida
 
-**Severidade: crítica. Bloqueada, não corrigida.**
+**Severidade original: crítica. Bloqueada primeiro, corrigida depois.**
+
+> **Resolução:** as oito colunas **já existiram** — estavam no `CREATE TABLE` original de
+> `20260225132502` e se perderam quando `20260415020135` recriou a tabela sem elas. A nova
+> migration `20260813120000_on_demand_queue_restore_columns.sql` as restaura com os tipos do
+> original (apenas `paid_at`, sem precedente, adota o `timestamptz` que a própria
+> `20260809100300` declara). **Ordem obrigatória: `20260813120000` antes de `20260809100300`.**
+
+O diagnóstico original, mantido abaixo por ser o que explica o risco:
 
 `20260809100300_on_demand_queue_integrity.sql` escreve em **oito colunas que não existem**:
 `paid_at`, `price`, `payment_id`, `shift`, `assigned_at`, `started_at`, `completed_at`,
@@ -63,20 +78,15 @@ instrui aplicar essas migrations.
 > Isto corrige uma recomendação que **eu mesmo tinha dado antes**, de rodar o preflight e
 > aplicar. O preflight não era suficiente.
 
-### Outros achados nas migrations (revisão cruzada, não corrigidos)
+### Outros achados nas migrations — estado atual
 
-Exigem decisão de schema/produto, não conserto mecânico:
-
-- **Teto de preço na coluna errada** — o gatilho ancora em `doctor_profiles.price`, mas o app
-  lê e escreve `consultation_price`. Médico ajusta para R$300, paciente paga R$300, o gatilho
-  aplica `LEAST(300, 89)` e o repasse sai sobre 89. Subpagamento silencioso em toda consulta.
-- **Ordem de INSERT no plantão** — o gatilho exige `assigned_doctor_id` já preenchido, mas
-  `DoctorOnDutyPanel` insere a consulta *antes* de gravar esse campo. O único fluxo que a
-  migration afirma preservar não tem como passar.
-- **Reembolso vira no-op** — `status:'refunded'` não está na lista permitida; o gatilho reverte,
-  a UI mostra "Reembolso solicitado com sucesso" e a entrada volta na próxima recarga.
-- **`20260809100300` está omitida** do loop de aplicação do próprio runbook e do cabeçalho do
-  script de verificação, embora o script cheque um trigger que só ela cria.
+| Achado | Situação |
+|---|---|
+| **Reembolso virava no-op** — `status:'refunded'` fora da lista permitida; o gatilho revertia e a UI dizia "Reembolso solicitado com sucesso" | ✅ **Corrigido** — `refunded` incluído na lista |
+| **Teto de preço na coluna errada** | ✅ **Deixou de valer** — a migration lê `dp.price` e o app agora escreve em `price`; ficaram consistentes após a correção dos nomes de coluna |
+| **`payment_transactions` e `discount_cards` derrubadas** | ❌ **Achado falso** — consultei produção, **as duas existem** (HTTP 200). A conclusão veio de um `DROP TABLE` no repositório que não reflete o banco |
+| **Ordem de INSERT no plantão** — o gatilho exige `assigned_doctor_id` preenchido, mas `DoctorOnDutyPanel` insere a consulta *antes* de gravá-lo | ⚠️ **Em aberto** — precisa ser exercitado em staging |
+| **`20260809100300` omitida do runbook** | ⚠️ **Em aberto** — reconciliar antes da janela |
 
 ### Corrigido
 
@@ -123,38 +133,33 @@ view. Por isso os 18 chamadores compilam sem reclamação enquanto quebram em ru
 As duas últimas são escritas — piores que leituras, porque o usuário recebe confirmação de
 sucesso e o dado não persiste.
 
-### Restam 15, incluindo fluxos centrais do paciente
+### Todas corrigidas
 
-| Arquivo:linha | Colunas erradas |
-|---|---|
-| `patient/BookAppointment.tsx:248` | `consultation_price`, `rating` |
-| `patient/DoctorSearch.tsx:150` e `:158` | `rating`, `consultation_price`, `total_reviews` |
-| `patient/AppointmentDetail.tsx:65` | `rating` |
-| `hooks/usePatientDashboard.ts:256` | `consultation_price`, `rating` |
-| `hooks/useDoctorDashboard.ts:12` | `consultation_price`, `rating`, `total_reviews` |
-| `doctor/DoctorEarnings.tsx:73` | `consultation_price` |
-| `doctor/DoctorOnboarding.tsx:83` | `consultation_price` |
-| `consultation/DoctorInfoPanel.tsx:45` | `consultation_price`, `rating`, `total_reviews` |
-| `admin/AdminApprovals.tsx:77` | `consultation_price` |
-| `admin/AdminFinancial.tsx:139` | `consultation_price` |
-| `admin/AdminReports.tsx:124` | `consultation_price`, `rating`, `total_reviews` |
-| `dashboards/AdminAnalyticsCharts.tsx:240` | `consultation_price`, `rating`, `total_reviews` |
-| `dashboards/AdminDashboard.tsx:125` | `rating` |
-| `dashboards/DoctorAnalyticsCharts.tsx:50` | `consultation_price` |
-| `profile/UserProfile.tsx:133` (leitura) | `consultation_price` |
+Os 20 pontos foram fechados em quatro commits: primeiro `AdminDoctors`, `RateConsultation` e
+`UserProfile` (escrita); depois os fluxos centrais do paciente — `BookAppointment`,
+`DoctorSearch`, `AppointmentDetail` e os dois hooks de dashboard; por fim as dez telas
+administrativas e de relatório.
 
-**Correspondência:** `consultation_price` → `price` · `rating` → `rating_avg` ·
-`total_reviews` → `rating_count`.
+A varredura final encontrou **dois que não estavam no inventário original**:
 
-**Cuidado ao corrigir:** `experience_years` e `education` **existem** (o banco responde 42501
-*permission denied*, não 42703 — só faltam grants para a chave anônima). Eu cheguei a removê-las
-por engano lendo o `types.ts`, que está incompleto quanto a essas duas. Não as remova.
+- `ClinicDashboard` usava select aninhado `doctor_profiles(consultation_price)` — a receita da
+  clínica caía no valor padrão de R$89 em toda consulta. Número errado é pior que tela vazia,
+  porque parece funcionar.
+- `AdminReports` além do select filtrava por `.gt("total_reviews")` e ordenava por
+  `.order("rating")` — ambos inválidos, então não havia caminho que retornasse dados.
 
-Parei em 3 de 18 conscientemente: cada correção exige ajustar também as referências de UI no
-mesmo arquivo, e como o tipo aceita ambos os conjuntos, o `tsc` **não** aponta o que ficou para
-trás. Fazer as 15 restantes às pressas, sem conseguir exercitar os fluxos autenticados, trocaria
-um bug conhecido por um desconhecido. O caminho certo é separar `DoctorProfileRow` em dois tipos
-— tabela e view — e deixar o compilador apontar cada chamador.
+**Não alterados por serem corretos:** `Agendar.tsx` e `AppointmentConfirmed` consultam a view
+`doctor_profiles_public`, onde `consultation_price` e `rating` são os nomes válidos; e em
+`AdminAnalyticsCharts:238` o `consultation_price` é da tabela `specialties`. Confirmei cada um
+antes de decidir — trocar esses teria quebrado o que funciona.
+
+**Consequência boa:** o achado do teto de preço ancorado na coluna errada deixou de valer. A
+migration lê `dp.price` e o app agora escreve em `price`; ficaram consistentes sem intervenção.
+
+**Estratégia adotada:** corrigir apenas a ORIGEM — select, order e o ponto de mapeamento —
+mantendo os nomes antigos na forma local que cada componente já usa. Onde o componente espalha a
+linha do banco no estado, o remapeamento é explícito. Assim a mudança ficou pequena e revisável
+em vez de renomear centenas de referências de UI.
 
 ---
 
