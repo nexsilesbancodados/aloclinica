@@ -86,6 +86,20 @@ serve(async (req) => {
     if (document_url != null && (typeof document_url !== "string" || document_url.length > 2048)) {
       return json({ error: "document_url inválida" }, 400);
     }
+    // `consent_logs` é prova de aceite e a URL do documento é exibida depois.
+    // Sem checar o esquema, um visitante anônimo grava `javascript:` ou `data:`
+    // num registro append-only que ninguém pode corrigir.
+    if (typeof document_url === "string" && document_url.length > 0) {
+      let scheme: string;
+      try {
+        scheme = new URL(document_url).protocol;
+      } catch {
+        return json({ error: "document_url inválida" }, 400);
+      }
+      if (scheme !== "http:" && scheme !== "https:") {
+        return json({ error: "document_url inválida" }, 400);
+      }
+    }
     if (metadata != null && (typeof metadata !== "object" || Array.isArray(metadata))) {
       return json({ error: "metadata inválida" }, 400);
     }
@@ -123,10 +137,12 @@ serve(async (req) => {
       user_id: caller.user?.id ?? null,
       consent_type,
       version: version.trim(),
-      accepted: accepted !== false,
+      accepted,
       document_url: typeof document_url === "string" ? document_url : null,
       ip_address: clientIp(req),
-      user_agent: req.headers.get("user-agent"),
+      // Cabeçalho controlado pelo cliente num endpoint anônimo: truncado para
+      // não virar vetor de inflar a tabela de aceites.
+      user_agent: req.headers.get("user-agent")?.slice(0, 512) ?? null,
       metadata: metadata && typeof metadata === "object" ? metadata : {},
     });
 
