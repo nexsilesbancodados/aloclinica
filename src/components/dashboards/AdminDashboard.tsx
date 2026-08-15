@@ -114,7 +114,7 @@ const AdminDashboard = () => {
       db.from("appointments").select("id", { count: "exact", head: true })
         .gte("scheduled_at", periodStart.toISOString()),
       db.from("doctor_profiles").select("id, user_id, crm, crm_state").eq("is_approved", false).limit(5),
-      db.from("subscriptions").select("id, user_id, plan_id, status, starts_at, expires_at, created_at")
+      db.from("subscriptions").select("id, user_id, plan_id, status, started_at, expires_at, created_at")
         .order("created_at", { ascending: false }).limit(10),
       db.from("appointments").select("id", { count: "exact", head: true })
         .eq("status", "cancelled").gte("scheduled_at", periodStart.toISOString()),
@@ -122,7 +122,7 @@ const AdminDashboard = () => {
         .eq("status", "no_show").gte("scheduled_at", periodStart.toISOString()),
       db.from("appointments").select("id", { count: "exact", head: true })
         .gte("scheduled_at", periodStart.toISOString()),
-      db.from("doctor_profiles").select("rating").gt("rating", 0),
+      db.from("doctor_profiles").select("rating_avg").gt("rating_avg", 0),
       db.from("satisfaction_surveys").select("nps_score")
         .gte("created_at", periodStart.toISOString()),
     ]);
@@ -130,7 +130,7 @@ const AdminDashboard = () => {
     const totalMonth = totalMonthRes.count ?? 0;
     const cancelRate = totalMonth > 0 ? ((cancelledRes.count ?? 0) / totalMonth) * 100 : 0;
     const noShowRate = totalMonth > 0 ? ((noShowRes.count ?? 0) / totalMonth) * 100 : 0;
-    const ratings = (ratingsRes.data ?? []).map(d => Number(d.rating)).filter(r => r > 0);
+    const ratings = (ratingsRes.data ?? []).map(d => Number(d.rating_avg)).filter(r => r > 0);
     const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
     const npsScores = (npsRes.data ?? []).map(s => Number(s.nps_score));
     const avgNps = npsScores.length > 0 ? npsScores.reduce((a, b) => a + b, 0) / npsScores.length : 0;

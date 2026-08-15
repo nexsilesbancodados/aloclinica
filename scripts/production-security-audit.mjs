@@ -31,6 +31,9 @@ const expectedPublicFunctions = new Set([
   "vidaas-callback",
   "robots-txt",
   "sitemap-xml",
+  // Cookie consent is allowed before login; the function requires a user JWT
+  // for every non-cookie consent type and derives user_id from that JWT.
+  "record-consent",
   "guest-checkout",
   "guest-consultation",
   "validate-invite-code",

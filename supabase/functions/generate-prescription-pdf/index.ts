@@ -8,11 +8,30 @@ Deno.serve(async (req) => {
     const { prescription_id } = await req.json()
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
+    // ── Autorização ──────────────────────────────────────────────────────────
+    // Sem isto, qualquer um obtinha a receita (nome+CPF+diagnóstico+medicação) de
+    // qualquer paciente por um prescription_id. O chamador tem de ser o médico ou
+    // o paciente da receita. verify_jwt não basta (a anon key é um JWT válido).
+    const authHeader = req.headers.get('Authorization') ?? ''
+    if (!authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const authed = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authHeader } } })
+    const { data: { user: caller } } = await authed.auth.getUser()
+    if (!caller) {
+      return new Response(JSON.stringify({ error: 'Sessão inválida' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     const { data: rx, error } = await supabase.from('prescriptions').select('*').eq('id', prescription_id).maybeSingle()
     if (error || !rx) throw new Error('Prescription not found')
 
     const { data: patient } = await supabase.from('profiles').select('first_name,last_name,cpf').eq('user_id', rx.patient_id).maybeSingle()
     const { data: doctor } = await supabase.from('doctor_profiles').select('crm,crm_state,user_id').eq('id', rx.doctor_id).maybeSingle()
+
+    // Só o médico da receita ou o próprio paciente.
+    if (caller.id !== rx.patient_id && doctor?.user_id !== caller.id) {
+      return new Response(JSON.stringify({ error: 'Sem permissão para acessar esta receita.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     const { data: doctorProfile } = doctor ? await supabase.from('profiles').select('first_name,last_name').eq('user_id', doctor.user_id).maybeSingle() : { data: null }
 
     const code = rx.verification_code || crypto.randomUUID().slice(0, 8).toUpperCase()

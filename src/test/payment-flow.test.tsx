@@ -48,11 +48,9 @@ const mockActiveSub = {
   id: "sub-1",
   plan_id: "plan-1",
   status: "active",
-  starts_at: new Date(Date.now() - 86400000 * 30).toISOString(),
+  started_at: new Date(Date.now() - 86400000 * 30).toISOString(),
   expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
   created_at: new Date().toISOString(),
-  payment_method: "pix",
-  notes: null,
   plan_name: "Plano Saúde Plus",
   plan_price: 89.9,
   plan_description: "Acesso ilimitado às consultas",
@@ -86,8 +84,8 @@ describe("PaymentHistory", () => {
         return {
           select: () => makeChain([{
             id: "sub-1", plan_id: "plan-1", status: "active",
-            starts_at: mockActiveSub.starts_at, expires_at: mockActiveSub.expires_at,
-            created_at: mockActiveSub.created_at, payment_method: "pix", notes: null,
+            started_at: mockActiveSub.started_at, expires_at: mockActiveSub.expires_at,
+            created_at: mockActiveSub.created_at,
           }]),
         };
       }

@@ -8,6 +8,24 @@ export interface SpecialtyJoinRow {
   specialties?: { name?: string } | null;
 }
 
+/**
+ * ATENÇÃO — este tipo mistura duas relações diferentes, e isso já causou bug.
+ *
+ * A TABELA `doctor_profiles` tem: `price`, `rating_avg`, `rating_count`.
+ * A VIEW  `doctor_profiles_public` apelida `price AS consultation_price`.
+ *
+ * Confirmado contra o banco de produção: um `select` de `consultation_price`,
+ * `rating` ou `total_reviews` na TABELA responde
+ * `42703 column doctor_profiles.<nome> does not exist`. E o PostgREST rejeita a
+ * query INTEIRA — não é um campo vazio, é a lista inteira sumindo sem erro
+ * visível, porque quase todo chamador faz `const { data } = ...` e descarta o
+ * `error`.
+ *
+ * Por isso os dois conjuntos convivem aqui como opcionais: quem consulta a
+ * tabela usa `price`/`rating_avg`/`rating_count`; quem consulta a view usa os
+ * nomes antigos. Separar em dois tipos é o certo, mas exige varrer os ~17
+ * chamadores — ver NIGHTLY_REPORT.md.
+ */
 export interface DoctorProfileRow {
   id: string;
   user_id: string;
@@ -17,13 +35,20 @@ export interface DoctorProfileRow {
   crm_verified?: boolean;
   crm_verified_at?: string | null;
   bio: string | null;
-  consultation_price: number | null;
   experience_years: number | null;
   education: string | null;
-  rating?: number | null;
-  total_reviews?: number | null;
   created_at: string;
   available_now?: boolean;
+
+  /** Colunas reais da TABELA `doctor_profiles`. */
+  price?: number | null;
+  rating_avg?: number | null;
+  rating_count?: number | null;
+
+  /** Nomes expostos pela VIEW `doctor_profiles_public`. NÃO existem na tabela. */
+  consultation_price?: number | null;
+  rating?: number | null;
+  total_reviews?: number | null;
 }
 
 export interface DoctorWithProfile extends DoctorProfileRow {

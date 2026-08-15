@@ -120,7 +120,7 @@ const AdminFinancial = () => {
     const FINANCIAL_FETCH_LIMIT = 5000;
     const { data: appts, count: totalAppts } = await db
       .from("appointments")
-      .select("id, status, payment_status, scheduled_at, created_at, payment_confirmed_at, cancel_reason, doctor_id, patient_id, guest_patient_id", { count: "exact" })
+      .select("id, status, payment_status, scheduled_at, created_at, payment_confirmed_at, cancel_reason, doctor_id, patient_id", { count: "exact" })
       .gte("created_at", daysAgo.toISOString())
       .order("created_at", { ascending: false })
       .limit(FINANCIAL_FETCH_LIMIT);
@@ -137,9 +137,9 @@ const AdminFinancial = () => {
     const doctorIds = [...new Set(appts.map(a => a.doctor_id))];
     const { data: docProfiles } = await db
       .from("doctor_profiles")
-      .select("id, user_id, consultation_price")
+      .select("id, user_id, price")
       .in("id", doctorIds);
-    const docPriceMap = new Map(docProfiles?.map(d => [d.id, Number(d.consultation_price) || 89]) ?? []);
+    const docPriceMap = new Map(docProfiles?.map(d => [d.id, Number(d.price) || 89]) ?? []);
 
     const userIds = [...new Set([
       ...(docProfiles?.map(d => d.user_id) ?? []),

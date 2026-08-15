@@ -76,7 +76,7 @@ export function usePrescriptionData(appointmentId?: string) {
         // 1. Fetch appointment
         const { data: appt } = await db
           .from("appointments")
-          .select("patient_id, guest_patient_id, doctor_id")
+          .select("patient_id, doctor_id")
           .eq("id", appointmentId)
           .single();
 

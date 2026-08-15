@@ -246,7 +246,10 @@ const BookAppointment = () => {
     try {
       const { data: doc, error } = await db
         .from("doctor_profiles")
-        .select("id, user_id, crm, crm_state, bio, consultation_price, rating, experience_years, doctor_type")
+        // Nomes da TABELA. `consultation_price`/`rating` só existem na view
+        // `doctor_profiles_public`; usá-los aqui faz o PostgREST rejeitar a
+        // query inteira (42703) e a lista de médicos vem vazia, sem erro visível.
+        .select("id, user_id, crm, crm_state, bio, price, rating_avg, experience_years, doctor_type")
         .eq("id", doctorId!)
         .single();
 
@@ -265,8 +268,10 @@ const BookAppointment = () => {
 
       setDoctor({
         ...doc,
-        consultation_price: Number(doc.consultation_price),
-        rating: Number(doc.rating),
+        // A forma local mantém os nomes antigos de propósito: o restante do
+        // componente já os usa. Só a origem muda.
+        consultation_price: Number(doc.price),
+        rating: Number(doc.rating_avg),
         first_name: profileRes.data?.first_name ?? "",
         last_name: profileRes.data?.last_name ?? "",
         specialties: specsRes.data?.map((s: { specialties?: { name?: string } | null }) => s.specialties?.name).filter(Boolean) as string[] ?? [],
@@ -473,13 +478,12 @@ const BookAppointment = () => {
     let errorOccurred = false;
 
     for (const dt of datesToBook) {
-      // Use doctor_type as appointment_type if available (telemedicina),
-      // otherwise use appointmentType (first_visit/return)
-      const apptType = firstApptId
-        ? "return"
-        : (doctor.doctor_type && ["telemedicina"].includes(doctor.doctor_type))
-          ? doctor.doctor_type
-          : appointmentType;
+      // `appointment_type` e `doctor_type` são dimensões diferentes e não podem
+      // ser misturadas. O enum appointment_type só aceita first_visit | return |
+      // urgency; gravar "telemedicina" (o default de doctor_type) fazia o INSERT
+      // falhar com 22P02 — ou seja, a primeira consulta de qualquer paciente não
+      // era criada. A modalidade do médico não pertence a este campo.
+      const apptType = firstApptId ? "return" : appointmentType;
 
       const { data: insertedAppt, error } = await db.from("appointments").insert({
         patient_id: patientUserIdForAppt,

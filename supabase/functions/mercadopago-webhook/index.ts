@@ -80,6 +80,28 @@ Deno.serve(async (req) => {
   }
 });
 
+/**
+ * O resultado de cada escrita era descartado. Como a função devolvia 200 de
+ * qualquer forma, uma falha de banco (coluna ausente, RLS, indisponibilidade)
+ * ficava invisível E a MP não reenviava a notificação: o pagamento existia só
+ * do lado da MP e a consulta seguia como não paga, sem nenhum registro.
+ *
+ * `critical` marca as escritas que decidem se o paciente tem atendimento pago.
+ * Nelas o erro é propagado para o handler, que devolve 500 e faz a MP reenviar
+ * — a atualização é idempotente, então reprocessar é seguro.
+ *
+ * As escritas no ledger (`payment_transactions`) ficam deliberadamente NÃO
+ * críticas: o schema dessa tabela foi restaurado fora do versionamento e não é
+ * verificável a partir deste repositório. Se as colunas divergirem, o efeito é
+ * um erro em log — e não todo webhook em 500 com a MP reenviando para sempre.
+ */
+function checkWrite(step: string, error: unknown, critical = false): void {
+  if (!error) return;
+  const message = (error as { message?: string })?.message ?? String(error);
+  console.error(`[mp-webhook] ${step} falhou:`, message);
+  if (critical) throw new Error(`${step}: ${message}`);
+}
+
 async function handlePayment(admin: any, paymentId: string) {
   const res = await mpRequest<any>("GET", `/v1/payments/${paymentId}`);
   if (!res.ok) {
@@ -93,14 +115,14 @@ async function handlePayment(admin: any, paymentId: string) {
   const now = new Date().toISOString();
 
   // Atualiza transaction
-  await admin
+  const { error: txError } = await admin
     .from("payment_transactions")
     .update({
       status: internalStatus,
-      paid_at: internalStatus === "approved" ? now : null,
       raw_response: res.data,
     } as any)
     .eq("mp_payment_id", paymentId);
+  checkWrite("update payment_transactions", txError);
 
   if (!externalRef) return;
 
@@ -108,18 +130,22 @@ async function handlePayment(admin: any, paymentId: string) {
   if (externalRef.startsWith("appointment_")) {
     const apptId = externalRef.replace("appointment_", "");
     if (internalStatus === "approved") {
-      await admin
+      const { error: apptError } = await admin
         .from("appointments")
         .update({ payment_status: "approved", payment_confirmed_at: now } as any)
         .eq("id", apptId);
-      await admin.from("notifications").insert({
-        // Buscar user_id da appointment
+      checkWrite("marcar appointment como paga", apptError, true);
+
+      // Notificação e recibo são acessórios: falhar aqui não pode desfazer o
+      // pagamento já confirmado acima nem provocar reenvio da MP.
+      const { error: notifError } = await admin.from("notifications").insert({
         type: "payment",
         title: "Pagamento confirmado",
         message: "Sua consulta está garantida.",
         link: `/dashboard/appointments?role=patient`,
         user_id: await getUserIdFromAppointment(admin, apptId),
       } as any);
+      checkWrite("insert notifications", notifError);
       // Dispara recibo + confirmação por e-mail/WhatsApp
       try {
         await admin.functions.invoke("appointment-confirmed", {
@@ -129,39 +155,35 @@ async function handlePayment(admin: any, paymentId: string) {
         console.error("[mp-webhook] falha ao enviar recibo", e);
       }
     } else if (internalStatus === "refused" || internalStatus === "cancelled") {
-      await admin
+      const { error: refusedError } = await admin
         .from("appointments")
         .update({ payment_status: "refused" } as any)
         .eq("id", apptId);
+      checkWrite("marcar appointment como recusada", refusedError, true);
     }
   } else if (externalRef.startsWith("queue_")) {
     const qId = externalRef.replace("queue_", "");
-    await admin
+    const { error: queueError } = await admin
       .from("on_demand_queue")
       .update({ payment_status: internalStatus, paid_at: internalStatus === "approved" ? now : null } as any)
       .eq("id", qId);
+    checkWrite("atualizar on_demand_queue", queueError, true);
   } else if (externalRef.startsWith("renewal_")) {
     const rId = externalRef.replace("renewal_", "");
-    await admin
+    const { error: renewalError } = await admin
       .from("prescription_renewals")
       .update({ status: internalStatus === "approved" ? "paid" : internalStatus, paid_at: internalStatus === "approved" ? now : null } as any)
       .eq("id", rId);
-  } else if (externalRef.startsWith("sub_")) {
-    const sId = externalRef.replace("sub_", "");
-    await admin
-      .from("subscriptions")
-      .update({
-        last_charge_at: now,
-        last_charge_status: internalStatus,
-        retry_count: internalStatus === "approved" ? 0 : undefined,
-      } as any)
-      .eq("id", sId);
+    checkWrite("atualizar prescription_renewals", renewalError, true);
   }
 }
 
 async function handlePreapproval(admin: any, preapprovalId: string) {
   const res = await mpRequest<any>("GET", `/preapproval/${preapprovalId}`);
-  if (!res.ok) return;
+  if (!res.ok) {
+    console.error("[mp-webhook] falha ao buscar preapproval", preapprovalId, res.data);
+    return;
+  }
 
   const mpStatus = res.data.status as string; // pending | authorized | paused | cancelled
   const internalStatus =
@@ -170,19 +192,22 @@ async function handlePreapproval(admin: any, preapprovalId: string) {
     mpStatus === "cancelled" ? "cancelled" :
     "pending";
 
-  await admin
+  const { error: subError } = await admin
     .from("subscriptions")
     .update({
       status: internalStatus,
-      metadata: res.data,
     } as any)
     .eq("mp_preapproval_id", preapprovalId);
+  checkWrite("atualizar status da subscription", subError, true);
 }
 
 async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
   // authorized_payment é a cobrança recorrente disparada pela MP
   const res = await mpRequest<any>("GET", `/authorized_payments/${authPaymentId}`);
-  if (!res.ok) return;
+  if (!res.ok) {
+    console.error("[mp-webhook] falha ao buscar authorized_payment", authPaymentId, res.data);
+    return;
+  }
 
   const preapprovalId = res.data.preapproval_id;
   if (!preapprovalId) return;
@@ -191,17 +216,24 @@ async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
   const internalStatus = mapMpStatus(mpStatus);
 
   // Busca sub
-  const { data: sub } = await admin
+  const { data: sub, error: subLookupError } = await admin
     .from("subscriptions")
-    .select("id, user_id, amount_cents")
+    .select("id, user_id")
     .eq("mp_preapproval_id", preapprovalId)
     .single();
 
-  if (!sub) return;
+  if (!sub) {
+    console.error(
+      "[mp-webhook] subscription não encontrada para preapproval",
+      preapprovalId,
+      subLookupError?.message ?? "",
+    );
+    return;
+  }
 
   // UPSERT idempotente: MP reenvia mesma notificação várias vezes (retry).
   // UNIQUE em mp_payment_id garante que não duplica linha.
-  await admin.from("payment_transactions").upsert({
+  const { error: ledgerError } = await admin.from("payment_transactions").upsert({
     user_id: sub.user_id,
     gateway: "mercadopago",
     mp_payment_id: String(res.data.payment?.id ?? authPaymentId),
@@ -214,14 +246,7 @@ async function handleAuthorizedPayment(admin: any, authPaymentId: string) {
     resource_type: "subscription",
     raw_response: res.data,
   } as any, { onConflict: "mp_payment_id" });
-
-  await admin
-    .from("subscriptions")
-    .update({
-      last_charge_at: new Date().toISOString(),
-      last_charge_status: internalStatus,
-    } as any)
-    .eq("id", sub.id);
+  checkWrite("upsert payment_transactions (recorrência)", ledgerError);
 }
 
 async function getUserIdFromAppointment(admin: any, apptId: string): Promise<string | null> {

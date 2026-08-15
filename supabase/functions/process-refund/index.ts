@@ -116,10 +116,13 @@ Deno.serve(async (req) => {
     await admin
       .from("payment_transactions")
       .update({
-        status: refundType === "full" ? "refunded" : "partially_refunded",
-        refund_amount_cents: refundAmountCents,
-        refunded_at: new Date().toISOString(),
-        refund_reason: reason,
+        status: refundType === "full" ? "refunded" : "partial_refund",
+        raw_response: {
+          ...(tx.raw_response ?? {}),
+          refund: mpRes.data,
+          refund_amount_cents: refundAmountCents,
+          refund_reason: reason,
+        },
       })
       .eq("id", tx.id);
 

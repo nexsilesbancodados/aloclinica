@@ -78,7 +78,7 @@ const ClinicDashboard = () => {
     if (doctorIds.length > 0) {
       // Limit 2000 — protege contra clínicas com milhares de consultas em 6m
       const { data: appts } = await db.from("appointments")
-        .select("*, doctor_profiles(consultation_price)")
+        .select("*, doctor_profiles(price)")
         .in("doctor_id", doctorIds)
         .gte("scheduled_at", subMonths(new Date(), 6).toISOString())
         .order("scheduled_at", { ascending: false })
@@ -108,7 +108,7 @@ const ClinicDashboard = () => {
   const monthStart = startOfMonth(now);
   const thisMonthAppts = appointments.filter(a => new Date(a.scheduled_at) >= monthStart);
   const completed = thisMonthAppts.filter(a => a.status === "completed");
-  const revenue = completed.reduce((sum, a) => sum + (a.doctor_profiles?.consultation_price ?? 89), 0);
+  const revenue = completed.reduce((sum, a) => sum + (a.doctor_profiles?.price ?? 89), 0);
   const activeDoctors = doctors.filter(d => d.status === "active").length;
   const occupancy = totalSlots > 0 ? Math.round((thisMonthAppts.length / totalSlots) * 100) : 0;
   const upcomingAppts = appointments.filter(a => new Date(a.scheduled_at) >= now && a.status !== "cancelled").slice(0, 5);
@@ -118,7 +118,7 @@ const ClinicDashboard = () => {
     const ms = startOfMonth(month);
     const me = startOfMonth(subMonths(now, 4 - i));
     const ma = appointments.filter(a => { const d = new Date(a.scheduled_at); return d >= ms && (i < 5 ? d < me : true); });
-    return { month: format(month, "MMM", { locale: ptBR }), consultas: ma.length, receita: ma.filter(a => a.status === "completed").reduce((s, a) => s + (a.doctor_profiles?.consultation_price ?? 89), 0) };
+    return { month: format(month, "MMM", { locale: ptBR }), consultas: ma.length, receita: ma.filter(a => a.status === "completed").reduce((s, a) => s + (a.doctor_profiles?.price ?? 89), 0) };
   });
 
   const doctorPerformance = doctors.filter(d => d.status === "active").map(d => {

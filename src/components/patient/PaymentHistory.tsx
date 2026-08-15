@@ -18,11 +18,9 @@ interface SubscriptionEntry {
   id: string;
   plan_id: string;
   status: string;
-  starts_at: string | null;
+  started_at: string | null;
   expires_at: string | null;
   created_at: string;
-  payment_method: string | null;
-  notes: string | null;
   plan_name: string;
   plan_price: number;
   plan_description: string;
@@ -47,7 +45,7 @@ const PaymentHistory = () => {
   const fetchPayments = async () => {
     const { data: subsData } = await db
       .from("subscriptions")
-      .select("id, plan_id, status, starts_at, expires_at, created_at, payment_method, notes")
+      .select("id, plan_id, status, started_at, expires_at, created_at")
       .eq("user_id", user!.id)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -198,7 +196,6 @@ const PaymentHistory = () => {
                       <p className="text-[14px] font-semibold text-foreground">{s.plan_name}</p>
                       <p className="text-[12px] text-muted-foreground mt-0.5">
                         {format(new Date(s.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                        {s.payment_method && ` · ${s.payment_method === "credit_card" ? "Cartão" : s.payment_method === "pix" ? "PIX" : s.payment_method}`}
                       </p>
                     </div>
                     <div className="text-right shrink-0">

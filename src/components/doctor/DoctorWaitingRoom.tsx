@@ -106,7 +106,7 @@ const DoctorWaitingRoom = () => {
     const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const { data } = await db.from("appointments")
-      .select("id, scheduled_at, status, patient_id, duration_minutes, appointment_type, guest_patient_id")
+      .select("id, scheduled_at, status, patient_id, duration_minutes, appointment_type")
       .eq("doctor_id", docId)
       .gte("scheduled_at", todayStart.toISOString())
       .lte("scheduled_at", todayEnd.toISOString())

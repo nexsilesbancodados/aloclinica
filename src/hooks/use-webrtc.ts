@@ -617,10 +617,17 @@ export function useWebRTC({
     cleanup();
   }, [sendSignal, userId, cleanup]);
 
-  // ─── Cleanup ao desmontar / fechar aba ──────────────────────────────────────
+  // ─── Cleanup ao desmontar / sair da página ──────────────────────────────────
+  // NÃO transmite "hang-up" aqui. No celular, `pagehide` dispara ao MINIMIZAR o
+  // app ou trocar de aba — não só ao fechar. Como o `hang-up` fazia o par
+  // encerrar e, adiante, gravava a consulta como `completed`, minimizar o app no
+  // meio do atendimento marcava a teleconsulta como concluída dos dois lados.
+  //
+  // Aqui fazemos apenas cleanup LOCAL. O par detecta a queda via ICE e entra em
+  // `reconnecting` (com restartIce), em vez de "ended". O encerramento explícito
+  // continua sendo só pelo botão (callback `hangUp`, acima).
   useEffect(() => {
     const handleLeave = () => {
-      sendSignal({ type: "hang-up", sender: userId, data: null });
       cleanup();
     };
 
@@ -632,7 +639,7 @@ export function useWebRTC({
       window.removeEventListener("pagehide", handleLeave);
       cleanup();
     };
-  }, [cleanup, sendSignal, userId]);
+  }, [cleanup]);
 
   return {
     localStream,

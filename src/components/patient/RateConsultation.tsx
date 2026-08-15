@@ -61,10 +61,14 @@ const RateConsultation = ({ appointmentId, doctorId, onClose }: RateConsultation
     });
     const avgRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
 
-    await db
+    // Colunas da TABELA: rating_avg / rating_count. `rating` e `total_reviews`
+    // só existem na view `doctor_profiles_public` — gravar nelas aqui fazia o
+    // UPDATE inteiro falhar (42703) e a nota do paciente nunca era consolidada.
+    const { error: ratingError } = await db
       .from("doctor_profiles")
-      .update({ rating: Math.round(avgRating * 10) / 10, total_reviews: surveys.length })
+      .update({ rating_avg: Math.round(avgRating * 10) / 10, rating_count: surveys.length })
       .eq("id", doctorId);
+    if (ratingError) console.error("Falha ao atualizar média do médico:", ratingError.message);
   };
 
   const toggleTag = (tag: string) => {

@@ -26,14 +26,27 @@ const AdminDoctors = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState<DoctorWithProfile | null>(null);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ crm: "", crm_state: "", bio: "", consultation_price: "" });
+  const [editForm, setEditForm] = useState({ crm: "", crm_state: "", bio: "", price: "" });
 
   useEffect(() => { fetchDoctors(); }, []);
 
   const fetchDoctors = async () => {
-    const { data } = await db.from("doctor_profiles")
-      .select("id, user_id, crm, crm_state, is_approved, bio, consultation_price, experience_years, education, rating, total_reviews, created_at")
+    // Os nomes abaixo são os da TABELA `doctor_profiles`, confirmados contra o
+    // banco de produção. NÃO use `consultation_price`, `rating` nem
+    // `total_reviews`: o Postgres responde 42703 "column does not exist" para os
+    // três. Esses nomes existem apenas na view `doctor_profiles_public`, que
+    // apelida `price AS consultation_price`.
+    //
+    // Selecionar um nome inexistente faz o PostgREST rejeitar a query INTEIRA —
+    // não é um campo vazio, é a lista de médicos inteira sumindo sem erro visível.
+    const { data, error } = await db.from("doctor_profiles")
+      .select("id, user_id, crm, crm_state, is_approved, bio, price, rating_avg, rating_count, experience_years, education, created_at")
       .order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Erro ao carregar médicos", { description: error.message });
+      setLoading(false);
+      return;
+    }
     if (!data) { setLoading(false); return; }
     const userIds = data.map(d => d.user_id);
     const { data: profiles } = await db.from("profiles").select("user_id, first_name, last_name, phone").in("user_id", userIds);
@@ -50,7 +63,7 @@ const AdminDoctors = () => {
 
   const openDetail = (doc: DoctorWithProfile) => {
     setSelected(doc);
-    setEditForm({ crm: doc.crm, crm_state: doc.crm_state, bio: doc.bio || "", consultation_price: String(doc.consultation_price || "") });
+    setEditForm({ crm: doc.crm, crm_state: doc.crm_state, bio: doc.bio || "", price: String(doc.price || "") });
   };
 
   const saveEdit = async () => {
@@ -59,7 +72,7 @@ const AdminDoctors = () => {
       crm: editForm.crm,
       crm_state: editForm.crm_state,
       bio: editForm.bio || null,
-      consultation_price: parseFloat(editForm.consultation_price) || null,
+      price: parseFloat(editForm.price) || null,
     }).eq("id", selected.id);
     if (error) {
       toast.error("Erro", { description: error.message });
@@ -86,10 +99,10 @@ const AdminDoctors = () => {
         nome: `Dr(a). ${d.first_name ?? ""} ${d.last_name ?? ""}`.trim(),
         crm: `${d.crm ?? ""}/${d.crm_state ?? ""}`,
         telefone: d.phone ?? "",
-        preco: d.consultation_price ?? "",
+        preco: d.price ?? "",
         experiencia_anos: d.experience_years ?? 0,
-        avaliacao: d.rating ?? "",
-        avaliacoes_total: d.total_reviews ?? 0,
+        avaliacao: d.rating_avg ?? "",
+        avaliacoes_total: d.rating_count ?? 0,
         formacao: d.education ?? "",
         status: d.is_approved ? "Aprovado" : "Pendente",
         cadastrado_em: new Date(d.created_at).toLocaleDateString("pt-BR"),
@@ -190,7 +203,7 @@ const AdminDoctors = () => {
                       </div>
                     </TableCell>
                     <TableCell data-label="Telefone" className="hidden md:table-cell text-muted-foreground text-xs">{doc.phone || "—"}</TableCell>
-                    <TableCell data-label="Preço" className="hidden lg:table-cell text-muted-foreground">R$ {doc.consultation_price || "—"}</TableCell>
+                    <TableCell data-label="Preço" className="hidden lg:table-cell text-muted-foreground">R$ {doc.price || "—"}</TableCell>
                     <TableCell data-label="Status">
                       <Badge variant={doc.is_approved ? "default" : "outline"} className={cn(doc.is_approved ? "bg-emerald-500 hover:bg-emerald-600" : "")}>
                         {doc.is_approved ? "Ativo" : "Pendente"}
@@ -222,9 +235,9 @@ const AdminDoctors = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div><span className="text-muted-foreground">Nome:</span><p className="font-medium text-foreground">Dr(a). {selected.first_name} {selected.last_name}</p></div>
                 <div><span className="text-muted-foreground">CRM:</span><p className="font-medium text-foreground">{selected.crm}/{selected.crm_state}</p></div>
-                <div><span className="text-muted-foreground">Preço:</span><p className="font-medium text-foreground">R$ {selected.consultation_price || "—"}</p></div>
+                <div><span className="text-muted-foreground">Preço:</span><p className="font-medium text-foreground">R$ {selected.price || "—"}</p></div>
                 <div><span className="text-muted-foreground">Experiência:</span><p className="font-medium text-foreground">{selected.experience_years || 0} anos</p></div>
-                <div><span className="text-muted-foreground">Avaliação:</span><p className="font-medium text-foreground">{selected.rating ?? "—"} ({selected.total_reviews} avaliações)</p></div>
+                <div><span className="text-muted-foreground">Avaliação:</span><p className="font-medium text-foreground">{selected.rating_avg ?? "—"} ({selected.rating_count ?? 0} avaliações)</p></div>
                 <div><span className="text-muted-foreground">Formação:</span><p className="font-medium text-foreground">{selected.education || "—"}</p></div>
               </div>
               {selected.bio && <div><span className="text-muted-foreground">Bio:</span><p className="text-foreground">{selected.bio}</p></div>}
@@ -235,7 +248,7 @@ const AdminDoctors = () => {
             <div className="space-y-3">
               <Input placeholder="CRM" value={editForm.crm} onChange={e => setEditForm({ ...editForm, crm: e.target.value })} />
               <Input placeholder="Estado CRM" value={editForm.crm_state} onChange={e => setEditForm({ ...editForm, crm_state: e.target.value })} />
-              <Input placeholder="Preço consulta" type="number" value={editForm.consultation_price} onChange={e => setEditForm({ ...editForm, consultation_price: e.target.value })} />
+              <Input placeholder="Preço consulta" type="number" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} />
               <Input placeholder="Bio" value={editForm.bio} onChange={e => setEditForm({ ...editForm, bio: e.target.value })} />
               <div className="flex gap-2">
                 <Button onClick={saveEdit} className="bg-gradient-hero text-primary-foreground">Salvar</Button>

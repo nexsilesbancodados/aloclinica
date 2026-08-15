@@ -12,7 +12,6 @@
  *     card_token: string,                               // tokenizado client-side
  *     payer_email: string,                              // pode ser do user.email
  *     external_reference?: string,
- *     metadata?: Record<string, unknown>                // attach extra info
  *   }
  *
  * Retorna: { subscription_id, mp_preapproval_id, status, init_point }
@@ -48,7 +47,6 @@ Deno.serve(async (req) => {
       card_token,
       payer_email,
       external_reference,
-      metadata,
       skip_db_insert = false,  // frontend insere na tabela específica
     } = await req.json();
 
@@ -64,13 +62,20 @@ Deno.serve(async (req) => {
     // Busca plano
     const { data: plan } = await (admin as any)
       .from(plan_table)
-      .select("id, name, slug, price_monthly, price_yearly")
+      .select("id, name, price, interval")
       .eq("id", plan_id)
       .single();
     if (!plan) return json({ error: "Plano não encontrado" }, 404);
 
+    if (billing_cycle !== "monthly" && billing_cycle !== "yearly") {
+      return json({ error: "billing_cycle inválido" }, 400);
+    }
+    if (plan.interval && plan.interval !== billing_cycle) {
+      return json({ error: "billing_cycle incompatível com o plano" }, 400);
+    }
+
     const isYearly = billing_cycle === "yearly";
-    const amount = Number(isYearly ? plan.price_yearly : plan.price_monthly);
+    const amount = Number(plan.price);
     if (!amount || amount <= 0) return json({ error: "Preço inválido no plano" }, 400);
 
     const email = payer_email || user.email || "";
@@ -126,14 +131,8 @@ Deno.serve(async (req) => {
       gateway: "mercadopago",
       mp_preapproval_id: res.data.id,
       mp_payer_id: res.data.payer_id,
-      amount_cents: Math.round(amount * 100),
-      currency: "BRL",
-      interval_days: isYearly ? 365 : 30,
-      billing_cycle,
       status: res.data.status === "authorized" ? "active" : "pending",
       started_at: new Date().toISOString(),
-      next_charge_at: res.data.next_payment_date || null,
-      metadata: { ...res.data, ...(metadata ?? {}), plan_table },
     } as any).select("id").single();
 
     if (error) {

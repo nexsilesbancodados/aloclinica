@@ -6,7 +6,30 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DOCUSEAL_BASE = "http://72.62.138.208:3200";
+/**
+ * Endpoint do DocuSeal — vem SEMPRE de `DOCUSEAL_BASE`.
+ *
+ * Antes havia aqui um IP fixo em HTTP puro. O secret-catalog declara
+ * `DOCUSEAL_BASE` como configurável e o painel admin permite editá-la, mas
+ * esta função ignorava o valor: o admin salvava a URL, via "salvo com sucesso"
+ * e nada mudava.
+ *
+ * Exige HTTPS pelo mesmo motivo de `_shared/evolution.ts`: aqui trafegam
+ * documentos clínicos para assinatura (receitas, laudos), que não podem ir em
+ * texto claro. Sem a env configurada a função falha com mensagem explícita, em
+ * vez de pendurar a requisição contra um endereço que não responde.
+ */
+const resolveDocusealBase = (): string | null => {
+  const raw = Deno.env.get("DOCUSEAL_BASE");
+  if (!raw || raw.includes("PLACEHOLDER_VALUE_TO_BE_REPLACED")) return null;
+  try {
+    const url = new URL(raw.trim().replace(/\/+$/, ""));
+    if (url.protocol !== "https:") return null;
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -19,6 +42,18 @@ serve(async (req) => {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  const DOCUSEAL_BASE = resolveDocusealBase();
+  if (!DOCUSEAL_BASE) {
+    return new Response(
+      JSON.stringify({
+        error: "DOCUSEAL_BASE not configured",
+        message:
+          "Configure DOCUSEAL_BASE com a URL HTTPS do DocuSeal. Endereços http:// são recusados: documentos clínicos não podem trafegar em texto claro.",
+      }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   try {

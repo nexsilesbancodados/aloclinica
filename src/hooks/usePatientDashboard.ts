@@ -254,7 +254,9 @@ export const useFavoriteDoctors = () => {
 
       const { data: favDocs } = await db
         .from("doctor_profiles")
-        .select("id, user_id, consultation_price, rating")
+        // Nomes da TABELA. O retorno abaixo remapeia para os nomes antigos, que
+        // é o que os consumidores deste hook já esperam.
+        .select("id, user_id, price, rating_avg")
         .in("id", favDocIds);
 
       if (!favDocs?.length) return [];
@@ -275,6 +277,8 @@ export const useFavoriteDoctors = () => {
 
         return {
           ...d,
+          consultation_price: (d as { price?: number | null }).price ?? null,
+          rating: (d as { rating_avg?: number | null }).rating_avg ?? null,
           name: p ? `Dr(a). ${p.first_name} ${p.last_name}` : "Médico",
           specs,
         };

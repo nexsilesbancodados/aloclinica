@@ -41,7 +41,7 @@ const steps: OnboardingStep[] = [
   },
   {
     id: "price", label: "Definir preço da consulta", description: "Valor que pacientes vão ver",
-    icon: DollarSign, path: "/dashboard/profile", check: (d) => !!d.docProfile?.consultation_price && Number(d.docProfile.consultation_price) > 0, estimatedMin: 1,
+    icon: DollarSign, path: "/dashboard/profile", check: (d) => !!d.docProfile?.price && Number(d.docProfile.price) > 0, estimatedMin: 1,
   },
   {
     id: "availability", label: "Configurar disponibilidade", description: "Defina pelo menos 1 horário semanal",
@@ -80,7 +80,7 @@ const DoctorOnboarding = () => {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const docRes = await db.from("doctor_profiles").select("id, bio, consultation_price, is_approved, crm_verified, crm").eq("user_id", user.id).single();
+      const docRes = await db.from("doctor_profiles").select("id, bio, price, is_approved, crm_verified, crm").eq("user_id", user.id).single();
 
       const docProfile = docRes.data as any;
       if (!docProfile) return;

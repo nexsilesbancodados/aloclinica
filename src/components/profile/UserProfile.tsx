@@ -130,14 +130,14 @@ const UserProfile = () => {
   }, [user]);
 
   const fetchDoctorProfile = async () => {
-    const { data } = await db.from("doctor_profiles").select("id, bio, education, experience_years, consultation_price, display_name, mp_user_id, mp_connected_at").eq("user_id", user!.id).single();
+    const { data } = await db.from("doctor_profiles").select("id, bio, education, experience_years, price, display_name, mp_user_id, mp_connected_at").eq("user_id", user!.id).single();
     if (data) {
       setDoctorProfileId(data.id);
       setMpUserId((data as any).mp_user_id ?? null);
       setMpConnectedAt((data as any).mp_connected_at ?? null);
       setBio(data.bio || ""); setEducation(data.education || "");
       setDisplayName((data as any).display_name || "");
-      setExperienceYears(data.experience_years || 0); setConsultationPrice(Number(data.consultation_price) || 89);
+      setExperienceYears(data.experience_years || 0); setConsultationPrice(Number(data.price) || 89);
       const [specRes, careRes] = await Promise.all([
         db.from("doctor_specialties").select("specialty_id").eq("doctor_id", data.id),
         db.from("doctor_care_areas" as any).select("area_name").eq("doctor_id", data.id),
@@ -184,7 +184,11 @@ const UserProfile = () => {
     if (isDoctor) {
       if (priceMin !== null && consultationPrice < priceMin) { toast.error(`Preço mínimo: R$ ${priceMin.toFixed(0)}`); setSaving(false); return; }
       if (priceMax !== null && consultationPrice > priceMax) { toast.error(`Preço máximo: R$ ${priceMax.toFixed(0)}`); setSaving(false); return; }
-      await db.from("doctor_profiles").update({ bio, education, experience_years: experienceYears, consultation_price: consultationPrice, display_name: displayName.trim() || null } as any).eq("user_id", user.id);
+      // `price` é o nome na TABELA; `consultation_price` só existe na view
+      // `doctor_profiles_public`. Gravar o nome da view aqui fazia o UPDATE
+      // inteiro falhar (42703) — o médico salvava o perfil e o preço não mudava.
+      const { error: docError } = await db.from("doctor_profiles").update({ bio, education, experience_years: experienceYears, price: consultationPrice, display_name: displayName.trim() || null } as any).eq("user_id", user.id);
+      if (docError) { toast.error("Erro ao salvar dados do médico", { description: docError.message }); setSaving(false); return; }
     }
     setSaving(false);
     if (error) toast.error("Erro ao salvar", { description: error.message });

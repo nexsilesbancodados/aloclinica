@@ -44,17 +44,22 @@ export function usePWAInstall() {
       setIsInstallable(true);
     };
 
-    window.addEventListener("beforeinstallprompt", handler);
-
-    // Detect when app is successfully installed
-    window.addEventListener("appinstalled", () => {
+    // Detect when app is successfully installed.
+    // Precisa ser uma referência nomeada: um listener anônimo não pode ser
+    // removido, e cada mount deixaria para trás um listener permanente
+    // segurando os setters de um componente já desmontado.
+    const installedHandler = () => {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
-    });
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
     };
   }, []);
 

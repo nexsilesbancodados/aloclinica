@@ -58,7 +58,8 @@ Deno.serve(async (req) => {
       if (!isAdmin) return json({ error: "Sem permissão" }, 403);
     } else {
       // Owner só pode estornar dentro de 24h
-      const paidAt = tx.paid_at ? new Date(tx.paid_at).getTime() : 0;
+      const paidAtValue = tx.raw_response?.date_approved ?? tx.created_at;
+      const paidAt = paidAtValue ? new Date(paidAtValue).getTime() : 0;
       const hoursSince = paidAt ? (Date.now() - paidAt) / 3_600_000 : Infinity;
       if (hoursSince > 24) {
         return json({ error: "Refund só disponível em até 24h após pagamento. Entre em contato com o suporte." }, 403);
@@ -67,6 +68,10 @@ Deno.serve(async (req) => {
 
     if (!tx.mp_payment_id) {
       return json({ error: "Transação não tem mp_payment_id — possivelmente transação legacy" }, 400);
+    }
+
+    if (!["approved", "paid", "confirmed", "received"].includes(tx.status)) {
+      return json({ error: "A transação ainda não está confirmada para estorno" }, 400);
     }
 
     if (tx.status === "refunded") return json({ error: "Já estornado" }, 400);
@@ -93,7 +98,6 @@ Deno.serve(async (req) => {
       .from("payment_transactions")
       .update({
         status: isPartial ? "partial_refund" : "refunded",
-        refunded_at: new Date().toISOString(),
         raw_response: { ...tx.raw_response, refund: refund.data },
       } as any)
       .eq("id", tx.id);

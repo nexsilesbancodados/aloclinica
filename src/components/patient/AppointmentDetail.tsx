@@ -63,7 +63,8 @@ const AppointmentDetail = () => {
 
     const { data: doc } = await db
       .from("doctor_profiles")
-      .select("id, crm, rating, user_id")
+      // `rating_avg` é o nome na TABELA; `rating` só existe na view.
+      .select("id, crm, rating_avg, user_id")
       .eq("id", data.doctor_id)
       .single();
 
@@ -100,7 +101,7 @@ const AppointmentDetail = () => {
       doctor_name: doctorName,
       doctor_crm: doc?.crm ?? "",
       specialties,
-      rating: doc?.rating ?? null,
+      rating: doc?.rating_avg ?? null,
     });
 
     // Carrega receitas/atestados em paralelo (só faz sentido se completed)
@@ -121,7 +122,7 @@ const AppointmentDetail = () => {
     try {
       const { error } = await db
         .from("appointments")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancelled_by: user?.id ?? null } as any)
+        .update({ status: "cancelled", cancel_reason: "Cancelado pelo paciente", cancelled_by: user?.id ?? null })
         .eq("id", appointmentId);
       if (error) throw error;
       toast.success("Consulta cancelada", { description: "Você receberá confirmação por email." });

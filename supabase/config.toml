@@ -27,6 +27,12 @@ verify_jwt = false
 verify_jwt = false
 [functions.sitemap-xml]
 verify_jwt = false
+# Registro de consentimento. Precisa aceitar visitante anônimo porque o aceite
+# de cookies ocorre antes do login; a própria função exige sessão para os demais
+# tipos (termos, privacidade, TCLE, biometria) e grava o user_id a partir do JWT
+# validado, nunca do corpo da requisição.
+[functions.record-consent]
+verify_jwt = false
 # Guest flows — token / rate-limited, no account.
 [functions.guest-checkout]
 verify_jwt = false

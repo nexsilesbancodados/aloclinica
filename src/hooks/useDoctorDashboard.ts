@@ -10,13 +10,15 @@ export const useDoctorStats = () => {
       if (!user) return null;
       const { data: docProfile } = await db
         .from("doctor_profiles")
-        .select("id, consultation_price, rating, total_reviews, crm, crm_state, crm_verified, is_approved, kyc_status, created_at, approved_at, cfm_verified_at, kyc_verified_at, rejection_reason")
+        // Nomes da TABELA (price/rating_avg/rating_count). Os nomes antigos só
+        // existem na view e fazem o PostgREST rejeitar a query inteira.
+        .select("id, price, rating_avg, rating_count, crm, crm_state, crm_verified, crm_verified_at, is_approved, kyc_status, created_at, kyc_verified_at")
         .eq("user_id", user.id)
         .single();
       if (!docProfile) return null;
 
       const doctorId = docProfile.id;
-      const price = Number(docProfile.consultation_price) || 89;
+      const price = Number(docProfile.price) || 89;
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -94,20 +96,20 @@ export const useDoctorStats = () => {
 
       return {
         doctorId,
-        rating: Number(docProfile.rating) || 0,
-        totalReviews: Number(docProfile.total_reviews) || 0,
+        rating: Number(docProfile.rating_avg) || 0,
+        totalReviews: Number(docProfile.rating_count) || 0,
         crm: docProfile.crm,
         crmState: docProfile.crm_state,
         crmVerified: docProfile.crm_verified,
         approval: {
           created_at: (docProfile as any).created_at ?? null,
           cfm_verified: (docProfile as any).crm_verified ?? false,
-          cfm_verified_at: (docProfile as any).cfm_verified_at ?? null,
+          cfm_verified_at: (docProfile as any).crm_verified_at ?? null,
           kyc_status: (docProfile as any).kyc_status ?? null,
           kyc_verified_at: (docProfile as any).kyc_verified_at ?? null,
           is_approved: (docProfile as any).is_approved ?? false,
-          approved_at: (docProfile as any).approved_at ?? null,
-          rejection_reason: (docProfile as any).rejection_reason ?? null,
+          approved_at: null,
+          rejection_reason: null,
         },
         stats: {
           today: todayRes.data?.length ?? 0,
